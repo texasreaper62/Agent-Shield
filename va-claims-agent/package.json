@@ -1,0 +1,28 @@
+{
+  "name": "va-claims-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VA Disability Claims AI Agent System",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "api:dev": "cd apps/api && uvicorn main:app --reload",
+    "web:dev": "cd apps/web && npm run dev",
+    "db:migrate": "cd apps/api && alembic upgrade head",
+    "db:seed": "cd apps/api && python scripts/seed.py"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
