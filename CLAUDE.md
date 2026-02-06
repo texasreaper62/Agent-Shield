@@ -38,9 +38,11 @@ This file provides guidance to Claude Code when working with this repository.
 <!-- Describe your project structure here -->
 ```
 /
-├── src/           # Source code
-├── tests/         # Test files
-└── docs/          # Documentation
+├── .claude/
+│   └── settings.json  # Claude Code project settings
+├── src/               # Source code
+├── tests/             # Test files
+└── docs/              # Documentation
 ```
 
 ## Important Conventions
@@ -58,4 +60,4 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Additional Notes
 
-<!-- Any other information Claude should know about this project -->
+- Agent Teams is enabled via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json`
