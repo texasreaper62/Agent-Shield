@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=360">
+  <title>AI Shield</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <span class="header-icon">&#x1F6E1;&#xFE0F;</span>
+      <div>
+        <h1 class="header-title">AI Shield</h1>
+        <span class="header-version">v0.1.0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Status Card -->
+  <div id="status-card" class="status-card status-safe">
+    <div class="status-icon" id="status-icon">&#x2705;</div>
+    <div class="status-title" id="status-title">Scanning...</div>
+    <div class="status-description" id="status-description">Checking this page for AI threats.</div>
+  </div>
+
+  <!-- Threat List -->
+  <div id="threat-list" class="threat-list" style="display:none;">
+    <h2 class="section-title">Threats Found</h2>
+    <div id="threats-container"></div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-label">Scan Time</span>
+      <span class="stat-value" id="stat-scan-time">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Pages Scanned</span>
+      <span class="stat-value" id="stat-total-scans">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Threats Found</span>
+      <span class="stat-value" id="stat-total-threats">—</span>
+    </div>
+  </div>
+
+  <!-- Rescan Button -->
+  <button id="rescan-btn" class="rescan-btn">Scan Again</button>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>&#x1F512;</span> All scanning happens locally. Your data never leaves your browser.
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
