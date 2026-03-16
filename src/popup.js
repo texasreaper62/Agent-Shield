@@ -4,7 +4,8 @@
  * AI Shield Popup Script
  *
  * Manages the popup UI that appears when clicking the extension icon.
- * Fetches scan results, displays threats, and handles rescan requests.
+ * Fetches scan results, displays threats, handles rescan requests,
+ * pause/resume toggle, export reports, and settings navigation.
  */
 (() => {
   // =========================================================================
@@ -63,6 +64,15 @@
   const statTotalScans = document.getElementById('stat-total-scans');
   const statTotalThreats = document.getElementById('stat-total-threats');
   const rescanBtn = document.getElementById('rescan-btn');
+  const exportBtn = document.getElementById('export-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const pauseIcon = document.getElementById('pause-icon');
+  const pausedBanner = document.getElementById('paused-banner');
+  const resumeLink = document.getElementById('resume-link');
+  const settingsBtn = document.getElementById('settings-btn');
+
+  // Current scan result (for export)
+  let currentResult = null;
 
   // =========================================================================
   // UI RENDERING
@@ -91,10 +101,12 @@
   const renderThreats = (threats) => {
     if (!threats || threats.length === 0) {
       threatList.style.display = 'none';
+      exportBtn.style.display = 'none';
       return;
     }
 
     threatList.style.display = 'block';
+    exportBtn.style.display = 'block';
     threatsContainer.innerHTML = '';
 
     for (const threat of threats) {
@@ -135,6 +147,7 @@
 
     // Fetch cumulative stats from background
     chrome.runtime.sendMessage({ type: 'GET_STATS' }, (response) => {
+      if (chrome.runtime.lastError) return;
       if (response) {
         statTotalScans.textContent = formatNumber(response.totalScans);
         statTotalThreats.textContent = formatNumber(response.totalThreatsFound);
@@ -147,16 +160,135 @@
    * @param {object} result - Scan result from the detector.
    */
   const displayResults = (result) => {
+    currentResult = result;
+
     if (!result) {
       statusIcon.textContent = '\u2753';
       statusTitle.textContent = 'No Data';
       statusDescription.textContent = 'Could not scan this page. It may be a browser internal page.';
+      exportBtn.style.display = 'none';
       return;
     }
 
     updateStatusCard(result);
     renderThreats(result.threats);
     updateStats(result);
+  };
+
+  // =========================================================================
+  // PAUSE / RESUME
+  // =========================================================================
+
+  /**
+   * Loads the current enabled state and updates UI.
+   */
+  const loadPauseState = () => {
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || {};
+      const enabled = settings.enabled !== false; // Default to enabled
+      updatePauseUI(enabled);
+    });
+  };
+
+  /**
+   * Toggles the pause state.
+   */
+  const togglePause = () => {
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || {};
+      const currentlyEnabled = settings.enabled !== false;
+      settings.enabled = !currentlyEnabled;
+
+      chrome.storage.local.set({ settings }, () => {
+        updatePauseUI(settings.enabled);
+
+        // Notify background
+        chrome.runtime.sendMessage({
+          type: 'SETTINGS_CHANGED',
+          settings: settings
+        });
+      });
+    });
+  };
+
+  /**
+   * Updates the UI to reflect pause state.
+   * @param {boolean} enabled - Whether scanning is enabled.
+   */
+  const updatePauseUI = (enabled) => {
+    if (enabled) {
+      pauseIcon.textContent = '\u23F8\uFE0F';
+      pauseBtn.title = 'Pause scanning';
+      pausedBanner.style.display = 'none';
+      rescanBtn.disabled = false;
+    } else {
+      pauseIcon.textContent = '\u25B6\uFE0F';
+      pauseBtn.title = 'Resume scanning';
+      pausedBanner.style.display = 'block';
+      rescanBtn.disabled = true;
+    }
+  };
+
+  // =========================================================================
+  // EXPORT REPORT
+  // =========================================================================
+
+  /**
+   * Generates a plain-text threat report and copies it to clipboard.
+   */
+  const exportReport = () => {
+    if (!currentResult) return;
+
+    const lines = [];
+    lines.push('AI SHIELD THREAT REPORT');
+    lines.push('='.repeat(40));
+    lines.push('');
+    lines.push(`URL: ${currentResult.url}`);
+    lines.push(`Scanned: ${new Date(currentResult.timestamp).toLocaleString()}`);
+    lines.push(`Status: ${currentResult.status.toUpperCase()}`);
+    lines.push(`Total Threats: ${currentResult.stats.totalThreats}`);
+
+    if (currentResult.stats.critical > 0) lines.push(`  Critical: ${currentResult.stats.critical}`);
+    if (currentResult.stats.high > 0) lines.push(`  High: ${currentResult.stats.high}`);
+    if (currentResult.stats.medium > 0) lines.push(`  Medium: ${currentResult.stats.medium}`);
+    if (currentResult.stats.low > 0) lines.push(`  Low: ${currentResult.stats.low}`);
+
+    lines.push(`Scan Time: ${currentResult.stats.scanTimeMs}ms`);
+    lines.push('');
+
+    if (currentResult.threats.length > 0) {
+      lines.push('THREATS DETECTED:');
+      lines.push('-'.repeat(40));
+
+      for (let i = 0; i < currentResult.threats.length; i++) {
+        const threat = currentResult.threats[i];
+        const categoryName = CATEGORY_NAMES[threat.category] || threat.category;
+        lines.push('');
+        lines.push(`${i + 1}. [${threat.severity.toUpperCase()}] ${categoryName}`);
+        lines.push(`   ${threat.description}`);
+        lines.push(`   Detail: ${threat.detail}`);
+      }
+    }
+
+    lines.push('');
+    lines.push('-'.repeat(40));
+    lines.push('Generated by AI Shield (https://github.com/texasreaper62/AI-Shield)');
+
+    const report = lines.join('\n');
+
+    navigator.clipboard.writeText(report).then(() => {
+      exportBtn.textContent = 'Copied!';
+      exportBtn.classList.add('copied');
+      setTimeout(() => {
+        exportBtn.textContent = 'Copy Report';
+        exportBtn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      exportBtn.textContent = 'Failed';
+      setTimeout(() => {
+        exportBtn.textContent = 'Copy Report';
+      }, 2000);
+    });
   };
 
   // =========================================================================
@@ -180,7 +312,7 @@
    * @returns {string} Formatted number string.
    */
   const formatNumber = (num) => {
-    if (num === undefined || num === null) return '—';
+    if (num === undefined || num === null) return '\u2014';
     return num.toLocaleString();
   };
 
@@ -210,6 +342,7 @@
 
         // Still fetch cumulative stats
         chrome.runtime.sendMessage({ type: 'GET_STATS' }, (response) => {
+          if (chrome.runtime.lastError) return;
           if (response) {
             statTotalScans.textContent = formatNumber(response.totalScans);
             statTotalThreats.textContent = formatNumber(response.totalThreatsFound);
@@ -223,6 +356,10 @@
         if (chrome.runtime.lastError || !response) {
           // Fallback: try background script
           chrome.runtime.sendMessage({ type: 'GET_TAB_RESULT', tabId: tab.id }, (bgResponse) => {
+            if (chrome.runtime.lastError) {
+              displayResults(null);
+              return;
+            }
             if (bgResponse) {
               displayResults(bgResponse);
             } else {
@@ -260,7 +397,9 @@
       }
 
       chrome.tabs.sendMessage(tabs[0].id, { type: 'RESCAN' }, (response) => {
-        if (response) {
+        if (chrome.runtime.lastError) {
+          // Content script not available
+        } else if (response) {
           displayResults(response);
         }
         rescanBtn.disabled = false;
@@ -269,9 +408,22 @@
     });
   });
 
+  // Export button
+  exportBtn.addEventListener('click', exportReport);
+
+  // Pause/resume button
+  pauseBtn.addEventListener('click', togglePause);
+  resumeLink.addEventListener('click', togglePause);
+
+  // Settings button
+  settingsBtn.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+
   // =========================================================================
   // INITIALIZATION
   // =========================================================================
 
+  loadPauseState();
   fetchResults();
 })();

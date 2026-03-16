@@ -16,7 +16,18 @@
         <span class="header-version">v0.1.0</span>
       </div>
     </div>
+    <div class="header-actions">
+      <button id="pause-btn" class="icon-btn" title="Pause scanning">
+        <span id="pause-icon">&#x23F8;&#xFE0F;</span>
+      </button>
+      <button id="settings-btn" class="icon-btn" title="Settings">&#x2699;&#xFE0F;</button>
+    </div>
   </header>
+
+  <!-- Paused Banner -->
+  <div id="paused-banner" class="paused-banner" style="display:none;">
+    Scanning is paused. <button id="resume-link" class="link-btn">Resume</button>
+  </div>
 
   <!-- Status Card -->
   <div id="status-card" class="status-card status-safe">
@@ -47,8 +58,11 @@
     </div>
   </div>
 
-  <!-- Rescan Button -->
-  <button id="rescan-btn" class="rescan-btn">Scan Again</button>
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+    <button id="rescan-btn" class="rescan-btn">Scan Again</button>
+    <button id="export-btn" class="export-btn" style="display:none;">Copy Report</button>
+  </div>
 
   <!-- Footer -->
   <footer class="footer">

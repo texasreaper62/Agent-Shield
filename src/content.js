@@ -127,6 +127,10 @@
   /**
    * Runs a scan and processes the results.
    */
+  /**
+   * Reads settings and runs scan if appropriate.
+   * Checks: enabled state, domain allowlist, sensitivity level.
+   */
   const runScan = () => {
     try {
       if (typeof AIShieldDetector === 'undefined') {
@@ -134,32 +138,67 @@
         return;
       }
 
-      const result = AIShieldDetector.scan();
-      lastScanResult = result;
+      // Load settings and check before scanning
+      chrome.storage.local.get('settings', (data) => {
+        const settings = data.settings || {};
 
-      // Show/hide warning banner
-      showBanner(result);
+        // Check if scanning is enabled
+        if (settings.enabled === false) {
+          console.log('[AI Shield] Scanning is paused.');
+          return;
+        }
 
-      // Send results to background script
-      try {
-        chrome.runtime.sendMessage({
-          type: 'SCAN_COMPLETE',
-          result: result
-        });
-      } catch (e) {
-        // Extension context may be invalidated (e.g., extension updated)
-        console.warn('[AI Shield] Could not send scan results to background:', e.message);
-      }
+        // Check allowlist
+        const hostname = window.location.hostname.toLowerCase().replace(/^www\./, '');
+        const allowlist = settings.allowlist || [];
+        if (allowlist.some(domain => hostname === domain || hostname.endsWith('.' + domain))) {
+          console.log(`[AI Shield] ${hostname} is in trusted sites list. Skipping scan.`);
+          lastScanResult = {
+            status: 'safe',
+            threats: [],
+            stats: { totalThreats: 0, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: 0 },
+            url: window.location.href,
+            hostname: hostname,
+            timestamp: Date.now(),
+            skipped: true,
+            skipReason: 'trusted_site'
+          };
+          removeBanner();
+          return;
+        }
 
-      // Store in local storage for popup retrieval
-      try {
-        chrome.storage.local.set({
-          [`scan_${result.url}`]: result,
-          lastScanResult: result
-        });
-      } catch (e) {
-        console.warn('[AI Shield] Could not store scan results:', e.message);
-      }
+        // Run scan with sensitivity setting
+        const sensitivity = settings.sensitivity || 'medium';
+        const result = AIShieldDetector.scan({ sensitivity });
+        lastScanResult = result;
+
+        // Show/hide warning banner (respect showBanner setting)
+        if (settings.showBanner !== false) {
+          showBanner(result);
+        } else {
+          removeBanner();
+        }
+
+        // Send results to background script
+        try {
+          chrome.runtime.sendMessage({
+            type: 'SCAN_COMPLETE',
+            result: result
+          });
+        } catch (e) {
+          console.warn('[AI Shield] Could not send scan results to background:', e.message);
+        }
+
+        // Store in local storage for popup retrieval
+        try {
+          chrome.storage.local.set({
+            [`scan_${result.url}`]: result,
+            lastScanResult: result
+          });
+        } catch (e) {
+          console.warn('[AI Shield] Could not store scan results:', e.message);
+        }
+      });
 
     } catch (e) {
       console.error('[AI Shield] Scan failed:', e);

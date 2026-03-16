@@ -275,6 +275,57 @@ const AIShieldDetector = (() => {
   ];
 
   /**
+   * Domains known to discuss AI security topics — detections on these sites
+   * are legitimate content, not attacks. Reduce severity for educational context.
+   */
+  const EDUCATIONAL_CONTEXT_DOMAINS = [
+    // Security research & education
+    'owasp.org',
+    'portswigger.net',
+    'hackerone.com',
+    'bugcrowd.com',
+    'snyk.io',
+    'securityweek.com',
+    'bleepingcomputer.com',
+    'krebsonsecurity.com',
+    'thehackernews.com',
+    // AI research & documentation
+    'arxiv.org',
+    'papers.ssrn.com',
+    'ai.meta.com',
+    'research.google',
+    'deepmind.google',
+    'openai.com',
+    'anthropic.com',
+    'docs.anthropic.com',
+    'platform.openai.com',
+    // Developer & education platforms
+    'stackoverflow.com',
+    'stackexchange.com',
+    'medium.com',
+    'dev.to',
+    'towardsdatascience.com',
+    'wikipedia.org',
+    'en.wikipedia.org',
+    // Code hosting (discussing injection patterns in code context)
+    'github.com',
+    'gitlab.com',
+    'gist.github.com'
+  ];
+
+  /**
+   * Checks if a hostname is an educational/research context.
+   * @param {string} hostname - The hostname to check.
+   * @returns {boolean}
+   */
+  const isEducationalDomain = (hostname) => {
+    const normalized = hostname.toLowerCase().replace(/^www\./, '');
+    return EDUCATIONAL_CONTEXT_DOMAINS.some(domain =>
+      normalized === domain || normalized.endsWith('.' + domain)
+    );
+  };
+
+  /**
    * AI brand names to look for in fake interface detection.
    */
   const AI_BRAND_PATTERNS = /\b(?:ChatGPT|GPT-?4|GPT-?3\.?5|OpenAI|Claude|Anthropic|Gemini|Google\s*AI|Bard|Copilot|Microsoft\s*AI)\b/i;
@@ -659,10 +710,58 @@ const AIShieldDetector = (() => {
   // =========================================================================
 
   /**
+   * Filters threats based on sensitivity level.
+   * - high: show all threats (critical, high, medium, low)
+   * - medium: show critical, high, and medium only
+   * - low: show critical and high only
+   * @param {Array} threats - Array of threat objects.
+   * @param {string} sensitivity - 'high', 'medium', or 'low'.
+   * @returns {Array} Filtered threats.
+   */
+  const filterBySensitivity = (threats, sensitivity) => {
+    if (sensitivity === 'high') return threats;
+
+    const minSeverity = sensitivity === 'low'
+      ? { critical: true, high: true }
+      : { critical: true, high: true, medium: true };
+
+    return threats.filter(t => minSeverity[t.severity]);
+  };
+
+  /**
+   * Reduces severity for threats found on educational/research domains.
+   * Content on security blogs and AI documentation sites is informational,
+   * not malicious — users should know it's there but not be alarmed.
+   * @param {Array} threats - Array of threat objects.
+   * @param {string} hostname - Current page hostname.
+   * @returns {Array} Adjusted threats.
+   */
+  const adjustForContext = (threats, hostname) => {
+    if (!isEducationalDomain(hostname)) return threats;
+
+    return threats.map(t => {
+      // Don't reduce hidden text injections even on educational sites —
+      // those are always suspicious regardless of domain
+      if (t.category === 'hidden_text' && t.severity === 'critical') return t;
+
+      // Downgrade visible pattern matches on educational domains
+      const adjusted = Object.assign({}, t);
+      if (adjusted.severity === 'critical') adjusted.severity = 'high';
+      else if (adjusted.severity === 'high') adjusted.severity = 'medium';
+
+      adjusted.detail += ' (Severity reduced: this appears to be an educational or research context.)';
+      return adjusted;
+    });
+  };
+
+  /**
    * Performs a full scan of the current page for AI-specific threats.
+   * @param {object} [options] - Scan options.
+   * @param {string} [options.sensitivity='medium'] - Detection sensitivity level.
    * @returns {object} Scan result object with status, threats, stats, url, hostname, timestamp.
    */
-  const scan = () => {
+  const scan = (options) => {
+    const sensitivity = (options && options.sensitivity) || 'medium';
     const startTime = performance.now();
     const url = window.location.href;
     const hostname = window.location.hostname;
@@ -682,6 +781,12 @@ const AIShieldDetector = (() => {
 
     // Deduplicate
     allThreats = deduplicateThreats(allThreats);
+
+    // Adjust severity for educational/research domains
+    allThreats = adjustForContext(allThreats, hostname);
+
+    // Filter by sensitivity level
+    allThreats = filterBySensitivity(allThreats, sensitivity);
 
     // Sort by severity (critical first)
     const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };

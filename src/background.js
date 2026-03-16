@@ -114,8 +114,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Store result per tab
     tabResults.set(tabId, result);
 
-    // Update badge
-    updateBadge(tabId, result);
+    // Update badge (respect showBadge setting)
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || {};
+      if (settings.showBadge !== false) {
+        updateBadge(tabId, result);
+      } else {
+        clearBadge(tabId);
+      }
+    });
 
     // Update cumulative stats
     updateStats(result);
@@ -133,11 +140,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'GET_STATS') {
     chrome.storage.local.get(['totalScans', 'totalThreatsFound'], (data) => {
-      sendResponse({
-        totalScans: data.totalScans || 0,
-        totalThreatsFound: data.totalThreatsFound || 0
-      });
+      if (chrome.runtime.lastError) {
+        sendResponse({ totalScans: 0, totalThreatsFound: 0 });
+      } else {
+        sendResponse({
+          totalScans: data.totalScans || 0,
+          totalThreatsFound: data.totalThreatsFound || 0
+        });
+      }
     });
+    return true;
+  }
+
+  if (message.type === 'SETTINGS_CHANGED') {
+    const settings = message.settings || {};
+
+    // If scanning was paused, clear all badges
+    if (settings.enabled === false) {
+      tabResults.forEach((_, tabId) => clearBadge(tabId));
+    }
+
+    // If badge display was turned off, clear all badges
+    if (settings.showBadge === false) {
+      tabResults.forEach((_, tabId) => clearBadge(tabId));
+    }
+
+    sendResponse({ received: true });
     return true;
   }
 });

@@ -1,0 +1,344 @@
+/*
+ * AI Shield Options Page Styles
+ * Dark theme consistent with popup UI.
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0d1117;
+  color: #e6edf3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+/* ========== Header ========== */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #21262d;
+  margin-bottom: 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.header-version {
+  font-size: 12px;
+  color: #8b949e;
+}
+
+/* ========== Sections ========== */
+
+.section {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #21262d;
+}
+
+.section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin-bottom: 6px;
+}
+
+.section-description {
+  font-size: 13px;
+  color: #8b949e;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ========== Sensitivity Radio Cards ========== */
+
+.sensitivity-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background-color: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.radio-card:hover {
+  background-color: #1c2128;
+}
+
+.radio-card:has(input:checked) {
+  border-color: #58a6ff;
+  background-color: rgba(88, 166, 255, 0.06);
+}
+
+.radio-card input[type="radio"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #363b42;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.radio-card input[type="radio"]:checked {
+  border-color: #58a6ff;
+}
+
+.radio-card input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  background-color: #58a6ff;
+  border-radius: 50%;
+}
+
+.radio-content {
+  flex: 1;
+}
+
+.radio-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin-bottom: 2px;
+}
+
+.radio-description {
+  font-size: 12px;
+  color: #8b949e;
+  line-height: 1.4;
+}
+
+.badge-recommended {
+  display: inline-block;
+  padding: 1px 6px;
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* ========== Allowlist ========== */
+
+.allowlist-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: #161b22;
+  border: 1px solid #363b42;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.text-input:focus {
+  border-color: #58a6ff;
+}
+
+.text-input::placeholder {
+  color: #484f58;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background-color: #238636;
+  color: #ffffff;
+  border-color: rgba(240, 246, 252, 0.1);
+}
+
+.btn-primary:hover {
+  background-color: #2ea043;
+}
+
+.btn-danger {
+  background: none;
+  color: #f85149;
+  border: none;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.btn-danger:hover {
+  background-color: rgba(248, 81, 73, 0.1);
+  border-radius: 4px;
+}
+
+.error-text {
+  color: #f85149;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.allowlist-container {
+  margin-top: 12px;
+}
+
+.empty-state {
+  color: #484f58;
+  font-size: 13px;
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.allowlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.allowlist-domain {
+  font-size: 13px;
+  color: #e6edf3;
+  font-family: monospace;
+}
+
+/* ========== Toggle Switch ========== */
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  cursor: pointer;
+  border-bottom: 1px solid #21262d;
+}
+
+.toggle-row:last-child {
+  border-bottom: none;
+}
+
+.toggle-label {
+  font-size: 14px;
+  color: #e6edf3;
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background-color: #363b42;
+  border-radius: 11px;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background-color: #e6edf3;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.toggle-input:checked + .toggle-switch {
+  background-color: #238636;
+}
+
+.toggle-input:checked + .toggle-switch::after {
+  transform: translateX(18px);
+}
+
+/* ========== Save Status ========== */
+
+.save-status {
+  padding: 10px 16px;
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* ========== Footer ========== */
+
+.footer {
+  text-align: center;
+  font-size: 12px;
+  color: #8b949e;
+  padding-top: 16px;
+  border-top: 1px solid #21262d;
+}

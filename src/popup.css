@@ -54,6 +54,52 @@ body {
   color: #8b949e;
 }
 
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  line-height: 1;
+  transition: background-color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background-color: #21262d;
+}
+
+/* ========== Paused Banner ========== */
+
+.paused-banner {
+  padding: 8px 16px;
+  background-color: rgba(234, 179, 8, 0.1);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.2);
+  color: #eab308;
+  font-size: 12px;
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #58a6ff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
+.link-btn:hover {
+  color: #79c0ff;
+}
+
 /* ========== Status Card ========== */
 
 .status-card {
@@ -265,12 +311,17 @@ body {
   margin-top: 2px;
 }
 
-/* ========== Rescan Button ========== */
+/* ========== Action Buttons ========== */
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  margin: 12px 0;
+}
 
 .rescan-btn {
-  display: block;
-  width: calc(100% - 32px);
-  margin: 12px 16px;
+  flex: 1;
   padding: 8px 16px;
   background-color: #21262d;
   color: #e6edf3;
@@ -293,6 +344,30 @@ body {
 .rescan-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.export-btn {
+  padding: 8px 16px;
+  background-color: #161b22;
+  color: #8b949e;
+  border: 1px solid #363b42;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.export-btn:hover {
+  background-color: #21262d;
+  color: #e6edf3;
+}
+
+.export-btn.copied {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }
 
 /* ========== Footer ========== */
