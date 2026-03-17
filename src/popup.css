@@ -279,6 +279,18 @@ body {
   color: #8b949e;
 }
 
+.threat-confidence {
+  display: inline-block;
+  margin-top: 4px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  background-color: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  border-radius: 3px;
+  font-size: 10px;
+  color: #58a6ff;
+}
+
 /* ========== Stats Bar ========== */
 
 .stats-bar {

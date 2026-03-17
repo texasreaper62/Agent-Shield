@@ -47,7 +47,10 @@
     data_exfiltration: 'Data Exfiltration',
     fake_ai_interface: 'Fake AI Interface',
     social_engineering: 'Social Engineering',
-    instruction_override: 'Instruction Override'
+    instruction_override: 'Instruction Override',
+    clipboard_hijack: 'Clipboard Hijack',
+    malicious_plugin: 'Suspicious Plugin',
+    ai_phishing: 'AI Phishing'
   };
 
   // =========================================================================
@@ -115,6 +118,10 @@
 
       const categoryName = CATEGORY_NAMES[threat.category] || threat.category;
 
+      const confidenceHtml = threat.confidenceLabel
+        ? `<br><span class="threat-confidence">${escapeHtml(threat.confidenceLabel)}</span>`
+        : '';
+
       item.innerHTML = `
         <div class="threat-header">
           <span class="threat-chevron">&#x25B6;</span>
@@ -124,7 +131,7 @@
         <div class="threat-detail">
           ${escapeHtml(threat.detail)}
           <br>
-          <span class="threat-category">${escapeHtml(categoryName)}</span>
+          <span class="threat-category">${escapeHtml(categoryName)}</span>${confidenceHtml}
         </div>
       `;
 
@@ -267,6 +274,9 @@
         lines.push(`${i + 1}. [${threat.severity.toUpperCase()}] ${categoryName}`);
         lines.push(`   ${threat.description}`);
         lines.push(`   Detail: ${threat.detail}`);
+        if (threat.confidenceLabel) {
+          lines.push(`   Confidence: ${threat.confidenceLabel}`);
+        }
       }
     }
 

@@ -273,7 +273,7 @@
       }
     });
 
-    observer.observe(document.documentElement, {
+    mutationObserver.observe(document.documentElement, {
       childList: true,
       subtree: true
     });
