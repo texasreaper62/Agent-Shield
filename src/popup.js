@@ -459,6 +459,12 @@
   pauseBtn.addEventListener('click', togglePause);
   resumeLink.addEventListener('click', togglePause);
 
+  // History button
+  const historyBtn = document.getElementById('history-btn');
+  historyBtn.addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/history.html') });
+  });
+
   // Settings button
   settingsBtn.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();

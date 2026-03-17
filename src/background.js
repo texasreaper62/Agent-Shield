@@ -139,6 +139,81 @@ const updateStats = async (result) => {
 };
 
 // =========================================================================
+// SCAN HISTORY
+// =========================================================================
+
+/** Maximum history entries to keep. */
+const MAX_HISTORY_ENTRIES = 500;
+
+/**
+ * Saves a scan result to the history log.
+ * Only stores one entry per URL per day to avoid bloat.
+ * @param {object} result - Scan result from the detector.
+ */
+const saveToHistory = async (result) => {
+  try {
+    const data = await chrome.storage.local.get('scanHistory');
+    const history = data.scanHistory || [];
+
+    // Deduplicate: skip if same URL scanned in the last hour
+    const oneHourAgo = Date.now() - 3600000;
+    const recentDupe = history.find(h =>
+      h.url === result.url && h.timestamp > oneHourAgo
+    );
+    if (recentDupe) {
+      // Update the existing entry instead
+      recentDupe.status = result.status;
+      recentDupe.stats = result.stats;
+      recentDupe.threats = result.threats;
+      recentDupe.timestamp = result.timestamp;
+      await chrome.storage.local.set({ scanHistory: history });
+      return;
+    }
+
+    // Add new entry (most recent first)
+    history.unshift({
+      url: result.url,
+      hostname: result.hostname,
+      status: result.status,
+      stats: result.stats,
+      threats: result.threats,
+      timestamp: result.timestamp
+    });
+
+    // Trim to max size
+    if (history.length > MAX_HISTORY_ENTRIES) {
+      history.length = MAX_HISTORY_ENTRIES;
+    }
+
+    await chrome.storage.local.set({ scanHistory: history });
+  } catch (e) {
+    console.warn('[AI Shield] Could not save to history:', e.message);
+  }
+};
+
+/**
+ * Runs auto-cleanup of history entries older than the configured retention period.
+ */
+const runAutoCleanup = async () => {
+  try {
+    const data = await chrome.storage.local.get(['settings', 'scanHistory']);
+    const settings = data.settings || {};
+    const history = data.scanHistory || [];
+    const retentionDays = settings.historyRetention || 90;
+
+    const cutoff = Date.now() - (retentionDays * 86400000);
+    const filtered = history.filter(h => h.timestamp > cutoff);
+
+    if (filtered.length < history.length) {
+      await chrome.storage.local.set({ scanHistory: filtered });
+      console.log(`[AI Shield] Auto-cleanup: removed ${history.length - filtered.length} old history entries.`);
+    }
+  } catch (e) {
+    console.warn('[AI Shield] Auto-cleanup failed:', e.message);
+  }
+};
+
+// =========================================================================
 // MESSAGE HANDLING
 // =========================================================================
 
@@ -166,6 +241,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Browser notification for critical threats
     showCriticalNotification(tabId, result);
 
+    // Save to history
+    saveToHistory(result);
+
     sendResponse({ received: true });
     return true;
   }
@@ -187,6 +265,50 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           totalThreatsFound: data.totalThreatsFound || 0
         });
       }
+    });
+    return true;
+  }
+
+  if (message.type === 'GET_HISTORY') {
+    chrome.storage.local.get('scanHistory', (data) => {
+      if (chrome.runtime.lastError) {
+        sendResponse([]);
+      } else {
+        sendResponse(data.scanHistory || []);
+      }
+    });
+    return true;
+  }
+
+  if (message.type === 'CLEAR_HISTORY') {
+    chrome.storage.local.set({ scanHistory: [] }, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  if (message.type === 'DELETE_HISTORY_ENTRY') {
+    chrome.storage.local.get('scanHistory', (data) => {
+      const history = data.scanHistory || [];
+      const filtered = history.filter(h => h.timestamp !== message.timestamp);
+      chrome.storage.local.set({ scanHistory: filtered }, () => {
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'EXPORT_SETTINGS') {
+    chrome.storage.local.get('settings', (data) => {
+      sendResponse(data.settings || {});
+    });
+    return true;
+  }
+
+  if (message.type === 'IMPORT_SETTINGS') {
+    const imported = message.settings;
+    chrome.storage.local.set({ settings: imported }, () => {
+      sendResponse({ success: true });
     });
     return true;
   }
@@ -231,3 +353,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 // =========================================================================
 
 console.log('[AI Shield] Background service worker started.');
+
+// Run auto-cleanup on startup
+runAutoCleanup();

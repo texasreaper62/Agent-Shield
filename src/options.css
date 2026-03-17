@@ -320,6 +320,59 @@ body {
   transform: translateX(18px);
 }
 
+/* ========== Select Input ========== */
+
+.select-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #21262d;
+}
+
+.select-row:last-child {
+  border-bottom: none;
+}
+
+.select-label {
+  font-size: 14px;
+  color: #e6edf3;
+}
+
+.select-input {
+  padding: 6px 12px;
+  background-color: #161b22;
+  border: 1px solid #363b42;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.select-input:focus {
+  border-color: #58a6ff;
+}
+
+/* ========== Button Row ========== */
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  background-color: #21262d;
+  color: #e6edf3;
+  border-color: #363b42;
+}
+
+.btn-secondary:hover {
+  background-color: #30363d;
+}
+
 /* ========== Save Status ========== */
 
 .save-status {

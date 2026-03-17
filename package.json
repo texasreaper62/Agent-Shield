@@ -1,6 +1,6 @@
 {
   "name": "ai-shield",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Chrome extension that protects everyday people from AI-specific threats while browsing the web.",
   "private": true,
   "scripts": {

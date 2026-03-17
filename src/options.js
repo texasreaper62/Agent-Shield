@@ -17,6 +17,8 @@
     showBanner: true,
     showBadge: true,
     notifications: true,
+    theme: 'dark',
+    historyRetention: 90,
     enabled: true
   };
 
@@ -33,6 +35,12 @@
   const showBannerToggle = document.getElementById('show-banner');
   const showBadgeToggle = document.getElementById('show-badge');
   const showNotificationsToggle = document.getElementById('show-notifications');
+  const themeSelect = document.getElementById('theme-select');
+  const historyRetentionSelect = document.getElementById('history-retention');
+  const exportSettingsBtn = document.getElementById('export-settings-btn');
+  const importSettingsBtn = document.getElementById('import-settings-btn');
+  const importFileInput = document.getElementById('import-file');
+  const importError = document.getElementById('import-error');
   const saveStatus = document.getElementById('save-status');
 
   // =========================================================================
@@ -54,6 +62,8 @@
       showBannerToggle.checked = settings.showBanner;
       showBadgeToggle.checked = settings.showBadge;
       showNotificationsToggle.checked = settings.notifications !== false;
+      themeSelect.value = settings.theme || 'dark';
+      historyRetentionSelect.value = String(settings.historyRetention || 90);
 
       // Render allowlist
       renderAllowlist(settings.allowlist);
@@ -72,6 +82,8 @@
       settings.showBanner = showBannerToggle.checked;
       settings.showBadge = showBadgeToggle.checked;
       settings.notifications = showNotificationsToggle.checked;
+      settings.theme = themeSelect.value;
+      settings.historyRetention = parseInt(historyRetentionSelect.value, 10);
 
       chrome.storage.local.set({ settings }, () => {
         showSaveConfirmation();
@@ -255,6 +267,55 @@
   showBannerToggle.addEventListener('change', saveSettings);
   showBadgeToggle.addEventListener('change', saveSettings);
   showNotificationsToggle.addEventListener('change', saveSettings);
+  themeSelect.addEventListener('change', saveSettings);
+  historyRetentionSelect.addEventListener('change', saveSettings);
+
+  // Export settings
+  exportSettingsBtn.addEventListener('click', () => {
+    chrome.storage.local.get('settings', (data) => {
+      const settings = Object.assign({}, DEFAULTS, data.settings || {});
+      const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai-shield-settings-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      exportSettingsBtn.textContent = 'Exported!';
+      setTimeout(() => { exportSettingsBtn.textContent = 'Export Settings'; }, 2000);
+    });
+  });
+
+  // Import settings
+  importSettingsBtn.addEventListener('click', () => importFileInput.click());
+  importFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        // Validate it has at least one expected field
+        if (typeof imported !== 'object' || imported === null) {
+          throw new Error('Invalid format');
+        }
+        // Merge with defaults to ensure all fields exist
+        const merged = Object.assign({}, DEFAULTS, imported);
+        chrome.storage.local.set({ settings: merged }, () => {
+          importError.style.display = 'none';
+          loadSettings();
+          showSaveConfirmation();
+          chrome.runtime.sendMessage({ type: 'SETTINGS_CHANGED', settings: merged });
+        });
+      } catch (err) {
+        importError.textContent = 'Invalid settings file. Please select a valid AI Shield settings JSON file.';
+        importError.style.display = 'block';
+      }
+      importFileInput.value = '';
+    };
+    reader.readAsText(file);
+  });
 
   // Allowlist add
   allowlistAddBtn.addEventListener('click', addToAllowlist);

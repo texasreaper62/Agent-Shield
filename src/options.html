@@ -14,7 +14,7 @@
         <span class="header-icon">&#x1F6E1;&#xFE0F;</span>
         <div>
           <h1 class="header-title">AI Shield Settings</h1>
-          <span class="header-version">v0.3.0</span>
+          <span class="header-version">v0.4.0</span>
         </div>
       </div>
     </header>
@@ -88,6 +88,49 @@
         <input type="checkbox" id="show-notifications" checked class="toggle-input">
         <span class="toggle-switch"></span>
       </label>
+    </section>
+
+    <!-- Appearance Section -->
+    <section class="section">
+      <h2 class="section-title">Appearance</h2>
+
+      <div class="select-row">
+        <span class="select-label">Theme</span>
+        <select id="theme-select" class="select-input">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- History Section -->
+    <section class="section">
+      <h2 class="section-title">History</h2>
+      <p class="section-description">AI Shield keeps a local log of your scan results. Choose how long to keep them.</p>
+
+      <div class="select-row">
+        <span class="select-label">Keep history for</span>
+        <select id="history-retention" class="select-input">
+          <option value="30">30 days</option>
+          <option value="60">60 days</option>
+          <option value="90" selected>90 days</option>
+          <option value="365">1 year</option>
+          <option value="0">Forever</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Import/Export Section -->
+    <section class="section">
+      <h2 class="section-title">Backup &amp; Restore</h2>
+      <p class="section-description">Export your settings to a file, or import settings from a backup.</p>
+
+      <div class="button-row">
+        <button id="export-settings-btn" class="btn btn-primary">Export Settings</button>
+        <button id="import-settings-btn" class="btn btn-secondary">Import Settings</button>
+        <input type="file" id="import-file" accept=".json" style="display:none;">
+      </div>
+      <div id="import-error" class="error-text" style="display:none;"></div>
     </section>
 
     <!-- Save Status -->
