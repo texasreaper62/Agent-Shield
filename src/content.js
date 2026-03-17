@@ -211,6 +211,7 @@
   const debouncedScan = () => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
+      pendingBatches = 0;
       console.log('[AI Shield] Re-scanning after DOM change...');
       runScan();
     }, DEBOUNCE_MS);
@@ -249,26 +250,43 @@
 
   /**
    * Observe DOM changes and trigger re-scans for dynamically loaded content.
+   * Tracks the size of mutations to avoid rescanning for trivial changes.
    */
   let mutationObserver = null;
 
+  /** Minimum number of added element nodes to trigger a rescan. */
+  const MIN_MUTATION_NODES = 1;
+
+  /** Maximum number of mutation batches to accumulate before forcing a rescan. */
+  const MAX_PENDING_BATCHES = 10;
+
+  let pendingBatches = 0;
+
   const setupMutationObserver = () => {
     mutationObserver = new MutationObserver((mutations) => {
-      // Only re-scan if meaningful content was added
-      let hasNewContent = false;
+      // Count meaningful added elements (skip our own banner)
+      let addedElementCount = 0;
       for (const mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        if (mutation.type === 'childList') {
           for (const node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE && node.id !== BANNER_ID) {
-              hasNewContent = true;
-              break;
+              addedElementCount++;
             }
           }
         }
-        if (hasNewContent) break;
       }
 
-      if (hasNewContent) {
+      if (addedElementCount < MIN_MUTATION_NODES) return;
+
+      pendingBatches++;
+
+      // Force immediate scan if too many batches have accumulated
+      if (pendingBatches >= MAX_PENDING_BATCHES) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        pendingBatches = 0;
+        console.log('[AI Shield] Re-scanning after significant DOM changes...');
+        runScan();
+      } else {
         debouncedScan();
       }
     });

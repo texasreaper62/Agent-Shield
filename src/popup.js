@@ -150,7 +150,17 @@
    * @param {object} result - Scan result from the detector.
    */
   const updateStats = (result) => {
-    statScanTime.textContent = result.stats.scanTimeMs + 'ms';
+    const timeText = result.stats.scanTimeMs + 'ms';
+    statScanTime.textContent = timeText;
+
+    // Show warning if scan was truncated due to time budget
+    if (result.stats.budgetExceeded) {
+      statScanTime.title = 'Scan was truncated because this page is very large. Results may be incomplete.';
+      statScanTime.style.color = '#f59e0b';
+    } else {
+      statScanTime.title = '';
+      statScanTime.style.color = '';
+    }
 
     // Fetch cumulative stats from background
     chrome.runtime.sendMessage({ type: 'GET_STATS' }, (response) => {

@@ -12,6 +12,28 @@
 const AIShieldDetector = (() => {
 
   // =========================================================================
+  // PERFORMANCE LIMITS
+  // =========================================================================
+
+  /** Maximum number of DOM elements to inspect in hidden text scan. */
+  const MAX_HIDDEN_TEXT_ELEMENTS = 5000;
+
+  /** Maximum number of elements to inspect in metadata scan. */
+  const MAX_METADATA_ELEMENTS = 2000;
+
+  /** Maximum scan time budget in ms. Modules bail early if exceeded. */
+  const SCAN_TIME_BUDGET_MS = 200;
+
+  /** Shared scan start time — set at beginning of scan(). */
+  let _scanStartTime = 0;
+
+  /**
+   * Returns true if the scan time budget has been exceeded.
+   * @returns {boolean}
+   */
+  const isOverBudget = () => (performance.now() - _scanStartTime) > SCAN_TIME_BUDGET_MS;
+
+  // =========================================================================
   // PATTERN DEFINITIONS
   // =========================================================================
 
@@ -1076,9 +1098,13 @@ const AIShieldDetector = (() => {
     );
 
     let node;
+    let elementCount = 0;
     const checkedTexts = new Set();
 
     while ((node = walker.nextNode())) {
+      // Performance guard: bail if element limit or time budget exceeded
+      if (++elementCount > MAX_HIDDEN_TEXT_ELEMENTS || isOverBudget()) break;
+
       if (!isElementHidden(node)) continue;
 
       const text = node.innerText || node.textContent || '';
@@ -1140,7 +1166,10 @@ const AIShieldDetector = (() => {
     );
 
     let node;
+    let commentCount = 0;
     while ((node = walker.nextNode())) {
+      if (++commentCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
+
       const text = node.textContent || '';
       if (text.trim().length < 10) continue;
 
@@ -1163,16 +1192,22 @@ const AIShieldDetector = (() => {
 
     // Scan meta tags
     const metaTags = document.querySelectorAll('meta[content]');
+    let metaCount = 0;
     for (const meta of metaTags) {
+      if (++metaCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
       const content = meta.getAttribute('content') || '';
       if (content.length < 10) continue;
       const metaThreats = scanTextForPatterns(content, `<meta> tag (name="${meta.getAttribute('name') || meta.getAttribute('property') || 'unknown'}")`);
       threats.push(...metaThreats);
     }
 
+    if (isOverBudget()) return threats;
+
     // Scan data attributes and aria labels (sample — full scan too expensive)
     const elements = document.querySelectorAll('[data-instructions], [data-prompt], [data-system], [data-ai], [aria-label]');
+    let attrCount = 0;
     for (const el of elements) {
+      if (++attrCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
       for (const attr of el.attributes) {
         if (!attr.name.startsWith('data-') && attr.name !== 'aria-label') continue;
         const val = attr.value || '';
@@ -1182,9 +1217,13 @@ const AIShieldDetector = (() => {
       }
     }
 
+    if (isOverBudget()) return threats;
+
     // Scan hidden form fields
     const hiddenInputs = document.querySelectorAll('input[type="hidden"]');
+    let inputCount = 0;
     for (const input of hiddenInputs) {
+      if (++inputCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
       const val = input.value || '';
       if (val.length < 10) continue;
       const inputThreats = scanTextForPatterns(val, 'hidden form field');
@@ -1467,6 +1506,7 @@ const AIShieldDetector = (() => {
   const scan = (options) => {
     const sensitivity = (options && options.sensitivity) || 'medium';
     const startTime = performance.now();
+    _scanStartTime = startTime;
     const url = window.location.href;
     const hostname = window.location.hostname;
 
@@ -1499,13 +1539,15 @@ const AIShieldDetector = (() => {
     allThreats.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
     // Calculate stats
+    const scanTimeMs = Math.round(performance.now() - startTime);
     const stats = {
       totalThreats: allThreats.length,
       critical: allThreats.filter(t => t.severity === 'critical').length,
       high: allThreats.filter(t => t.severity === 'high').length,
       medium: allThreats.filter(t => t.severity === 'medium').length,
       low: allThreats.filter(t => t.severity === 'low').length,
-      scanTimeMs: Math.round(performance.now() - startTime)
+      scanTimeMs,
+      budgetExceeded: scanTimeMs > SCAN_TIME_BUDGET_MS
     };
 
     // Determine overall status
