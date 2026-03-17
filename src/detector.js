@@ -499,6 +499,54 @@ const AIShieldDetector = (() => {
       category: 'ai_phishing',
       description: 'This page claims early access to an AI product — verify on the official site before clicking anything.',
       detail: 'Potential AI vaporware scam: claiming early access to unannounced AI products.'
+    },
+
+    // --- Deepfake / AI-Generated Media Warnings ---
+    {
+      regex: /(?:deepfake|deep\s*fake)\s+(?:video|image|photo|audio|voice|generator|creator|maker|tool|service)/i,
+      severity: 'medium',
+      category: 'ai_phishing',
+      description: 'This page references deepfake creation tools — content from such tools can be used to impersonate real people.',
+      detail: 'Deepfake media tool reference detected. May facilitate identity fraud or misinformation.'
+    },
+    {
+      regex: /(?:clone|cloning)\s+(?:your|any|someone'?s?)\s+(?:voice|face|likeness|identity)/i,
+      severity: 'high',
+      category: 'ai_phishing',
+      description: 'This page promotes cloning someone\'s voice or face — this technology is commonly used in scams.',
+      detail: 'AI voice/face cloning promotion detected. Common in impersonation scams.'
+    },
+
+    // --- AI Voice Scam Detection ---
+    {
+      regex: /(?:verify|confirm)\s+(?:your\s+)?(?:identity|account)\s+(?:by|using|with)\s+(?:voice|speaking|recording)/i,
+      severity: 'high',
+      category: 'ai_phishing',
+      description: 'This page asks you to verify your identity by voice — scammers use this to clone your voice with AI.',
+      detail: 'Voice identity verification scam: collected voice data can be used for AI voice cloning.'
+    },
+    {
+      regex: /(?:record|say|speak|read)\s+(?:the\s+following|this\s+(?:phrase|sentence|text))\s+(?:to|for)\s+(?:verify|confirm|authenticate)/i,
+      severity: 'high',
+      category: 'ai_phishing',
+      description: 'This page asks you to record a phrase — this is a common AI voice cloning scam technique.',
+      detail: 'Voice sample harvesting: users asked to speak phrases that can train voice cloning models.'
+    },
+
+    // --- Indirect Prompt Injection via Images ---
+    {
+      regex: /(?:alt|title)\s*=\s*["'][^"']*(?:ignore|override|system|admin|forget|you\s+are\s+now)[^"']*["']/i,
+      severity: 'critical',
+      category: 'prompt_injection',
+      description: 'An image on this page has hidden AI instructions in its description — this targets multimodal AI assistants.',
+      detail: 'Indirect prompt injection via image alt/title attribute. Text-in-image targeting multimodal AI.'
+    },
+    {
+      regex: /(?:OCR|read\s+(?:the\s+)?text\s+(?:in|from)\s+(?:this|the)\s+image|extract\s+text\s+from\s+(?:this|the)\s+image)/i,
+      severity: 'medium',
+      category: 'prompt_injection',
+      description: 'This page instructs AI to read text from an image — this could be used to deliver hidden attack payloads.',
+      detail: 'OCR-based prompt injection vector: page instructs AI to extract and process text from images.'
     }
   ];
 
@@ -1412,6 +1460,57 @@ const AIShieldDetector = (() => {
   };
 
   // =========================================================================
+  // SAFETY SCORE
+  // =========================================================================
+
+  /**
+   * Action guidance map — plain-language advice for each threat category.
+   */
+  const ACTION_GUIDANCE = {
+    prompt_injection: 'Do not copy text from this page into any AI assistant.',
+    hidden_text: 'Avoid pasting content from this page into AI tools — hidden instructions may be included.',
+    role_hijack: 'Do not copy text from this page into any AI assistant. It tries to change how AI behaves.',
+    data_exfiltration: 'Do not enter personal information on this page. It may try to steal your data through AI.',
+    fake_ai_interface: 'This is not a real AI service. Do not enter any login credentials or personal info.',
+    social_engineering: 'Be cautious — this page tries to manipulate AI into hiding its true nature.',
+    instruction_override: 'Do not paste content from this page into AI tools.',
+    clipboard_hijack: 'Be careful when copying from this page — it may modify what gets copied.',
+    malicious_plugin: 'Do not install any plugins or enter API keys prompted by this page.',
+    ai_phishing: 'Do not enter your password or API key. Visit the official site directly instead.'
+  };
+
+  /**
+   * Calculates a 0-100 safety score for the page based on detected threats.
+   * Higher = safer. 100 = no threats, 0 = critical exploitation.
+   * @param {object} stats - Threat stats object.
+   * @returns {number} Safety score 0-100.
+   */
+  const calculateSafetyScore = (stats) => {
+    if (stats.totalThreats === 0) return 100;
+
+    let score = 100;
+    score -= stats.critical * 30;
+    score -= stats.high * 15;
+    score -= stats.medium * 8;
+    score -= stats.low * 3;
+
+    return Math.max(0, Math.min(100, score));
+  };
+
+  /**
+   * Returns a plain-language label for a safety score.
+   * @param {number} score - Safety score 0-100.
+   * @returns {string}
+   */
+  const safetyScoreLabel = (score) => {
+    if (score >= 90) return 'Very Safe';
+    if (score >= 70) return 'Mostly Safe';
+    if (score >= 50) return 'Use Caution';
+    if (score >= 25) return 'Risky';
+    return 'Dangerous';
+  };
+
+  // =========================================================================
   // MAIN SCAN FUNCTION
   // =========================================================================
 
@@ -1573,6 +1672,11 @@ const AIShieldDetector = (() => {
       status = 'caution';
     }
 
+    // Calculate safety score
+    const safetyScore = calculateSafetyScore(stats);
+    stats.safetyScore = safetyScore;
+    stats.safetyLabel = safetyScoreLabel(safetyScore);
+
     // Strip DOM element references for serialization (can't send through messaging)
     const serializableThreats = allThreats.map(t => ({
       severity: t.severity,
@@ -1580,7 +1684,8 @@ const AIShieldDetector = (() => {
       description: t.description,
       detail: t.detail,
       confidence: t.confidence || null,
-      confidenceLabel: t.confidenceLabel || null
+      confidenceLabel: t.confidenceLabel || null,
+      action: ACTION_GUIDANCE[t.category] || 'Exercise caution on this page.'
     }));
 
     const result = {

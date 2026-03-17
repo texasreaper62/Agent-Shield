@@ -61,6 +61,9 @@
   const statusIcon = document.getElementById('status-icon');
   const statusTitle = document.getElementById('status-title');
   const statusDescription = document.getElementById('status-description');
+  const safetyScoreEl = document.getElementById('safety-score');
+  const safetyScoreFill = document.getElementById('safety-score-fill');
+  const safetyScoreText = document.getElementById('safety-score-text');
   const threatList = document.getElementById('threat-list');
   const threatsContainer = document.getElementById('threats-container');
   const statScanTime = document.getElementById('stat-scan-time');
@@ -95,6 +98,22 @@
     statusIcon.textContent = config.icon;
     statusTitle.textContent = config.title;
     statusDescription.textContent = config.description;
+
+    // Show safety score
+    if (result.stats && result.stats.safetyScore !== undefined) {
+      const score = result.stats.safetyScore;
+      safetyScoreEl.style.display = 'flex';
+      safetyScoreFill.style.width = score + '%';
+      safetyScoreText.textContent = `${score}/100 — ${result.stats.safetyLabel}`;
+
+      // Color the bar based on score
+      if (score >= 90) safetyScoreFill.style.backgroundColor = '#22c55e';
+      else if (score >= 70) safetyScoreFill.style.backgroundColor = '#eab308';
+      else if (score >= 50) safetyScoreFill.style.backgroundColor = '#f97316';
+      else safetyScoreFill.style.backgroundColor = '#ef4444';
+    } else {
+      safetyScoreEl.style.display = 'none';
+    }
   };
 
   /**
@@ -122,6 +141,10 @@
         ? `<br><span class="threat-confidence">${escapeHtml(threat.confidenceLabel)}</span>`
         : '';
 
+      const actionHtml = threat.action
+        ? `<span class="threat-action">${escapeHtml(threat.action)}</span>`
+        : '';
+
       item.innerHTML = `
         <div class="threat-header">
           <span class="threat-chevron">&#x25B6;</span>
@@ -132,6 +155,7 @@
           ${escapeHtml(threat.detail)}
           <br>
           <span class="threat-category">${escapeHtml(categoryName)}</span>${confidenceHtml}
+          ${actionHtml}
         </div>
       `;
 

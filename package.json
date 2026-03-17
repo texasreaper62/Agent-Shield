@@ -1,0 +1,17 @@
+{
+  "name": "ai-shield",
+  "version": "0.3.0",
+  "description": "Chrome extension that protects everyday people from AI-specific threats while browsing the web.",
+  "private": true,
+  "scripts": {
+    "test": "node test/detector.test.js",
+    "lint": "node test/lint.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai-safety",
+    "prompt-injection",
+    "security"
+  ],
+  "license": "MIT"
+}

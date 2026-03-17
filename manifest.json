@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "AI Shield",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Protects you from AI threats while browsing. Detects hidden manipulation, prompt injection, and scams — all locally.",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "notifications"
   ],
   "action": {
     "default_popup": "src/popup.html",

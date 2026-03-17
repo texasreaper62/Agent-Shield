@@ -16,6 +16,7 @@
     allowlist: [],
     showBanner: true,
     showBadge: true,
+    notifications: true,
     enabled: true
   };
 
@@ -31,6 +32,7 @@
   const allowlistEmpty = document.getElementById('allowlist-empty');
   const showBannerToggle = document.getElementById('show-banner');
   const showBadgeToggle = document.getElementById('show-badge');
+  const showNotificationsToggle = document.getElementById('show-notifications');
   const saveStatus = document.getElementById('save-status');
 
   // =========================================================================
@@ -51,6 +53,7 @@
       // Set toggles
       showBannerToggle.checked = settings.showBanner;
       showBadgeToggle.checked = settings.showBadge;
+      showNotificationsToggle.checked = settings.notifications !== false;
 
       // Render allowlist
       renderAllowlist(settings.allowlist);
@@ -68,6 +71,7 @@
       settings.sensitivity = sensitivity;
       settings.showBanner = showBannerToggle.checked;
       settings.showBadge = showBadgeToggle.checked;
+      settings.notifications = showNotificationsToggle.checked;
 
       chrome.storage.local.set({ settings }, () => {
         showSaveConfirmation();
@@ -250,6 +254,7 @@
   // Toggle changes
   showBannerToggle.addEventListener('change', saveSettings);
   showBadgeToggle.addEventListener('change', saveSettings);
+  showNotificationsToggle.addEventListener('change', saveSettings);
 
   // Allowlist add
   allowlistAddBtn.addEventListener('click', addToAllowlist);

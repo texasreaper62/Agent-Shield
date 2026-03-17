@@ -83,6 +83,42 @@ const clearBadge = async (tabId) => {
 };
 
 // =========================================================================
+// BROWSER NOTIFICATIONS
+// =========================================================================
+
+/**
+ * Shows a browser notification for critical threats (if enabled in settings).
+ * @param {number} tabId - The tab ID.
+ * @param {object} result - Scan result from the detector.
+ */
+const showCriticalNotification = async (tabId, result) => {
+  if (result.stats.critical === 0) return;
+
+  try {
+    const data = await chrome.storage.local.get('settings');
+    const settings = data.settings || {};
+    if (settings.notifications === false) return;
+
+    // Avoid repeat notifications for the same tab/URL
+    const notifKey = `notified_${tabId}`;
+    const prev = await chrome.storage.session.get(notifKey);
+    if (prev[notifKey] === result.url) return;
+    await chrome.storage.session.set({ [notifKey]: result.url });
+
+    const notifId = `ai-shield-critical-${tabId}`;
+    await chrome.notifications.create(notifId, {
+      type: 'basic',
+      iconUrl: 'icons/shield-green-128.png',
+      title: 'AI Shield: Danger Detected',
+      message: `${result.stats.critical} critical threat${result.stats.critical > 1 ? 's' : ''} found on this page. Click the AI Shield icon for details.`,
+      priority: 2
+    });
+  } catch (e) {
+    // Notifications API may not be available — fail silently
+  }
+};
+
+// =========================================================================
 // STATISTICS
 // =========================================================================
 
@@ -126,6 +162,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Update cumulative stats
     updateStats(result);
+
+    // Browser notification for critical threats
+    showCriticalNotification(tabId, result);
 
     sendResponse({ received: true });
     return true;
