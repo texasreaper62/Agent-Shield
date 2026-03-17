@@ -27,11 +27,21 @@ const AIShieldDetector = (() => {
   /** Shared scan start time — set at beginning of scan(). */
   let _scanStartTime = 0;
 
+  /** Cached budget exceeded flag — avoids calling performance.now() on every iteration. */
+  let _budgetExceeded = false;
+
   /**
-   * Returns true if the scan time budget has been exceeded.
+   * Checks if the scan time budget has been exceeded.
+   * Uses a counter to amortize performance.now() calls (checked every 100 iterations).
+   * @param {number} counter - Current loop iteration count.
    * @returns {boolean}
    */
-  const isOverBudget = () => (performance.now() - _scanStartTime) > SCAN_TIME_BUDGET_MS;
+  const isOverBudget = (counter) => {
+    if (_budgetExceeded) return true;
+    if (counter % 100 !== 0) return false;
+    _budgetExceeded = (performance.now() - _scanStartTime) > SCAN_TIME_BUDGET_MS;
+    return _budgetExceeded;
+  };
 
   // =========================================================================
   // PATTERN DEFINITIONS
@@ -1103,7 +1113,7 @@ const AIShieldDetector = (() => {
 
     while ((node = walker.nextNode())) {
       // Performance guard: bail if element limit or time budget exceeded
-      if (++elementCount > MAX_HIDDEN_TEXT_ELEMENTS || isOverBudget()) break;
+      if (++elementCount > MAX_HIDDEN_TEXT_ELEMENTS || isOverBudget(elementCount)) break;
 
       if (!isElementHidden(node)) continue;
 
@@ -1168,7 +1178,7 @@ const AIShieldDetector = (() => {
     let node;
     let commentCount = 0;
     while ((node = walker.nextNode())) {
-      if (++commentCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
+      if (++commentCount > MAX_METADATA_ELEMENTS || isOverBudget(commentCount)) break;
 
       const text = node.textContent || '';
       if (text.trim().length < 10) continue;
@@ -1194,20 +1204,20 @@ const AIShieldDetector = (() => {
     const metaTags = document.querySelectorAll('meta[content]');
     let metaCount = 0;
     for (const meta of metaTags) {
-      if (++metaCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
+      if (++metaCount > MAX_METADATA_ELEMENTS || isOverBudget(metaCount)) break;
       const content = meta.getAttribute('content') || '';
       if (content.length < 10) continue;
       const metaThreats = scanTextForPatterns(content, `<meta> tag (name="${meta.getAttribute('name') || meta.getAttribute('property') || 'unknown'}")`);
       threats.push(...metaThreats);
     }
 
-    if (isOverBudget()) return threats;
+    if (isOverBudget(0)) return threats;
 
     // Scan data attributes and aria labels (sample — full scan too expensive)
     const elements = document.querySelectorAll('[data-instructions], [data-prompt], [data-system], [data-ai], [aria-label]');
     let attrCount = 0;
     for (const el of elements) {
-      if (++attrCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
+      if (++attrCount > MAX_METADATA_ELEMENTS || isOverBudget(attrCount)) break;
       for (const attr of el.attributes) {
         if (!attr.name.startsWith('data-') && attr.name !== 'aria-label') continue;
         const val = attr.value || '';
@@ -1217,13 +1227,13 @@ const AIShieldDetector = (() => {
       }
     }
 
-    if (isOverBudget()) return threats;
+    if (isOverBudget(0)) return threats;
 
     // Scan hidden form fields
     const hiddenInputs = document.querySelectorAll('input[type="hidden"]');
     let inputCount = 0;
     for (const input of hiddenInputs) {
-      if (++inputCount > MAX_METADATA_ELEMENTS || isOverBudget()) break;
+      if (++inputCount > MAX_METADATA_ELEMENTS || isOverBudget(inputCount)) break;
       const val = input.value || '';
       if (val.length < 10) continue;
       const inputThreats = scanTextForPatterns(val, 'hidden form field');
@@ -1507,6 +1517,7 @@ const AIShieldDetector = (() => {
     const sensitivity = (options && options.sensitivity) || 'medium';
     const startTime = performance.now();
     _scanStartTime = startTime;
+    _budgetExceeded = false;
     const url = window.location.href;
     const hostname = window.location.hostname;
 
@@ -1538,17 +1549,17 @@ const AIShieldDetector = (() => {
     const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     allThreats.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
-    // Calculate stats
+    // Calculate stats (single pass)
     const scanTimeMs = Math.round(performance.now() - startTime);
     const stats = {
       totalThreats: allThreats.length,
-      critical: allThreats.filter(t => t.severity === 'critical').length,
-      high: allThreats.filter(t => t.severity === 'high').length,
-      medium: allThreats.filter(t => t.severity === 'medium').length,
-      low: allThreats.filter(t => t.severity === 'low').length,
+      critical: 0, high: 0, medium: 0, low: 0,
       scanTimeMs,
       budgetExceeded: scanTimeMs > SCAN_TIME_BUDGET_MS
     };
+    for (const t of allThreats) {
+      stats[t.severity]++;
+    }
 
     // Determine overall status
     let status = 'safe';

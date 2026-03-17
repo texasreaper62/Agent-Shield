@@ -157,7 +157,7 @@
     if (result.stats.budgetExceeded) {
       statScanTime.title = 'Scan was truncated because this page is very large. Results may be incomplete.';
       statScanTime.style.color = '#f59e0b';
-    } else {
+    } else if (statScanTime.style.color) {
       statScanTime.title = '';
       statScanTime.style.color = '';
     }

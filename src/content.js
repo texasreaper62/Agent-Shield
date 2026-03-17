@@ -254,9 +254,6 @@
    */
   let mutationObserver = null;
 
-  /** Minimum number of added element nodes to trigger a rescan. */
-  const MIN_MUTATION_NODES = 1;
-
   /** Maximum number of mutation batches to accumulate before forcing a rescan. */
   const MAX_PENDING_BATCHES = 10;
 
@@ -264,19 +261,21 @@
 
   const setupMutationObserver = () => {
     mutationObserver = new MutationObserver((mutations) => {
-      // Count meaningful added elements (skip our own banner)
-      let addedElementCount = 0;
+      // Check if meaningful content was added (skip our own banner)
+      let hasNewContent = false;
       for (const mutation of mutations) {
         if (mutation.type === 'childList') {
           for (const node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE && node.id !== BANNER_ID) {
-              addedElementCount++;
+              hasNewContent = true;
+              break;
             }
           }
         }
+        if (hasNewContent) break;
       }
 
-      if (addedElementCount < MIN_MUTATION_NODES) return;
+      if (!hasNewContent) return;
 
       pendingBatches++;
 
