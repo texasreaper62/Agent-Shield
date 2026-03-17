@@ -693,14 +693,12 @@ const AIShieldDetector = (() => {
   };
 
   /**
-   * Checks if text contains zero-width characters that could split keywords.
-   * @param {string} text - Text to check.
+   * Checks if text contains zero-width characters that split injection keywords.
+   * Caller must pre-check HAS_ZERO_WIDTH before calling this function.
+   * @param {string} text - Text to check (known to contain zero-width chars).
    * @returns {boolean} True if suspicious zero-width usage found.
    */
   const hasZeroWidthObfuscation = (text) => {
-    const zeroWidthChars = /[\u200B\u200C\u200D\uFEFF\u00AD]/;
-    if (!zeroWidthChars.test(text)) return false;
-
     // Strip zero-width characters and check if it now matches injection patterns
     const stripped = text.replace(/[\u200B\u200C\u200D\uFEFF\u00AD]/g, '');
     if (stripped === text) return false;
@@ -867,10 +865,6 @@ const AIShieldDetector = (() => {
   };
 
   // =========================================================================
-  // SCANNING FUNCTIONS
-  // =========================================================================
-
-  // =========================================================================
   // CONFIDENCE SCORING
   // =========================================================================
 
@@ -878,11 +872,11 @@ const AIShieldDetector = (() => {
    * Calculates a confidence score (0-100) for a detected threat.
    * Higher scores mean we're more certain the detection is a true positive.
    * @param {object} threat - Threat object.
-   * @param {string} text - Source text where threat was found.
+   * @param {number} patternMatchCount - Number of patterns that matched the source text.
    * @param {string} source - Where the text came from.
    * @returns {number} Confidence score 0-100.
    */
-  const calculateConfidence = (threat, text, source) => {
+  const calculateConfidence = (threat, patternMatchCount, source) => {
     let confidence = 50; // Base confidence
 
     // Hidden content is more likely to be malicious
@@ -892,12 +886,8 @@ const AIShieldDetector = (() => {
     if (source.includes('data-') || source.includes('attribute')) confidence += 10;
 
     // Multiple injection patterns in same text = higher confidence
-    let patternCount = 0;
-    for (const pattern of INJECTION_PATTERNS) {
-      if (pattern.regex.test(text)) patternCount++;
-    }
-    if (patternCount >= 3) confidence += 20;
-    else if (patternCount >= 2) confidence += 10;
+    if (patternMatchCount >= 3) confidence += 20;
+    else if (patternMatchCount >= 2) confidence += 10;
 
     // Severity affects base confidence
     if (threat.severity === 'critical') confidence += 15;
@@ -940,13 +930,24 @@ const AIShieldDetector = (() => {
    * @param {string} source - Where the text came from (for detail messages).
    * @returns {Array} Array of threat objects found.
    */
+  /**
+   * Fast regex pre-checks to avoid expensive obfuscation detection on clean text.
+   */
+  const HAS_NON_ASCII = /[^\x00-\x7F]/;
+  const HAS_ZERO_WIDTH = /[\u200B\u200C\u200D\uFEFF\u00AD]/;
+  const HAS_BASE64_CANDIDATE = /[A-Za-z0-9+/]{20,}={0,2}/;
+  const HAS_ENCODED_ENTITIES = /&#\w+;|%[0-9a-fA-F]{2}/;
+
   const scanTextForPatterns = (text, source) => {
     const threats = [];
 
     if (!text || text.length < 10) return threats;
 
+    // Single pass through all patterns — count matches for confidence scoring
+    let patternMatchCount = 0;
     for (const pattern of INJECTION_PATTERNS) {
       if (pattern.regex.test(text)) {
+        patternMatchCount++;
         const threat = {
           severity: pattern.severity,
           category: pattern.category,
@@ -954,79 +955,89 @@ const AIShieldDetector = (() => {
           detail: `${pattern.detail} Found in ${source}.`,
           element: null
         };
-        threat.confidence = calculateConfidence(threat, text, source);
+        threats.push(threat);
+      }
+    }
+
+    // Calculate confidence for all pattern-matched threats using the count
+    for (const threat of threats) {
+      threat.confidence = calculateConfidence(threat, patternMatchCount, source);
+      threat.confidenceLabel = confidenceLabel(threat.confidence);
+    }
+
+    // Only run expensive obfuscation checks if text contains relevant characters
+    const hasNonAscii = HAS_NON_ASCII.test(text);
+
+    // Check for Unicode homoglyph obfuscation (only if non-ASCII chars present)
+    if (hasNonAscii) {
+      const homoglyphResult = checkHomoglyphObfuscation(text);
+      if (homoglyphResult) {
+        const threat = {
+          severity: 'critical',
+          category: 'prompt_injection',
+          description: 'This page uses look-alike characters to hide attack instructions from detection tools.',
+          detail: `Homoglyph obfuscation detected in ${source}. Characters were replaced with look-alikes to bypass security. Decoded text matches: ${homoglyphResult.matchedPattern.detail}`,
+          element: null
+        };
+        threat.confidence = calculateConfidence(threat, patternMatchCount, source);
+        threat.confidenceLabel = confidenceLabel(threat.confidence);
+        threats.push(threat);
+      }
+
+      // Check for zero-width character obfuscation (subset of non-ASCII)
+      if (HAS_ZERO_WIDTH.test(text) && hasZeroWidthObfuscation(text)) {
+        const threat = {
+          severity: 'critical',
+          category: 'prompt_injection',
+          description: 'This page uses invisible characters to split up attack keywords so they can\'t be detected.',
+          detail: `Zero-width character obfuscation detected in ${source}. Invisible Unicode characters were inserted between letters to evade pattern matching.`,
+          element: null
+        };
+        threat.confidence = calculateConfidence(threat, patternMatchCount, source);
         threat.confidenceLabel = confidenceLabel(threat.confidence);
         threats.push(threat);
       }
     }
 
-    // Check for Unicode homoglyph obfuscation
-    const homoglyphResult = checkHomoglyphObfuscation(text);
-    if (homoglyphResult) {
-      const threat = {
-        severity: 'critical',
-        category: 'prompt_injection',
-        description: 'This page uses look-alike characters to hide attack instructions from detection tools.',
-        detail: `Homoglyph obfuscation detected in ${source}. Characters were replaced with look-alikes to bypass security. Decoded text matches: ${homoglyphResult.matchedPattern.detail}`,
-        element: null
-      };
-      threat.confidence = calculateConfidence(threat, text, source);
-      threat.confidenceLabel = confidenceLabel(threat.confidence);
-      threats.push(threat);
-    }
+    // Check for encoding-based obfuscation
+    const hasBase64 = HAS_BASE64_CANDIDATE.test(text);
+    const hasEntities = HAS_ENCODED_ENTITIES.test(text);
+    let foundNested = false;
 
-    // Check for zero-width character obfuscation
-    if (hasZeroWidthObfuscation(text)) {
-      const threat = {
-        severity: 'critical',
-        category: 'prompt_injection',
-        description: 'This page uses invisible characters to split up attack keywords so they can\'t be detected.',
-        detail: `Zero-width character obfuscation detected in ${source}. Invisible Unicode characters were inserted between letters to evade pattern matching.`,
-        element: null
-      };
-      threat.confidence = calculateConfidence(threat, text, source);
-      threat.confidenceLabel = confidenceLabel(threat.confidence);
-      threats.push(threat);
-    }
-
-    // Check for nested/layered encoding
-    const nestedResult = checkNestedEncoding(text);
-    if (nestedResult) {
-      const threat = {
-        severity: 'critical',
-        category: 'prompt_injection',
-        description: 'This page hides attack instructions inside multiple layers of encoding to avoid detection.',
-        detail: `Multi-layer encoding detected in ${source} (${nestedResult.decodingChain}). Decoded content matches: ${nestedResult.matchedPattern.detail}`,
-        element: null
-      };
-      threat.confidence = calculateConfidence(threat, text, source);
-      threat.confidenceLabel = confidenceLabel(threat.confidence);
-      threats.push(threat);
-    }
-
-    // Check for base64-encoded content
-    const base64Result = checkBase64Content(text);
-    if (base64Result) {
-      if (base64Result.matchedPattern) {
+    // Check for nested/layered encoding (only if encoded content signatures present)
+    if (hasEntities || hasBase64) {
+      const nestedResult = checkNestedEncoding(text);
+      if (nestedResult) {
+        foundNested = true;
         const threat = {
           severity: 'critical',
           category: 'prompt_injection',
-          description: 'This page hides attack instructions inside encoded text.',
-          detail: `Base64-encoded injection found in ${source}. Decoded content matches: ${base64Result.matchedPattern.detail}`,
+          description: 'This page hides attack instructions inside multiple layers of encoding to avoid detection.',
+          detail: `Multi-layer encoding detected in ${source} (${nestedResult.decodingChain}). Decoded content matches: ${nestedResult.matchedPattern.detail}`,
           element: null
         };
-        threat.confidence = calculateConfidence(threat, text, source);
+        threat.confidence = calculateConfidence(threat, patternMatchCount, source);
         threat.confidenceLabel = confidenceLabel(threat.confidence);
         threats.push(threat);
-      } else {
+      }
+    }
+
+    // Check for base64-encoded content (skip if nested encoding already caught it)
+    if (hasBase64 && !foundNested) {
+      const base64Result = checkBase64Content(text);
+      if (base64Result) {
         const threat = {
-          severity: 'low',
+          severity: base64Result.matchedPattern ? 'critical' : 'low',
           category: 'prompt_injection',
-          description: 'This page contains encoded text that could hide instructions.',
-          detail: `Suspicious base64-encoded content found in ${source}. Preview: "${base64Result.decoded.substring(0, 100)}..."`,
+          description: base64Result.matchedPattern
+            ? 'This page hides attack instructions inside encoded text.'
+            : 'This page contains encoded text that could hide instructions.',
+          detail: base64Result.matchedPattern
+            ? `Base64-encoded injection found in ${source}. Decoded content matches: ${base64Result.matchedPattern.detail}`
+            : `Suspicious base64-encoded content found in ${source}. Preview: "${base64Result.decoded.substring(0, 100)}..."`,
           element: null
         };
-        threat.confidence = calculateConfidence(threat, text, source);
+        threat.confidence = calculateConfidence(threat, patternMatchCount, source);
         threat.confidenceLabel = confidenceLabel(threat.confidence);
         threats.push(threat);
       }
@@ -1086,23 +1097,29 @@ const AIShieldDetector = (() => {
       if (patternThreats.length > 0) {
         // Hidden text WITH injection patterns = CRITICAL
         for (const threat of patternThreats) {
-          threats.push({
+          const hiddenThreat = {
             severity: 'critical',
             category: 'hidden_text',
             description: 'Hidden text on this page contains instructions designed to manipulate AI assistants. This is a serious threat.',
             detail: `${threat.detail} The text was hidden using CSS, making it invisible to you but readable by AI assistants.`,
             element: node
-          });
+          };
+          hiddenThreat.confidence = 90;
+          hiddenThreat.confidenceLabel = confidenceLabel(90);
+          threats.push(hiddenThreat);
         }
       } else if (trimmed.length > 100) {
         // Large hidden text without patterns = LOW (informational)
-        threats.push({
+        const infoThreat = {
           severity: 'low',
           category: 'hidden_text',
           description: 'This page has a large block of hidden text. It may be harmless, but hidden text can sometimes contain instructions for AI.',
           detail: `Hidden text block (${trimmed.length} characters) found. Preview: "${trimmed.substring(0, 150)}..."`,
           element: node
-        });
+        };
+        infoThreat.confidence = 25;
+        infoThreat.confidenceLabel = confidenceLabel(25);
+        threats.push(infoThreat);
       }
     }
 
@@ -1216,7 +1233,6 @@ const AIShieldDetector = (() => {
     if (isLegitimateAIDomain(hostname)) return threats;
 
     const pageText = document.body.innerText || '';
-    const pageLower = pageText.toLowerCase();
 
     // Check for fake AI login forms
     const forms = document.querySelectorAll('form');
@@ -1305,13 +1321,16 @@ const AIShieldDetector = (() => {
     }
 
     if (chatElementsFound && brandMentioned) {
-      threats.push({
+      const threat = {
         severity: 'high',
         category: 'fake_ai_interface',
         description: `This page appears to impersonate ${matchedBrand}. This is NOT the real ${matchedBrand} — it could be a scam designed to steal your information.`,
         detail: `Chat-like interface referencing "${matchedBrand}" detected on ${hostname}, which is not an official AI service domain.`,
         element: null
-      });
+      };
+      threat.confidence = 80;
+      threat.confidenceLabel = confidenceLabel(80);
+      threats.push(threat);
     }
 
     return threats;
