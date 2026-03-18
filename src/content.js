@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * AI Shield Content Script
+ * Agent Shield Content Script
  *
  * Runs on every web page. Orchestrates scanning via the detection engine,
  * manages the warning banner, handles messaging with popup and background,
  * and observes DOM mutations for dynamic content.
  */
 (() => {
-  const BANNER_ID = 'ai-shield-warning-banner';
+  const BANNER_ID = 'agent-shield-warning-banner';
   const DEBOUNCE_MS = 2000;
 
   let lastScanResult = null;
@@ -64,8 +64,8 @@
     if (criticalCount > 0) detailParts.push(`${criticalCount} critical`);
     if (highCount > 0) detailParts.push(`${highCount} high severity`);
     const detailText = detailParts.length > 0
-      ? `${threatCount} threat${threatCount !== 1 ? 's' : ''} found (${detailParts.join(', ')}). Click the AI Shield icon for details.`
-      : `${threatCount} threat${threatCount !== 1 ? 's' : ''} found. Click the AI Shield icon for details.`;
+      ? `${threatCount} threat${threatCount !== 1 ? 's' : ''} found (${detailParts.join(', ')}). Click the Agent Shield icon for details.`
+      : `${threatCount} threat${threatCount !== 1 ? 's' : ''} found. Click the Agent Shield icon for details.`;
 
     banner.innerHTML = `
       <div style="display:flex!important;align-items:center!important;justify-content:space-between!important;max-width:1200px!important;margin:0 auto!important;padding:0 16px!important;">
@@ -76,7 +76,7 @@
             <div style="font-size:12px!important;opacity:0.9!important;">${detailText}</div>
           </div>
         </div>
-        <button id="ai-shield-dismiss" style="background:none!important;border:none!important;color:white!important;font-size:20px!important;cursor:pointer!important;padding:4px 8px!important;opacity:0.8!important;line-height:1!important;" aria-label="Dismiss warning">&times;</button>
+        <button id="agent-shield-dismiss" style="background:none!important;border:none!important;color:white!important;font-size:20px!important;cursor:pointer!important;padding:4px 8px!important;opacity:0.8!important;line-height:1!important;" aria-label="Dismiss warning">&times;</button>
       </div>
     `;
 
@@ -112,7 +112,7 @@
     });
 
     // Dismiss button handler
-    const dismissBtn = document.getElementById('ai-shield-dismiss');
+    const dismissBtn = document.getElementById('agent-shield-dismiss');
     if (dismissBtn) {
       dismissBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -145,8 +145,8 @@
    */
   const runScan = () => {
     try {
-      if (typeof AIShieldDetector === 'undefined') {
-        console.error('[AI Shield] Detector not loaded.');
+      if (typeof AgentShieldDetector === 'undefined') {
+        console.error('[Agent Shield] Detector not loaded.');
         return;
       }
 
@@ -156,7 +156,7 @@
 
         // Check if scanning is enabled
         if (settings.enabled === false) {
-          console.log('[AI Shield] Scanning is paused.');
+          console.log('[Agent Shield] Scanning is paused.');
           return;
         }
 
@@ -164,7 +164,7 @@
         const hostname = window.location.hostname.toLowerCase().replace(/^www\./, '');
         const allowlist = settings.allowlist || [];
         if (allowlist.some(domain => hostname === domain || hostname.endsWith('.' + domain))) {
-          console.log(`[AI Shield] ${hostname} is in trusted sites list. Skipping scan.`);
+          console.log(`[Agent Shield] ${hostname} is in trusted sites list. Skipping scan.`);
           lastScanResult = {
             status: 'safe',
             threats: [],
@@ -181,7 +181,7 @@
 
         // Run scan with sensitivity setting
         const sensitivity = settings.sensitivity || 'medium';
-        const result = AIShieldDetector.scan({ sensitivity });
+        const result = AgentShieldDetector.scan({ sensitivity });
         lastScanResult = result;
 
         // Show/hide warning banner (respect showBanner setting)
@@ -198,7 +198,7 @@
             result: result
           });
         } catch (e) {
-          console.warn('[AI Shield] Could not send scan results to background:', e.message);
+          console.warn('[Agent Shield] Could not send scan results to background:', e.message);
         }
 
         // Store in local storage for popup retrieval
@@ -208,12 +208,12 @@
             lastScanResult: result
           });
         } catch (e) {
-          console.warn('[AI Shield] Could not store scan results:', e.message);
+          console.warn('[Agent Shield] Could not store scan results:', e.message);
         }
       });
 
     } catch (e) {
-      console.error('[AI Shield] Scan failed:', e);
+      console.error('[Agent Shield] Scan failed:', e);
     }
   };
 
@@ -224,7 +224,7 @@
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       pendingBatches = 0;
-      console.log('[AI Shield] Re-scanning after DOM change...');
+      console.log('[Agent Shield] Re-scanning after DOM change...');
       runScan();
     }, DEBOUNCE_MS);
   };
@@ -233,7 +233,7 @@
   // SELECTION SCAN OVERLAY
   // =========================================================================
 
-  const OVERLAY_ID = 'ai-shield-selection-overlay';
+  const OVERLAY_ID = 'agent-shield-selection-overlay';
 
   /**
    * Shows a floating overlay with scan results for selected text.
@@ -272,7 +272,7 @@
           <div style="font-weight:700!important;font-size:13px!important;margin-bottom:4px!important;color:${isSafe ? '#22c55e' : 'white'}!important;">${isSafe ? '&#x2705;' : '&#x26A0;&#xFE0F;'} ${statusText}</div>
           ${threatHtml}
         </div>
-        <button id="ai-shield-overlay-close" style="background:none!important;border:none!important;color:#8b949e!important;font-size:18px!important;cursor:pointer!important;padding:0 4px!important;line-height:1!important;" aria-label="Close">&times;</button>
+        <button id="agent-shield-overlay-close" style="background:none!important;border:none!important;color:#8b949e!important;font-size:18px!important;cursor:pointer!important;padding:0 4px!important;line-height:1!important;" aria-label="Close">&times;</button>
       </div>
     `;
 
@@ -309,7 +309,7 @@
       });
     });
 
-    const closeBtn = document.getElementById('ai-shield-overlay-close');
+    const closeBtn = document.getElementById('agent-shield-overlay-close');
     if (closeBtn) {
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -339,12 +339,12 @@
   const setupPasteScanning = () => {
     document.addEventListener('paste', (e) => {
       try {
-        if (typeof AIShieldDetector === 'undefined') return;
+        if (typeof AgentShieldDetector === 'undefined') return;
 
         const text = (e.clipboardData || window.clipboardData).getData('text');
         if (!text || text.trim().length < 20) return;
 
-        const result = AIShieldDetector.scanText({
+        const result = AgentShieldDetector.scanText({
           text: text,
           source: 'pasted text',
           sensitivity: 'medium'
@@ -369,7 +369,7 @@
    */
   const scanFormInputs = () => {
     try {
-      if (typeof AIShieldDetector === 'undefined') return;
+      if (typeof AgentShieldDetector === 'undefined') return;
 
       const hiddenInputs = document.querySelectorAll(
         'input[type="hidden"], textarea[style*="display:none"], textarea[style*="visibility:hidden"]'
@@ -379,7 +379,7 @@
         const val = input.value || '';
         if (val.length < 20) continue;
 
-        const result = AIShieldDetector.scanText({
+        const result = AgentShieldDetector.scanText({
           text: val,
           source: 'hidden form field',
           sensitivity: 'medium'
@@ -402,7 +402,7 @@
         }
       }
     } catch (err) {
-      console.warn('[AI Shield] Form input scan failed:', err.message);
+      console.warn('[Agent Shield] Form input scan failed:', err.message);
     }
   };
 
@@ -491,8 +491,8 @@
 
     for (const link of links) {
       // Skip already-processed links
-      if (link.dataset.aiShieldChecked) continue;
-      link.dataset.aiShieldChecked = 'true';
+      if (link.dataset.agentShieldChecked) continue;
+      link.dataset.agentShieldChecked = 'true';
 
       const href = link.getAttribute('href');
       const result = checkLinkSuspicion(href);
@@ -514,12 +514,12 @@
         link.style.setProperty('outline', '2px dashed #f97316', 'important');
         link.style.setProperty('outline-offset', '2px', 'important');
         link.style.setProperty('position', 'relative', 'important');
-        link.title = `[AI Shield] ${result.reason}`;
+        link.title = `[Agent Shield] ${result.reason}`;
       }
     }
 
     if (flaggedCount > 0) {
-      console.log(`[AI Shield] Flagged ${flaggedCount} suspicious link${flaggedCount !== 1 ? 's' : ''}.`);
+      console.log(`[Agent Shield] Flagged ${flaggedCount} suspicious link${flaggedCount !== 1 ? 's' : ''}.`);
     }
   };
 
@@ -549,15 +549,15 @@
 
     if (message.type === 'SCAN_SELECTION') {
       try {
-        if (typeof AIShieldDetector === 'undefined') return true;
-        const result = AIShieldDetector.scanText({
+        if (typeof AgentShieldDetector === 'undefined') return true;
+        const result = AgentShieldDetector.scanText({
           text: message.text,
           source: 'selected text (context menu)',
           sensitivity: 'medium'
         });
         showSelectionOverlay(result);
       } catch (err) {
-        console.warn('[AI Shield] Selection scan failed:', err.message);
+        console.warn('[Agent Shield] Selection scan failed:', err.message);
       }
       return true;
     }
@@ -600,7 +600,7 @@
       if (pendingBatches >= MAX_PENDING_BATCHES) {
         if (debounceTimer) clearTimeout(debounceTimer);
         pendingBatches = 0;
-        console.log('[AI Shield] Re-scanning after significant DOM changes...');
+        console.log('[Agent Shield] Re-scanning after significant DOM changes...');
         runScan();
       } else {
         debouncedScan();
@@ -617,7 +617,7 @@
   // INITIALIZATION
   // =========================================================================
 
-  console.log('[AI Shield] Content script loaded.');
+  console.log('[Agent Shield] Content script loaded.');
 
   // Run initial scan
   runScan();

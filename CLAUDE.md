@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-AI Shield is a Chrome extension that protects everyday people from AI-specific threats while browsing the web. It detects prompt injection attacks, hidden AI manipulation, AI-powered scams, and other threats that target AI assistants and their users.
+Agent Shield is a Chrome extension that protects everyday people from AI-specific threats while browsing the web. It detects prompt injection attacks, hidden AI manipulation, AI-powered scams, and other threats that target AI assistants and their users.
 
 **Design Philosophy:** Built for non-technical users. Every warning, alert, and UI element must be understandable by someone who doesn't know what "prompt injection" means. Plain language. No jargon.
 
@@ -32,7 +32,7 @@ This is a vanilla JavaScript Chrome Extension (Manifest V3). No build tools or f
 - Vanilla JavaScript only — no frameworks or build tools for v0.1
 - IIFE pattern for content scripts to avoid global scope pollution
 - JSDoc comments on all public functions
-- Console logging prefixed with `[AI Shield]` for easy filtering
+- Console logging prefixed with `[Agent Shield]` for easy filtering
 - All CSS injected into pages must use `!important` to prevent conflicts
 - Use `const` and `let`, never `var`
 - Strict mode (`'use strict'`) in all scripts

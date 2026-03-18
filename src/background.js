@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * AI Shield Background Service Worker
+ * Agent Shield Background Service Worker
  *
  * Manages the extension badge, per-tab state, and cumulative statistics.
  * Receives scan results from content scripts and updates the UI accordingly.
@@ -20,10 +20,10 @@ const BADGE_COLORS = {
 
 // Status tooltip text
 const TOOLTIP_TEXT = {
-  safe: 'AI Shield: This page is safe',
-  caution: 'AI Shield: Minor items detected',
-  warning: 'AI Shield: Potential AI threats detected',
-  danger: 'AI Shield: Dangerous AI threats detected!'
+  safe: 'Agent Shield: This page is safe',
+  caution: 'Agent Shield: Minor items detected',
+  warning: 'Agent Shield: Potential AI threats detected',
+  danger: 'Agent Shield: Dangerous AI threats detected!'
 };
 
 // =========================================================================
@@ -59,13 +59,13 @@ const updateBadge = async (tabId, result) => {
 
     // Set tooltip
     await chrome.action.setTitle({
-      title: TOOLTIP_TEXT[status] || 'AI Shield',
+      title: TOOLTIP_TEXT[status] || 'Agent Shield',
       tabId
     });
 
   } catch (e) {
     // Tab may have been closed
-    console.warn('[AI Shield] Could not update badge for tab', tabId, ':', e.message);
+    console.warn('[Agent Shield] Could not update badge for tab', tabId, ':', e.message);
   }
 };
 
@@ -76,7 +76,7 @@ const updateBadge = async (tabId, result) => {
 const clearBadge = async (tabId) => {
   try {
     await chrome.action.setBadgeText({ text: '', tabId });
-    await chrome.action.setTitle({ title: 'AI Shield - Click to see scan results', tabId });
+    await chrome.action.setTitle({ title: 'Agent Shield - Click to see scan results', tabId });
   } catch (e) {
     // Tab may not exist
   }
@@ -105,12 +105,12 @@ const showCriticalNotification = async (tabId, result) => {
     if (prev[notifKey] === result.url) return;
     await chrome.storage.session.set({ [notifKey]: result.url });
 
-    const notifId = `ai-shield-critical-${tabId}`;
+    const notifId = `agent-shield-critical-${tabId}`;
     await chrome.notifications.create(notifId, {
       type: 'basic',
       iconUrl: 'icons/shield-green-128.png',
-      title: 'AI Shield: Danger Detected',
-      message: `${result.stats.critical} critical threat${result.stats.critical > 1 ? 's' : ''} found on this page. Click the AI Shield icon for details.`,
+      title: 'Agent Shield: Danger Detected',
+      message: `${result.stats.critical} critical threat${result.stats.critical > 1 ? 's' : ''} found on this page. Click the Agent Shield icon for details.`,
       priority: 2
     });
   } catch (e) {
@@ -134,7 +134,7 @@ const updateStats = async (result) => {
 
     await chrome.storage.local.set({ totalScans, totalThreatsFound });
   } catch (e) {
-    console.warn('[AI Shield] Could not update stats:', e.message);
+    console.warn('[Agent Shield] Could not update stats:', e.message);
   }
 };
 
@@ -187,7 +187,7 @@ const saveToHistory = async (result) => {
 
     await chrome.storage.local.set({ scanHistory: history });
   } catch (e) {
-    console.warn('[AI Shield] Could not save to history:', e.message);
+    console.warn('[Agent Shield] Could not save to history:', e.message);
   }
 };
 
@@ -206,10 +206,10 @@ const runAutoCleanup = async () => {
 
     if (filtered.length < history.length) {
       await chrome.storage.local.set({ scanHistory: filtered });
-      console.log(`[AI Shield] Auto-cleanup: removed ${history.length - filtered.length} old history entries.`);
+      console.log(`[Agent Shield] Auto-cleanup: removed ${history.length - filtered.length} old history entries.`);
     }
   } catch (e) {
-    console.warn('[AI Shield] Auto-cleanup failed:', e.message);
+    console.warn('[Agent Shield] Auto-cleanup failed:', e.message);
   }
 };
 
@@ -352,7 +352,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 // INITIALIZATION
 // =========================================================================
 
-console.log('[AI Shield] Background service worker started.');
+console.log('[Agent Shield] Background service worker started.');
 
 // Run auto-cleanup on startup
 runAutoCleanup();
@@ -361,15 +361,15 @@ runAutoCleanup();
 // CONTEXT MENU
 // =========================================================================
 
-// Create "Scan selection with AI Shield" context menu item
+// Create "Scan selection with Agent Shield" context menu item
 chrome.contextMenus.create({
-  id: 'ai-shield-scan-selection',
-  title: 'Scan selection with AI Shield',
+  id: 'agent-shield-scan-selection',
+  title: 'Scan selection with Agent Shield',
   contexts: ['selection']
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'ai-shield-scan-selection' && tab && tab.id) {
+  if (info.menuItemId === 'agent-shield-scan-selection' && tab && tab.id) {
     chrome.tabs.sendMessage(tab.id, {
       type: 'SCAN_SELECTION',
       text: info.selectionText

@@ -1,11 +1,11 @@
 /*
- * AI Shield Content Styles
+ * Agent Shield Content Styles
  *
  * Styles for the warning banner injected into pages.
  * All styles use !important to prevent page CSS from interfering.
  */
 
-#ai-shield-warning-banner {
+#agent-shield-warning-banner {
   all: initial !important;
   position: fixed !important;
   top: 0 !important;
@@ -21,12 +21,12 @@
   box-sizing: border-box !important;
 }
 
-#ai-shield-warning-banner * {
+#agent-shield-warning-banner * {
   box-sizing: border-box !important;
   font-family: inherit !important;
   line-height: inherit !important;
 }
 
-#ai-shield-dismiss:hover {
+#agent-shield-dismiss:hover {
   opacity: 1 !important;
 }

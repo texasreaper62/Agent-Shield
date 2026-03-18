@@ -14,4 +14,4 @@ if [ -f "package.json" ]; then
 fi
 
 # Validate the environment by running a quick check
-node -e "console.log('[AI Shield] Session hook: Node.js ' + process.version + ' ready')"
+node -e "console.log('[Agent Shield] Session hook: Node.js ' + process.version + ' ready')"

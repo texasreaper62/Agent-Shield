@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * AI Shield Options Page Script
+ * Agent Shield Options Page Script
  *
  * Manages user settings: sensitivity level, domain allowlist,
  * and notification preferences.
@@ -296,7 +296,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ai-shield-settings-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `agent-shield-settings-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
       exportSettingsBtn.textContent = 'Exported!';
@@ -327,7 +327,7 @@
           chrome.runtime.sendMessage({ type: 'SETTINGS_CHANGED', settings: merged });
         });
       } catch (err) {
-        importError.textContent = 'Invalid settings file. Please select a valid AI Shield settings JSON file.';
+        importError.textContent = 'Invalid settings file. Please select a valid Agent Shield settings JSON file.';
         importError.style.display = 'block';
       }
       importFileInput.value = '';

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * AI Shield Lint Check
+ * Agent Shield Lint Check
  *
  * Simple static analysis checks — no external dependencies required.
  * Validates code style rules defined in CLAUDE.md.
@@ -27,7 +27,7 @@ const check = (file, lineNum, condition, message) => {
   }
 };
 
-console.log('AI Shield Lint Check\n');
+console.log('Agent Shield Lint Check\n');
 
 for (const file of JS_FILES) {
   const content = fs.readFileSync(file, 'utf8');
@@ -52,12 +52,12 @@ for (const file of JS_FILES) {
       check(file, i + 1, true, `Use 'const' or 'let' instead of 'var': ${trimmed.substring(0, 60)}`);
     }
 
-    // No console.error without [AI Shield] prefix (except in test files)
+    // No console.error without [Agent Shield] prefix (except in test files)
     if (/console\.(log|warn|error)\s*\(/.test(trimmed) && !basename.includes('test')) {
-      if (!/\[AI Shield\]/.test(trimmed) && !/console\.(warn|error)\s*\(\s*'\[AI Shield\]/.test(trimmed)) {
-        // Allow console calls that reference [AI Shield] on the same line
-        if (!/AI Shield/.test(trimmed)) {
-          check(file, i + 1, true, `Console output should be prefixed with [AI Shield]: ${trimmed.substring(0, 60)}`);
+      if (!/\[Agent Shield\]/.test(trimmed) && !/console\.(warn|error)\s*\(\s*'\[Agent Shield\]/.test(trimmed)) {
+        // Allow console calls that reference [Agent Shield] on the same line
+        if (!/Agent Shield/.test(trimmed)) {
+          check(file, i + 1, true, `Console output should be prefixed with [Agent Shield]: ${trimmed.substring(0, 60)}`);
         }
       }
     }

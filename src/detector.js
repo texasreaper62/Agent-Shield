@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * AI Shield Detection Engine
+ * Agent Shield Detection Engine
  *
  * The core brain of the extension. Scans page content for AI-specific threats
  * including prompt injection, hidden text manipulation, fake AI interfaces,
@@ -9,7 +9,7 @@
  *
  * All detection runs locally — no data ever leaves the browser.
  */
-const AIShieldDetector = (() => {
+const AgentShieldDetector = (() => {
 
   // =========================================================================
   // PERFORMANCE LIMITS
@@ -1632,7 +1632,7 @@ const AIShieldDetector = (() => {
       allThreats.push(...scanClipboardHijacking());
       allThreats.push(...scanAIPhishing(hostname));
     } catch (e) {
-      console.error('[AI Shield] Scan error:', e);
+      console.error('[Agent Shield] Scan error:', e);
     }
 
     // Deduplicate
@@ -1697,7 +1697,7 @@ const AIShieldDetector = (() => {
       timestamp: Date.now()
     };
 
-    console.log(`[AI Shield] Scan complete: ${status} (${stats.totalThreats} threats found in ${stats.scanTimeMs}ms)`);
+    console.log(`[Agent Shield] Scan complete: ${status} (${stats.totalThreats} threats found in ${stats.scanTimeMs}ms)`);
 
     return result;
   };

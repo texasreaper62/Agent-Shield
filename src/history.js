@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * AI Shield History Page Script
+ * Agent Shield History Page Script
  *
  * Displays browsable scan history with search, filter, export, and cleanup.
  * All data is stored locally via chrome.storage.local.
@@ -379,7 +379,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ai-shield-history-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `agent-shield-history-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
 

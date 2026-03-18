@@ -1,6 +1,6 @@
-# AI Shield Roadmap
+# Agent Shield Roadmap
 
-This document outlines the planned features and improvements for AI Shield. Our mission is to protect everyday people from AI-specific threats — simply, privately, and effectively.
+This document outlines the planned features and improvements for Agent Shield. Our mission is to protect everyday people from AI-specific threats — simply, privately, and effectively.
 
 **Guiding principles for every release:**
 - Privacy first — all detection stays local unless users explicitly opt in
@@ -48,7 +48,7 @@ This document outlines the planned features and improvements for AI Shield. Our 
 ### Detection Quality
 
 - [ ] **Contextual false-positive reduction** — Smarter analysis of surrounding content to reduce alerts on security blogs, research papers, and educational content
-- [ ] **Confidence scoring** — Show users how certain AI Shield is about each threat (e.g., "Very likely a threat" vs "Might be suspicious")
+- [ ] **Confidence scoring** — Show users how certain Agent Shield is about each threat (e.g., "Very likely a threat" vs "Might be suspicious")
 - [ ] **Pattern versioning** — Track which detection patterns found what, enabling better tuning over time
 - [ ] **Allowlist by threat category** — Let users suppress specific threat types on specific domains (e.g., allow prompt injection discussion on security blogs)
 
@@ -56,11 +56,11 @@ This document outlines the planned features and improvements for AI Shield. Our 
 
 ## v0.3.0 — User Experience
 
-**Goal: Make AI Shield delightful and easy to understand.**
+**Goal: Make Agent Shield delightful and easy to understand.**
 
 ### Onboarding
 
-- [ ] **First-run welcome walkthrough** — 3-step intro explaining what AI Shield does, what the badge colors mean, and how to check the popup
+- [ ] **First-run welcome walkthrough** — 3-step intro explaining what Agent Shield does, what the badge colors mean, and how to check the popup
 - [ ] **Interactive tutorial page** — A safe page with example threats that users can explore to learn what each detection looks like
 - [ ] **"What is this?" tooltips** — Every threat type gets a plain-language tooltip explaining what it means and why it matters
 
@@ -157,7 +157,7 @@ This document outlines the planned features and improvements for AI Shield. Our 
 ### Threat Reporting
 
 - [ ] **One-click threat report** — Report a suspicious page to help others (sends only the URL and threat type, never page content)
-- [ ] **False positive reporting** — Easy way to report when AI Shield flags something incorrectly, helping improve detection
+- [ ] **False positive reporting** — Easy way to report when Agent Shield flags something incorrectly, helping improve detection
 - [ ] **Community threat feed** — Opt-in feed of recently reported dangerous URLs (no browsing data shared)
 
 ### Sharing and Advocacy
@@ -212,7 +212,7 @@ This document outlines the planned features and improvements for AI Shield. Our 
 
 ## v1.0.0 — Enterprise and Teams
 
-**Goal: Bring AI Shield to organizations that need to protect their employees.**
+**Goal: Bring Agent Shield to organizations that need to protect their employees.**
 
 ### Enterprise Features
 
@@ -237,7 +237,7 @@ This document outlines the planned features and improvements for AI Shield. Our 
 
 ## v1.1.0 — Accessibility and Inclusion
 
-**Goal: Make AI Shield usable by everyone.**
+**Goal: Make Agent Shield usable by everyone.**
 
 ### Accessibility
 
@@ -294,7 +294,7 @@ This document outlines the planned features and improvements for AI Shield. Our 
 
 - [ ] **Custom pattern editor** — Write and test your own detection patterns with a visual regex builder
 - [ ] **Pattern marketplace** — Share and download community-created detection patterns
-- [ ] **Detection API** — JavaScript API for developers to integrate AI Shield scanning into their own tools
+- [ ] **Detection API** — JavaScript API for developers to integrate Agent Shield scanning into their own tools
 - [ ] **Webhook support** — Send threat notifications to custom endpoints
 - [ ] **Debug mode** — Verbose logging showing exactly what was scanned, what matched, and why
 - [ ] **Performance profiler** — Detailed scan timing breakdowns per detection module
@@ -306,7 +306,7 @@ This document outlines the planned features and improvements for AI Shield. Our 
 - [ ] **Bulk domain management** — Import/export large allowlists and blocklists
 - [ ] **Scheduled scans** — Automatically re-scan bookmarked pages on a schedule
 - [ ] **CLI tool** — Command-line scanner using the same detection engine for CI/CD pipelines
-- [ ] **Browser DevTools panel** — AI Shield tab in Chrome DevTools with detailed technical analysis
+- [ ] **Browser DevTools panel** — Agent Shield tab in Chrome DevTools with detailed technical analysis
 
 ---
 
@@ -336,7 +336,7 @@ These are ideas we're researching but haven't committed to a release yet:
 
 ## Contributing
 
-Have a feature idea? Open an issue at https://github.com/texasreaper62/ai-shield/issues with the label `feature-request`. We read every suggestion.
+Have a feature idea? Open an issue at https://github.com/texasreaper62/agent-shield/issues with the label `feature-request`. We read every suggestion.
 
 ---
 
