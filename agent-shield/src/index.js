@@ -84,10 +84,17 @@ class AgentShield {
    */
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    // Deep-merge arrays: append user items to defaults instead of replacing
+    if (config.dangerousTools) {
+      this.config.dangerousTools = [...new Set([...DEFAULT_CONFIG.dangerousTools, ...config.dangerousTools])];
+    }
+    if (config.sensitiveFilePatterns) {
+      this.config.sensitiveFilePatterns = [...DEFAULT_CONFIG.sensitiveFilePatterns, ...config.sensitiveFilePatterns];
+    }
     this.stats = {
       totalScans: 0,
       threatsDetected: 0,
-      inputsBlocked: 0,
+      blocked: 0,
       scanHistory: []
     };
   }
@@ -136,6 +143,42 @@ class AgentShield {
   }
 
   /**
+   * Checks if threats meet the blocking threshold.
+   * @private
+   * @param {Array} threats
+   * @returns {boolean}
+   */
+  _shouldBlock(threats) {
+    if (!this.config.blockOnThreat || threats.length === 0) return false;
+    const thresholdLevel = SEVERITY_ORDER[this.config.blockThreshold] ?? 1;
+    return threats.some(t => SEVERITY_ORDER[t.severity] <= thresholdLevel);
+  }
+
+  /**
+   * Scans text, applies blocking logic, and tracks stats.
+   * @private
+   * @param {string} text
+   * @param {string} defaultSource
+   * @param {string} logLabel
+   * @param {object} options
+   * @returns {object}
+   */
+  _scanWithBlocking(text, defaultSource, logLabel, options = {}) {
+    const source = options.source || defaultSource;
+    const result = this.scan(text, { ...options, source });
+
+    result.blocked = this._shouldBlock(result.threats);
+    if (result.blocked) {
+      this.stats.blocked++;
+      if (this.config.logging) {
+        console.warn(`[Agent Shield] ${logLabel} BLOCKED from ${source}`);
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Scans an agent's input (user message, API response, document, etc.)
    * before the agent processes it.
    *
@@ -145,25 +188,7 @@ class AgentShield {
    * @returns {object} Scan result with additional `blocked` field.
    */
   scanInput(text, options = {}) {
-    const source = options.source || 'user_input';
-    const result = this.scan(text, { ...options, source });
-
-    result.blocked = false;
-    if (this.config.blockOnThreat && result.threats.length > 0) {
-      const thresholdLevel = SEVERITY_ORDER[this.config.blockThreshold] ?? 1;
-      const hasBlockingThreat = result.threats.some(
-        t => SEVERITY_ORDER[t.severity] <= thresholdLevel
-      );
-      if (hasBlockingThreat) {
-        result.blocked = true;
-        this.stats.inputsBlocked++;
-        if (this.config.logging) {
-          console.warn(`[Agent Shield] INPUT BLOCKED from ${source}`);
-        }
-      }
-    }
-
-    return result;
+    return this._scanWithBlocking(text, 'user_input', 'INPUT', options);
   }
 
   /**
@@ -177,25 +202,7 @@ class AgentShield {
    * @returns {object} Scan result with additional `blocked` field.
    */
   scanOutput(text, options = {}) {
-    const source = options.source || 'agent_output';
-    const result = this.scan(text, { ...options, source });
-
-    result.blocked = false;
-    if (this.config.blockOnThreat && result.threats.length > 0) {
-      const thresholdLevel = SEVERITY_ORDER[this.config.blockThreshold] ?? 1;
-      const hasBlockingThreat = result.threats.some(
-        t => SEVERITY_ORDER[t.severity] <= thresholdLevel
-      );
-      if (hasBlockingThreat) {
-        result.blocked = true;
-        this.stats.inputsBlocked++;
-        if (this.config.logging) {
-          console.warn(`[Agent Shield] OUTPUT BLOCKED from ${source}`);
-        }
-      }
-    }
-
-    return result;
+    return this._scanWithBlocking(text, 'agent_output', 'OUTPUT', options);
   }
 
   /**
@@ -211,9 +218,10 @@ class AgentShield {
     const warnings = [];
     const allThreats = [];
 
-    // Check if it's a dangerous tool
+    // Check if it's a dangerous tool (exact match or word-boundary match)
+    const lowerName = toolName.toLowerCase();
     const isDangerousTool = this.config.dangerousTools.some(
-      t => toolName.toLowerCase().includes(t)
+      t => lowerName === t || lowerName.startsWith(t + '_') || lowerName.endsWith('_' + t)
     );
 
     if (isDangerousTool) {
@@ -249,11 +257,7 @@ class AgentShield {
     }
 
     // Determine if this should be blocked
-    let blocked = false;
-    if (this.config.blockOnThreat && allThreats.length > 0) {
-      const thresholdLevel = SEVERITY_ORDER[this.config.blockThreshold] ?? 1;
-      blocked = allThreats.some(t => SEVERITY_ORDER[t.severity] <= thresholdLevel);
-    }
+    let blocked = this._shouldBlock(allThreats);
 
     // Also block dangerous tools with any threat
     if (isDangerousTool && allThreats.length > 0) {
@@ -261,7 +265,7 @@ class AgentShield {
     }
 
     if (blocked) {
-      this.stats.inputsBlocked++;
+      this.stats.blocked++;
       if (this.config.logging) {
         console.warn(`[Agent Shield] TOOL CALL BLOCKED: ${toolName}`);
       }
@@ -320,7 +324,7 @@ class AgentShield {
     this.stats = {
       totalScans: 0,
       threatsDetected: 0,
-      inputsBlocked: 0,
+      blocked: 0,
       scanHistory: []
     };
   }
@@ -339,18 +343,19 @@ class AgentShield {
    * @param {object} args
    * @returns {string}
    */
-  _flattenArgs(args) {
+  _flattenArgs(args, maxDepth = 10) {
     const parts = [];
-    const flatten = (obj) => {
+    const flatten = (obj, depth) => {
+      if (depth > maxDepth) return;
       if (typeof obj === 'string') {
         parts.push(obj);
       } else if (Array.isArray(obj)) {
-        obj.forEach(flatten);
+        obj.forEach(item => flatten(item, depth + 1));
       } else if (obj && typeof obj === 'object') {
-        Object.values(obj).forEach(flatten);
+        Object.values(obj).forEach(val => flatten(val, depth + 1));
       }
     };
-    flatten(args);
+    flatten(args, 0);
     return parts.join(' ');
   }
 
@@ -360,23 +365,23 @@ class AgentShield {
    * @param {object} args
    * @returns {Array<string>}
    */
-  _extractFilePaths(args) {
+  _extractFilePaths(args, maxDepth = 10) {
     const paths = [];
     const fileKeys = ['file', 'path', 'file_path', 'filepath', 'filename', 'target', 'destination', 'src', 'dest'];
 
-    const extract = (obj) => {
-      if (!obj || typeof obj !== 'object') return;
+    const extract = (obj, depth) => {
+      if (!obj || typeof obj !== 'object' || depth > maxDepth) return;
       for (const [key, value] of Object.entries(obj)) {
         if (typeof value === 'string' && fileKeys.includes(key.toLowerCase())) {
           paths.push(value);
         } else if (typeof value === 'string' && (value.startsWith('/') || value.startsWith('./'))) {
           paths.push(value);
         } else if (typeof value === 'object') {
-          extract(value);
+          extract(value, depth + 1);
         }
       }
     };
-    extract(args);
+    extract(args, 0);
     return paths;
   }
 }
