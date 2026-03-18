@@ -42,7 +42,7 @@ if (toolCheck.blocked) {
 
 ```javascript
 const Anthropic = require('@anthropic-ai/sdk');
-const { shieldAnthropicClient } = require('agent-shield/src/integrations');
+const { shieldAnthropicClient } = require('agent-shield');
 
 const client = shieldAnthropicClient(new Anthropic(), {
   blockOnThreat: true,
@@ -64,7 +64,7 @@ const msg = await client.messages.create({
 
 ```javascript
 const OpenAI = require('openai');
-const { shieldOpenAIClient } = require('agent-shield/src/integrations');
+const { shieldOpenAIClient } = require('agent-shield');
 
 const client = shieldOpenAIClient(new OpenAI(), { blockOnThreat: true });
 const response = await client.chat.completions.create({
@@ -76,7 +76,7 @@ const response = await client.chat.completions.create({
 ### LangChain
 
 ```javascript
-const { ShieldCallbackHandler } = require('agent-shield/src/integrations');
+const { ShieldCallbackHandler } = require('agent-shield');
 
 const handler = new ShieldCallbackHandler({
   blockOnThreat: true,
@@ -89,7 +89,7 @@ const chain = new LLMChain({ llm, prompt, callbacks: [handler] });
 ### Generic Agent Middleware
 
 ```javascript
-const { wrapAgent, shieldTools } = require('agent-shield/src/middleware');
+const { wrapAgent, shieldTools } = require('agent-shield');
 
 // Wrap any async agent function
 const protectedAgent = wrapAgent(myAgentFunction, { blockOnThreat: true });
@@ -105,7 +105,7 @@ const protectedTools = shieldTools({
 ### Express Middleware
 
 ```javascript
-const { expressMiddleware } = require('agent-shield/src/middleware');
+const { expressMiddleware } = require('agent-shield');
 
 app.use(expressMiddleware({ blockOnThreat: true }));
 app.post('/agent', (req, res) => {

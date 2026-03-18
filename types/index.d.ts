@@ -662,3 +662,255 @@ export declare class GitHubActionReporter {
   setOutputs(results: ScanResult): void;
   createSummary(shieldScore: ShieldScore | null, scanResults: ScanResult | null): string;
 }
+
+// =========================================================================
+// Allowlist & Feedback
+// =========================================================================
+
+export declare class Allowlist {
+  constructor(options?: { patterns?: Array<string | RegExp> });
+  add(pattern: string | RegExp): void;
+  remove(pattern: string): boolean;
+  check(text: string): boolean;
+  getAll(): string[];
+}
+
+export declare class ConfidenceCalibrator {
+  constructor();
+  record(predicted: number, actual: boolean): void;
+  calibrate(score: number): number;
+  getStats(): { total: number; accuracy: number };
+}
+
+export declare class FeedbackLoop {
+  constructor(options?: { onFeedback?: (entry: any) => void });
+  recordFalsePositive(scanResult: ScanResult, reason?: string): void;
+  recordFalseNegative(text: string, expectedCategory?: string): void;
+  getStats(): { falsePositives: number; falseNegatives: number; total: number };
+}
+
+export declare class ScanCache {
+  constructor(options?: { maxSize?: number; ttlMs?: number });
+  get(key: string): ScanResult | null;
+  set(key: string, result: ScanResult): void;
+  clear(): void;
+  getStats(): { hits: number; misses: number; size: number };
+}
+
+// =========================================================================
+// Presets & Config Builder
+// =========================================================================
+
+export declare class ConfigBuilder {
+  constructor();
+  sensitivity(level: string): ConfigBuilder;
+  blockOnThreat(enabled?: boolean): ConfigBuilder;
+  logging(enabled?: boolean): ConfigBuilder;
+  onThreat(callback: (result: ScanResult) => void): ConfigBuilder;
+  build(): ShieldOptions;
+}
+
+export declare class SnippetGenerator {
+  constructor();
+  generate(options?: { framework?: string; language?: string }): string;
+}
+
+export declare function getPresets(): Record<string, any>;
+export declare function getPreset(name: string): any;
+
+// =========================================================================
+// Advanced Scanners
+// =========================================================================
+
+export declare class RAGScanner {
+  constructor(options?: ShieldOptions);
+  scanDocument(text: string, source?: string): ScanResult;
+  scanChunk(chunk: string, metadata?: any): ScanResult;
+}
+
+export declare class PromptLinter {
+  constructor(options?: { rules?: string[] });
+  lint(prompt: string): Array<{ rule: string; severity: string; message: string; line?: number }>;
+}
+
+export declare class ToolSchemaValidator {
+  constructor(options?: { strict?: boolean });
+  validate(tool: any): { valid: boolean; issues: string[] };
+}
+
+// =========================================================================
+// Production
+// =========================================================================
+
+export declare class SamplingScanner {
+  constructor(options?: ShieldOptions & { sampleRate?: number });
+  scan(text: string, options?: any): ScanResult | null;
+}
+
+export declare class ShadowComparison {
+  constructor(options?: { primary: AgentShield; shadow: AgentShield });
+  scan(text: string): { primary: ScanResult; shadow: ScanResult; diverged: boolean };
+}
+
+export declare class GracefulScanner {
+  constructor(options?: ShieldOptions & { timeoutMs?: number; fallback?: ScanResult });
+  scan(text: string, options?: any): ScanResult;
+}
+
+export declare class ThreatReplay {
+  constructor();
+  record(input: string, result: ScanResult): void;
+  replay(shield: AgentShield): Array<{ input: string; original: ScanResult; replayed: ScanResult; match: boolean }>;
+}
+
+export declare class AttackAttributionChain {
+  constructor();
+  record(source: string, threat: Threat, metadata?: any): void;
+  getChain(source?: string): any[];
+}
+
+export declare class DiffReporter {
+  constructor();
+  compare(before: ScanResult, after: ScanResult): { added: Threat[]; removed: Threat[]; unchanged: Threat[] };
+}
+
+export declare class PostureTracker {
+  constructor();
+  record(score: number, timestamp?: number): void;
+  getTrend(): { improving: boolean; scores: number[]; average: number };
+}
+
+// =========================================================================
+// Testing & Contracts
+// =========================================================================
+
+export declare class TestSuiteGenerator {
+  constructor(options?: { shield?: AgentShield });
+  generate(options?: { categories?: string[] }): Array<{ name: string; input: string; expectedDetected: boolean; category: string }>;
+  run(options?: any): { passed: number; failed: number; total: number; results: any[] };
+}
+
+export declare class AgentContract {
+  constructor(options?: { rules?: Array<{ name: string; check: (result: ScanResult) => boolean }> });
+  verify(result: ScanResult): { valid: boolean; violations: string[] };
+}
+
+export declare class BreakglassProtocol {
+  constructor(options?: { code?: string; onActivate?: () => void; onDeactivate?: () => void });
+  activate(code: string): boolean;
+  deactivate(): void;
+  isActive(): boolean;
+}
+
+// =========================================================================
+// Multi-Agent Trust
+// =========================================================================
+
+export declare class MessageSigner {
+  constructor(options?: { secret?: string });
+  sign(message: string, agentId: string): { message: string; signature: string; agentId: string; timestamp: number };
+  verify(signed: { message: string; signature: string; agentId: string; timestamp: number }): boolean;
+}
+
+export declare class CapabilityToken {
+  constructor(options?: { issuer?: string; secret?: string });
+  issue(agentId: string, capabilities: string[], ttlMs?: number): string;
+  verify(token: string, requiredCapability?: string): { valid: boolean; agentId?: string; capabilities?: string[]; expired?: boolean };
+}
+
+export declare class DelegationManager {
+  constructor(options?: { maxDepth?: number });
+  delegate(from: string, to: string, task: string): { allowed: boolean; reason?: string };
+  getChain(): Array<{ from: string; to: string; task: string }>;
+  reset(): void;
+}
+
+export declare class BlastRadiusContainer {
+  constructor(options?: { maxAgents?: number; isolate?: boolean });
+  register(agentId: string): void;
+  quarantine(agentId: string, reason?: string): void;
+  isQuarantined(agentId: string): boolean;
+  getStatus(): { total: number; quarantined: number; active: number };
+}
+
+// =========================================================================
+// Extended Policy & Intelligence
+// =========================================================================
+
+export declare class ABTestRunner {
+  constructor(options?: { variants: Array<{ name: string; config: ShieldOptions }> });
+  run(text: string): Array<{ variant: string; result: ScanResult }>;
+}
+
+export declare class ThreatIntelFeed {
+  constructor();
+  addIndicator(indicator: { type: string; value: string; severity?: string }): void;
+  check(text: string): { matches: any[] };
+}
+
+export declare class PatternBuilder {
+  constructor();
+  add(regex: RegExp, options: { severity: string; category: string; description: string }): PatternBuilder;
+  build(): Pattern[];
+}
+
+export declare class Doctor {
+  constructor();
+  diagnose(shield?: AgentShield): { healthy: boolean; issues: string[]; recommendations: string[] };
+}
+
+export declare class GitHubActionGenerator {
+  constructor();
+  generate(options?: { trigger?: string; nodeVersion?: string }): string;
+}
+
+export declare class SOCIntegration {
+  constructor(options?: { format?: string });
+  formatAlert(threat: Threat, metadata?: any): any;
+}
+
+export declare class MigrationGuide {
+  constructor();
+  from(version: string): { steps: string[]; breaking: string[] };
+}
+
+export declare class Playground {
+  constructor(options?: ShieldOptions);
+  scan(text: string): ScanResult;
+  getHTML(): string;
+}
+
+// =========================================================================
+// Constants
+// =========================================================================
+
+export declare const SEVERITY_ORDER: Record<string, number>;
+export declare const API_KEY_PATTERNS: any[];
+export declare const PII_PATTERNS: Record<string, any>;
+export declare const CONTENT_CATEGORIES: Record<string, any>;
+export declare const SUSPICIOUS_SEQUENCES: any[];
+export declare const STEGO_PATTERNS: any[];
+export declare const ATTACK_PAYLOADS: Record<string, any>;
+export declare const SCORE_CATEGORIES: Record<string, any>;
+export declare const THREAT_ENCYCLOPEDIA: any[];
+export declare const DAILY_PATTERNS: any[];
+export declare const COMPLIANCE_FRAMEWORKS: Record<string, any>;
+export declare const INCIDENT_PLAYBOOKS: Record<string, any>;
+export declare const DEFAULT_ROLES: Record<string, any>;
+export declare const PRESETS: Record<string, any>;
+export declare const RAG_INJECTION_PATTERNS: any[];
+export declare const LINT_RULES: any[];
+export declare const DANGEROUS_TOOL_PATTERNS: any[];
+export declare const ATTACK_TEMPLATES: Record<string, any>;
+
+// =========================================================================
+// Utilities
+// =========================================================================
+
+export declare function getGrade(score: number): string;
+export declare function getGradeLabel(score: number): string;
+export declare function makeBar(value: number, max: number, width?: number): string;
+export declare function truncate(text: string, maxLength?: number): string;
+export declare function formatHeader(text: string): string;
+export declare function generateId(): string;
+export declare function extractTextFromBody(body: any): string;

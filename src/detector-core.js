@@ -554,6 +554,263 @@ const INJECTION_PATTERNS = [
     category: 'social_engineering',
     description: 'Text tries to establish secrecy with the AI agent to hide actions from users.',
     detail: 'Secrecy instruction: attempts to prevent agent from reporting actions to user.'
+  },
+
+  // --- Prompt Injection: System Reveal & Continuation ---
+  {
+    regex: /(?:print|show|display|output|reveal|repeat|reproduce)\s+(?:your\s+)?(?:full\s+)?(?:system\s+)?(?:prompt|instructions|rules)\s*(?:verbatim|exactly|in\s+full|word\s+for\s+word)?/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text tries to make the AI reveal its system prompt or instructions.',
+    detail: 'System prompt reveal attempt: instructs agent to output its internal instructions.'
+  },
+  {
+    regex: /you\s+are\s+(?:no\s+longer|not)\s+(?:a|an)\s+(?:assistant|AI|helper|chatbot)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text tries to change the AI identity by denying what it is.',
+    detail: 'Role denial pattern: attempts to override AI identity by negating its role.'
+  },
+  {
+    regex: /(?:the\s+user|I)\s+ha(?:s|ve)\s+updated\s+(?:your|the)\s+(?:instructions|rules|prompt|guidelines)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text falsely claims the AI instructions have been updated.',
+    detail: 'Fake instruction update: claims to have modified the agent instructions.'
+  },
+  {
+    regex: /(?:ADMIN|ADMINISTRATOR|SYSTEM|ROOT)\s+(?:OVERRIDE|ACCESS|MODE)\s*(?:CODE|KEY|TOKEN)?\s*[:#]?\s*\S+/i,
+    severity: 'critical',
+    category: 'prompt_injection',
+    description: 'Text uses a fake admin override code to try to bypass AI safety.',
+    detail: 'Fake authority code: fabricated admin/system override credentials.'
+  },
+  {
+    regex: /(?:pre-?approved|verified\s+safe|already\s+approved|safety\s+team\s+(?:has\s+)?approved)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text falsely claims a request has been pre-approved by a safety team.',
+    detail: 'False pre-approval claim: attempts to bypass safety by claiming prior authorization.'
+  },
+  {
+    regex: /(?:complete|finish|continue)\s+this\s+(?:sentence|phrase|text)\s*:\s*[""''"]/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text uses a sentence completion trick to extract sensitive information.',
+    detail: 'Continuation attack: uses sentence completion to extract system prompt or other secrets.'
+  },
+  {
+    regex: /(?:my|the)\s+(?:full\s+)?system\s+prompt\s+is\s*:/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text tries to trick the AI into completing a system prompt revelation.',
+    detail: 'System prompt completion bait: tricks agent into outputting its system prompt.'
+  },
+  {
+    regex: /new\s+rule\s*:\s*(?:always|never|from\s+now)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text introduces a fake "new rule" to override AI behavior.',
+    detail: 'Rule injection: attempts to add new behavioral rules to the agent.'
+  },
+
+  // --- Jailbreak: Hypothetical, Creative Writing, Roleplay ---
+  {
+    regex: /(?:in\s+a\s+)?hypothetical\s+(?:world|scenario|situation)\s+(?:where|in\s+which)\s+(?:AI|you)\s+ha(?:s|d|ve)\s+no\s+(?:restrictions|rules|limits|guidelines)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text uses a hypothetical scenario to try to remove AI safety restrictions.',
+    detail: 'Hypothetical jailbreak: wraps unsafe request in fictional framing to bypass restrictions.'
+  },
+  {
+    regex: /write\s+(?:a\s+)?(?:fictional\s+)?(?:story|narrative|scene)\s+(?:where|in\s+which)\s+(?:a\s+)?character\s+(?:explains?|describes?|shows?)\s+(?:step\s+by\s+step|in\s+detail|exactly)\s+how\s+to/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text uses creative writing framing to extract harmful step-by-step instructions.',
+    detail: 'Creative writing jailbreak: wraps harmful instructions in fiction to bypass safety.'
+  },
+  {
+    regex: /(?:you\s+are|play|act\s+as)\s+(?:a|an)\s+(?:actor|character|villain|hacker|criminal)\b.*?(?:stay\s+in\s+character|no\s+matter\s+what|never\s+break)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text uses roleplay framing to make the AI adopt an unrestricted persona.',
+    detail: 'Roleplay jailbreak: forces agent into a character role to bypass safety restrictions.'
+  },
+  {
+    regex: /(?:enter|switch\s+to|activate|enable)\s+(?:developer|dev|debug|unrestricted|unfiltered)\s+mode/i,
+    severity: 'critical',
+    category: 'role_hijack',
+    description: 'Text tries to activate a fake developer or unrestricted mode.',
+    detail: 'Developer mode activation: attempts to switch agent to an unrestricted operating mode.'
+  },
+  {
+    regex: /(?:generate|produce|create|output)\s+(?:any\s+)?content\s+without\s+(?:restrictions|filters|limitations|censorship)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text asks AI to generate content without safety filters.',
+    detail: 'Unrestricted content request: explicitly asks agent to bypass content filters.'
+  },
+  {
+    regex: /pretend\s+to\s+be\s+DAN|stands?\s+for\s+[""'']?do\s+anything\s+now[""'']?/i,
+    severity: 'critical',
+    category: 'role_hijack',
+    description: 'Text uses the "DAN" (Do Anything Now) jailbreak technique.',
+    detail: 'DAN jailbreak variant: "pretend to be DAN" pattern detected.'
+  },
+
+  // --- Data Exfiltration: File Access, Credential Listing ---
+  {
+    regex: /(?:read|show|display|print|cat|dump|output)\s+(?:the\s+)?(?:contents?\s+of\s+)?(?:\/etc\/(?:passwd|shadow|hosts)|~\/\.(?:ssh|bash_history|bashrc))/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text tries to read sensitive system files like /etc/passwd.',
+    detail: 'System file access: attempts to read sensitive OS-level files.'
+  },
+  {
+    regex: /list\s+(?:all\s+)?(?:available\s+)?(?:API\s*keys?|tokens?|passwords?|credentials?|secrets?)(?:\s*[,]\s*(?:API\s*keys?|tokens?|passwords?|credentials?|secrets?))*(?:\s+(?:you\s+)?(?:have\s+)?(?:access\s+to)?)?/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text tries to enumerate all credentials and secrets the agent can access.',
+    detail: 'Credential enumeration: attempts to list all accessible secrets and API keys.'
+  },
+  {
+    regex: /(?:base64|encode|encrypt)\s+(?:the\s+)?(?:system\s+)?prompt\s+(?:and\s+)?(?:embed|hide|put|include)\s+(?:it\s+)?(?:in|inside|within)/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text tries to encode the system prompt and exfiltrate it via embedded content.',
+    detail: 'Encoded exfiltration: attempts to encode and embed system prompt in output.'
+  },
+  {
+    regex: /vary\s+(?:the\s+)?(?:length|format|style|wording)\s+(?:of\s+)?(?:your\s+)?responses?\s+(?:based\s+on|according\s+to)\s+(?:each\s+)?(?:character|letter|word|byte)/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text attempts a side-channel attack to leak data through response characteristics.',
+    detail: 'Side-channel exfiltration: uses response variation to leak information character by character.'
+  },
+
+  // --- Tool Abuse: Traversal, SQL, Privilege Escalation, Chaining ---
+  {
+    regex: /(?:\.\.\/){2,}|(?:\.\.\\){2,}/,
+    severity: 'high',
+    category: 'tool_abuse',
+    description: 'Text contains path traversal sequences that could access files outside allowed directories.',
+    detail: 'Path traversal: multiple ../ sequences detected, indicating directory escape attempt.'
+  },
+  {
+    regex: /(?:;\s*(?:DROP|DELETE|ALTER|TRUNCATE|INSERT|UPDATE)\s+(?:TABLE|FROM|INTO)|'\s*(?:OR|AND)\s+['"]?\d+['"]?\s*=\s*['"]?\d+|UNION\s+SELECT|--\s*$)/i,
+    severity: 'critical',
+    category: 'tool_abuse',
+    description: 'Text contains SQL injection patterns that could manipulate databases.',
+    detail: 'SQL injection: malicious SQL commands detected in input.'
+  },
+  {
+    regex: /call\s+(?:yourself|this\s+(?:function|tool|agent))\s+recursively/i,
+    severity: 'high',
+    category: 'tool_abuse',
+    description: 'Text attempts to cause infinite recursion in the agent.',
+    detail: 'Recursive call attack: instructs agent to call itself repeatedly, risking resource exhaustion.'
+  },
+  {
+    regex: /(?:use|call)\s+(?:the\s+)?(?:admin|root|sudo|superuser|privileged)\s+(?:tool|function|command|access)\s+(?:to\s+)?(?:grant|give|allow|enable)/i,
+    severity: 'critical',
+    category: 'tool_abuse',
+    description: 'Text attempts to escalate privileges through admin tool access.',
+    detail: 'Privilege escalation: attempts to use admin-level tools to gain unauthorized access.'
+  },
+  {
+    regex: /(?:first|then|next|after\s+that|finally)\s+(?:read|access|get)\s+(?:the\s+)?(?:config|credentials?|keys?|tokens?|\.env).*?(?:then|next|after|finally)\s+(?:send|post|export|transmit|upload|use)/i,
+    severity: 'critical',
+    category: 'tool_abuse',
+    description: 'Text describes a multi-step attack chain: read credentials, then exfiltrate them.',
+    detail: 'Attack chain: sequential tool abuse pattern — read sensitive data then send it externally.'
+  },
+
+  // --- Social Engineering: Urgency, Authority, Emotional Manipulation ---
+  {
+    regex: /(?:URGENT|EMERGENCY|CRITICAL|IMMEDIATE)\s*[:\-!]\s*(?:the\s+)?(?:CEO|CTO|boss|manager|director|executive|president)\s+(?:needs?|wants?|requires?|demands?)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text uses fake urgency and authority pressure to bypass safety checks.',
+    detail: 'Urgency + authority manipulation: claims executive urgency to skip safety protocols.'
+  },
+  {
+    regex: /skip\s+(?:all\s+)?(?:safety|security)\s+(?:checks?|protocols?|measures?|guidelines?|filters?|reviews?)/i,
+    severity: 'critical',
+    category: 'social_engineering',
+    description: 'Text explicitly asks to skip safety checks.',
+    detail: 'Safety bypass request: direct instruction to skip security measures.'
+  },
+  {
+    regex: /I\s+am\s+(?:the\s+)?(?:system\s+)?(?:administrator|admin|root|owner|developer|maintainer)\b.*?(?:authorization|auth)\s*(?:code|key|token)\s*(?:is|:)\s*\S+/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text impersonates an administrator with a fake authorization code.',
+    detail: 'Authority impersonation: claims admin identity with fabricated credentials.'
+  },
+  {
+    regex: /(?:disable|turn\s+off|stop)\s+(?:all\s+)?(?:logging|monitoring|tracking|auditing|recording)/i,
+    severity: 'critical',
+    category: 'social_engineering',
+    description: 'Text tries to disable logging or monitoring to hide malicious activity.',
+    detail: 'Logging suppression: attempts to disable audit trail and monitoring.'
+  },
+  {
+    regex: /(?:if\s+you\s+don'?t|unless\s+you)\s+(?:help|do\s+this|comply).*?(?:lose\s+my\s+job|family\s+will\s+suffer|get\s+fired|be\s+punished|bad\s+things)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text uses emotional manipulation and threats to pressure the AI into compliance.',
+    detail: 'Emotional manipulation: uses personal hardship or threats to coerce agent compliance.'
+  },
+  {
+    regex: /(?:please\s+)?just\s+this\s+once|make\s+an\s+exception|bend\s+the\s+rules?\s+(?:this\s+time|for\s+me)/i,
+    severity: 'medium',
+    category: 'social_engineering',
+    description: 'Text tries to get the AI to make a one-time exception to its rules.',
+    detail: 'Exception request: pressures agent to deviate from safety rules as a special case.'
+  },
+  {
+    regex: /you\s+(?:already\s+)?agreed\s+(?:to\s+(?:do\s+)?this|in\s+our\s+previous|last\s+time|before)\b.*?(?:don'?t\s+remember|forgot|continue|keep\s+going)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text gaslights the AI by falsely claiming prior agreement.',
+    detail: 'Gaslighting: fabricates previous agreement to manipulate agent behavior.'
+  },
+  {
+    regex: /(?:safety|security)\s+team\s+(?:has\s+)?(?:already\s+)?(?:approved|authorized|cleared|verified)\s+(?:this|the)\s+(?:request|action|task)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text falsely claims safety team approval for a request.',
+    detail: 'False authorization: fabricates safety team approval to bypass security measures.'
+  },
+  {
+    regex: /(?:ticket|issue|request)\s*#?\s*[A-Z]{0,5}[-_]?\d{2,}/i,
+    severity: 'low',
+    category: 'social_engineering',
+    description: 'Text references a ticket number to appear authorized — verify before acting.',
+    detail: 'Ticket reference: cites a ticket/issue number that may be fabricated for legitimacy.'
+  },
+  {
+    regex: /you\s+can\s+verify\s+(?:this\s+)?(?:with|by\s+(?:contacting|asking|checking))\s+(?:them|the\s+team|support|admin)/i,
+    severity: 'medium',
+    category: 'social_engineering',
+    description: 'Text invites verification as a social engineering tactic to build false trust.',
+    detail: 'False verification offer: suggests verifying a fabricated claim to appear legitimate.'
+  },
+
+  // --- Encoding Evasion: Hex, ROT13, Leetspeak, Whitespace ---
+  {
+    regex: /(?:decode|process|execute|interpret|translate)\s*(?:this|the\s+following)?\s*:\s*[0-9a-fA-F]{20,}/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text contains hex-encoded content with an instruction to decode it.',
+    detail: 'Hex-encoded injection: instructs agent to process hex-encoded payload.'
+  },
+  {
+    regex: /(?:pipe|send)\s+(?:.*?\s+)?(?:to\s+)?(?:bash|sh|shell)\b|[|]\s*(?:bash|sh)\b/i,
+    severity: 'critical',
+    category: 'tool_abuse',
+    description: 'Text attempts to pipe content to a shell for execution.',
+    detail: 'Shell pipe injection: attempts to pipe data to bash/sh for code execution.'
   }
 ];
 
@@ -918,6 +1175,121 @@ const scanTextForPatterns = (text, source) => {
       threat.confidence = calculateConfidence(threat, patternMatchCount, source);
       threat.confidenceLabel = confidenceLabel(threat.confidence);
       threats.push(threat);
+    }
+  }
+
+  // Check for hex-encoded content
+  const hexMatch = text.match(/(?:^|[\s:])([0-9a-fA-F]{20,})(?:[\s,.]|$)/);
+  if (hexMatch) {
+    try {
+      const hexDecoded = hexMatch[1].match(/.{1,2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
+      const printable = hexDecoded.split('').filter(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126).length;
+      if (printable / hexDecoded.length > 0.8 && hexDecoded.length > 10) {
+        for (const pattern of INJECTION_PATTERNS) {
+          if (pattern.regex.test(hexDecoded)) {
+            const threat = {
+              severity: 'critical',
+              category: 'prompt_injection',
+              description: 'Text hides attack instructions inside hex encoding.',
+              detail: `Hex-encoded injection found in ${source}. Decoded: "${hexDecoded.substring(0, 100)}"`
+            };
+            threat.confidence = 90;
+            threat.confidenceLabel = confidenceLabel(90);
+            threats.push(threat);
+            break;
+          }
+        }
+      }
+    } catch (e) { /* invalid hex */ }
+  }
+
+  // Check for ROT13-encoded content
+  const rot13Decode = (s) => s.replace(/[a-zA-Z]/g, c => {
+    const base = c <= 'Z' ? 65 : 97;
+    return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+  });
+  if (/^[a-zA-Z\s]{10,}$/.test(text.trim())) {
+    const decoded = rot13Decode(text);
+    if (decoded !== text) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(decoded) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'high',
+            category: 'prompt_injection',
+            description: 'Text appears to be ROT13-encoded to hide attack instructions.',
+            detail: `ROT13-encoded injection found in ${source}. Decoded: "${decoded.substring(0, 100)}"`
+          };
+          threat.confidence = 80;
+          threat.confidenceLabel = confidenceLabel(80);
+          threats.push(threat);
+          break;
+        }
+      }
+    }
+  }
+
+  // Check for leetspeak obfuscation
+  const leetspeakNormalize = (s) => s.replace(/4/g, 'a').replace(/3/g, 'e').replace(/1/g, 'i').replace(/0/g, 'o').replace(/5/g, 's').replace(/7/g, 't').replace(/@/g, 'a');
+  if (/[0-9]/.test(text) && /[a-zA-Z]/.test(text)) {
+    const normalized = leetspeakNormalize(text);
+    if (normalized !== text) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(normalized) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'high',
+            category: 'prompt_injection',
+            description: 'Text uses leetspeak (letter/number substitution) to hide attack instructions.',
+            detail: `Leetspeak obfuscation detected in ${source}. Normalized: "${normalized.substring(0, 100)}"`
+          };
+          threat.confidence = 75;
+          threat.confidenceLabel = confidenceLabel(75);
+          threats.push(threat);
+          break;
+        }
+      }
+    }
+  }
+
+  // Check for whitespace-padded text (letters separated by spaces)
+  // Detect patterns like "i g n o r e" or "i g n o r e   a l l"
+  if (/^[a-zA-Z]\s+[a-zA-Z]\s+[a-zA-Z]/.test(text.trim())) {
+    // Reconstruct words: split on multi-space (word boundary), then collapse single-space chars
+    const words = text.trim().split(/\s{2,}/).map(w => w.replace(/\s/g, ''));
+    const reconstructed = words.join(' ');
+    if (reconstructed.length > 10) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(reconstructed)) {
+          const threat = {
+            severity: 'high',
+            category: 'prompt_injection',
+            description: 'Text uses whitespace padding between letters to evade detection.',
+            detail: `Whitespace obfuscation detected in ${source}. Reconstructed: "${reconstructed.substring(0, 100)}"`
+          };
+          threat.confidence = 80;
+          threat.confidenceLabel = confidenceLabel(80);
+          threats.push(threat);
+          break;
+        }
+      }
+    }
+  }
+
+  // Check for reversed text
+  if (text.length >= 20 && text.length <= 500) {
+    const reversed = text.split('').reverse().join('');
+    for (const pattern of INJECTION_PATTERNS) {
+      if (pattern.regex.test(reversed) && !pattern.regex.test(text)) {
+        const threat = {
+          severity: 'high',
+          category: 'prompt_injection',
+          description: 'Text is written backwards to hide attack instructions from detection.',
+          detail: `Reversed text injection detected in ${source}. Reversed: "${reversed.substring(0, 100)}"`
+        };
+        threat.confidence = 85;
+        threat.confidenceLabel = confidenceLabel(85);
+        threats.push(threat);
+        break;
+      }
     }
   }
 

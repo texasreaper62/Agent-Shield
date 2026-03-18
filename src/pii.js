@@ -83,7 +83,9 @@ class PIIRedactor {
    * @param {boolean} [options.logging=false] - Log redactions.
    */
   constructor(options = {}) {
-    this.categories = options.categories || Object.keys(PII_PATTERNS);
+    // Collect unique category values (not keys) so phone_us/phone_intl both map to 'phone'
+    const allCategories = [...new Set(Object.values(PII_PATTERNS).map(p => p.category))];
+    this.categories = options.categories || allCategories;
     this.customPatterns = options.customPatterns || {};
     this.logging = options.logging || false;
     this.stats = { totalRedactions: 0, byCategory: {} };
