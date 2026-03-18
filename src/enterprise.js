@@ -342,7 +342,7 @@ class DebugShield {
 
     if (this.verbose) {
       const ms = trace ? trace.totalTimeMs : 0;
-      console.log(`[DEBUG] Scan: ${text.substring(0, 50)}... → ${result.status} (${ms.toFixed(1)}ms, ${result.threats.length} threats)`);
+      console.log(`[Agent Shield] DEBUG Scan: ${text.substring(0, 50)}... → ${result.status} (${ms.toFixed(1)}ms, ${result.threats.length} threats)`);
     }
 
     return { ...result, _trace: trace };

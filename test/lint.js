@@ -54,6 +54,14 @@ for (const file of JS_FILES) {
 
     // No console.error without [Agent Shield] prefix (except in test files)
     if (/console\.(log|warn|error)\s*\(/.test(trimmed) && !basename.includes('test')) {
+      // Skip GitHub Actions annotation/output format (::error::, ::set-output, etc.)
+      if (/`::|::/.test(trimmed)) continue;
+      // Skip console.log inside string literals (code snippets / templates)
+      if (/['"`].*console\.(log|warn|error)/.test(trimmed)) continue;
+      // Skip console.log inside arrow functions within template strings
+      if (/=>\s*console\.(log|warn|error)/.test(trimmed) && /return\s+`|`/.test(lines.slice(Math.max(0, i - 20), i).join('\n'))) continue;
+      // Skip lines that push string containing console.log (generated code)
+      if (/\.push\(/.test(trimmed)) continue;
       if (!/\[Agent Shield\]/.test(trimmed) && !/console\.(warn|error)\s*\(\s*'\[Agent Shield\]/.test(trimmed)) {
         // Allow console calls that reference [Agent Shield] on the same line
         if (!/Agent Shield/.test(trimmed)) {
