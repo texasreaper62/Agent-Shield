@@ -4,95 +4,121 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Agent Shield is a Chrome extension that protects everyday people from AI-specific threats while browsing the web. It detects prompt injection attacks, hidden AI manipulation, AI-powered scams, and other threats that target AI assistants and their users.
+Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
 
-**Design Philosophy:** Built for non-technical users. Every warning, alert, and UI element must be understandable by someone who doesn't know what "prompt injection" means. Plain language. No jargon.
+**Design Philosophy:** Zero-dependency, local-only detection. Drop it into any Node.js agent and it works. No API keys, no cloud calls, no data leaves the user's environment.
 
-**Privacy First:** All detection runs locally in the browser. No data ever leaves the user's machine.
+**Privacy First:** All detection runs locally via pattern matching. No external calls ever.
 
 ## Build & Development
 
-This is a vanilla JavaScript Chrome Extension (Manifest V3). No build tools or frameworks required.
-
 ```bash
-# Load the extension in Chrome:
-# 1. Open chrome://extensions/
-# 2. Enable "Developer mode"
-# 3. Click "Load unpacked" and select this directory
+# Install (no external dependencies)
+npm install
 
-# Test the extension:
-# Open test/test-page.html in Chrome to verify detections
+# Run tests
+npm test
 
-# Run tests (future):
-# npm test
+# Run full test suite (40 features)
+npm run test:all
+
+# Red team attack simulation
+npm run redteam
+
+# Shield score / benchmarks
+npm run score
+npm run benchmark
 ```
 
 ## Code Style
 
-- Vanilla JavaScript only — no frameworks or build tools for v0.1
-- IIFE pattern for content scripts to avoid global scope pollution
+- Vanilla JavaScript (Node.js >=16) — no frameworks or build tools
+- CommonJS modules (`require`/`module.exports`)
 - JSDoc comments on all public functions
 - Console logging prefixed with `[Agent Shield]` for easy filtering
-- All CSS injected into pages must use `!important` to prevent conflicts
 - Use `const` and `let`, never `var`
 - Strict mode (`'use strict'`) in all scripts
 - Follow existing patterns in the codebase
-- Use meaningful variable and function names
 - Keep functions focused and concise
 
 ## Project Structure
 
 ```
 /
-├── .claude/
-│   └── settings.json    # Claude Code project settings
-├── icons/
-│   ├── shield-green-16.png
-│   ├── shield-green-32.png
-│   ├── shield-green-48.png
-│   └── shield-green-128.png
 ├── src/
-│   ├── detector.js      # Detection engine (core brain)
-│   ├── content.js       # Content script (runs on every page)
-│   ├── content.css      # Warning banner styles
-│   ├── background.js    # Service worker
-│   ├── popup.html       # Popup interface
-│   ├── popup.css        # Popup styles
-│   └── popup.js         # Popup logic
+│   ├── index.js             # AgentShield class — main SDK entry point
+│   ├── main.js              # Unified entry point (all exports)
+│   ├── detector-core.js     # Core detection engine (patterns, scanning)
+│   ├── middleware.js         # wrapAgent, shieldTools, Express middleware
+│   ├── integrations.js      # Anthropic, OpenAI, LangChain, Vercel AI
+│   ├── canary.js            # Canary tokens, prompt leak detection
+│   ├── pii.js               # PII redaction, DLP engine
+│   ├── tool-guard.js        # Tool sequence analysis, permission boundaries
+│   ├── circuit-breaker.js   # Circuit breaker, rate limiter, shadow mode
+│   ├── conversation.js      # Fragmentation, language switch, behavioral fingerprint
+│   ├── multi-agent.js       # Agent firewall, delegation chain, shared threat state
+│   ├── multi-agent-trust.js # Message signing, capability tokens, blast radius
+│   ├── encoding.js          # Steganography, encoding bruteforce, structured data
+│   ├── watermark.js         # Output watermarking, differential privacy
+│   ├── policy.js            # Policy loading, structured logging, webhooks
+│   ├── policy-extended.js   # A/B testing, threat intel, pattern builder
+│   ├── compliance.js        # SOC2/HIPAA/GDPR reporting, audit trail
+│   ├── enterprise.js        # Multi-tenant, RBAC, debug mode
+│   ├── scanners.js          # RAG scanner, prompt linter, tool schema validator
+│   ├── production.js        # Sampling, shadow comparison, graceful scanner
+│   ├── testing.js           # Test suite generator, agent contracts
+│   ├── redteam.js           # Attack simulator, payload fuzzer
+│   ├── shield-score.js      # Shield score calculator, benchmarks
+│   ├── threat-encyclopedia.js # Threat reference database
+│   ├── presets.js           # Config presets, snippet generator
+│   ├── badges.js            # Badge generator, GitHub Action reporter
+│   ├── allowlist.js         # Allowlists, feedback loop, scan cache
+│   └── utils.js             # Shared utilities
 ├── test/
-│   └── test-page.html   # Test page with injection examples
-├── manifest.json        # Chrome Extension manifest (V3)
-├── LICENSE              # MIT License
-├── README.md            # Project documentation
-├── PROJECT_BRIEF.md     # Detailed project specification
-└── CLAUDE.md            # This file
+│   ├── test.js              # Core tests
+│   ├── test-modules.js      # Module tests
+│   ├── test-new-features.js # New feature tests
+│   ├── test-all-40-features.js # Full feature test suite
+│   ├── detector.test.js     # Detector unit tests
+│   └── lint.js              # Linting
+├── examples/
+│   ├── quick-start.js       # Quick start demo
+│   ├── protect-agent.js     # Agent protection example
+│   └── agent-shield.json    # Example config
+├── types/
+│   └── index.d.ts           # TypeScript type definitions
+├── bin/
+│   └── agent-shield.js      # CLI tool
+├── dashboard/
+│   └── index.html           # Security dashboard
+├── package.json
+├── LICENSE
+├── README.md
+└── CLAUDE.md
 ```
 
 ## Important Conventions
 
 - Commit messages should be clear and descriptive
 - All new features should include tests
-- Update documentation when changing public APIs
 - All detection must run locally — never transmit user data
-- Use plain language in all user-facing text
 - Severity levels: critical > high > medium > low
 - Status levels: danger > warning > caution > safe
 
 ## Testing
 
-- Load the extension in Chrome Developer mode
-- Open `test/test-page.html` to verify all detection categories work
-- Check the popup UI shows correct threat counts and descriptions
-- Verify the warning banner appears on pages with critical/high threats
-- Verify badge colors update correctly per tab
-- Performance: scans should complete in under 100ms for typical pages
+- `npm test` — core and module tests
+- `npm run test:all` — full 40-feature suite
+- `npm run redteam` — attack simulation
+- `node examples/quick-start.js` — verify SDK works end-to-end
 
 ## Architecture Notes
 
-- **detector.js** is the core brain — self-contained, no DOM dependencies for pattern matching
-- **content.js** orchestrates scanning on each page, manages the warning banner, handles messaging
-- **background.js** manages badge state, cross-tab stats, and message routing
-- **popup.js** displays results and handles user interaction with the popup
+- **detector-core.js** — standalone pattern matching engine, no DOM dependencies
+- **index.js** — `AgentShield` class wrapping the detector with config, stats, blocking
+- **main.js** — unified re-export of all modules for `require('agent-shield')`
+- **integrations.js** — framework-specific wrappers (Anthropic, OpenAI, LangChain, Vercel)
+- **middleware.js** — generic agent wrapping and Express middleware
 
 ## Additional Notes
 

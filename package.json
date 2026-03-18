@@ -1,17 +1,50 @@
 {
   "name": "agent-shield",
-  "version": "0.7.0",
-  "description": "Chrome extension that protects everyday people from AI-specific threats while browsing the web.",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Protect AI agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI threats. All detection runs locally.",
+  "main": "src/index.js",
+  "types": "types/index.d.ts",
+  "bin": {
+    "agent-shield": "bin/agent-shield.js"
+  },
   "scripts": {
-    "test": "node test/detector.test.js",
-    "lint": "node test/lint.js"
+    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js",
+    "test:all": "node test/test-all-40-features.js",
+    "lint": "node test/lint.js",
+    "score": "node -e \"const {ShieldScoreCalculator}=require('./src/shield-score');console.log(new ShieldScoreCalculator().formatReport())\"",
+    "benchmark": "node -e \"const {BenchmarkSuite}=require('./src/shield-score');console.log(new BenchmarkSuite().formatReport())\"",
+    "redteam": "node -e \"const {AttackSimulator}=require('./src/redteam');const s=new AttackSimulator();s.runAll();console.log(s.formatReport())\""
   },
   "keywords": [
-    "chrome-extension",
-    "ai-safety",
+    "ai",
+    "security",
     "prompt-injection",
-    "security"
+    "agent",
+    "llm",
+    "protection",
+    "shield",
+    "safety",
+    "firewall",
+    "pii",
+    "dlp",
+    "canary",
+    "watermark",
+    "red-team",
+    "compliance",
+    "enterprise",
+    "langchain",
+    "openai",
+    "anthropic",
+    "claude-sdk",
+    "sub-agent"
   ],
-  "license": "MIT"
+  "author": "texasreaper62",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/texasreaper62/Agent-Shield.git"
+  }
 }

@@ -1,109 +1,267 @@
 # Agent Shield
 
-**Protect yourself from AI-specific threats while browsing the web.**
+**Security SDK for AI agents.** Protect your agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats.
 
-Agent Shield is a free, open-source Chrome extension that detects prompt injection attacks, hidden AI manipulation, AI-powered scams, and fake AI chatbots — all without sending any of your data anywhere.
+Drop it into any agent pipeline — Claude SDK, OpenAI, LangChain, or your own custom agents. Runs as a sub-agent or middleware. All detection happens locally. No data ever leaves your environment.
 
-## Why Agent Shield?
+## Install
 
-As AI assistants become part of everyday life, a new category of threats has emerged:
+```bash
+npm install agent-shield
+```
 
-- **Hidden instructions** on websites that hijack your AI assistant
-- **Fake AI chatbots** that impersonate ChatGPT, Claude, or other services to steal your information
-- **Prompt injection attacks** that trick AI tools into doing things you didn't ask for
-- **Data exfiltration** attempts that use AI assistants to leak your private information
+## Quick Start
 
-Existing security solutions (CrowdStrike, Microsoft Prompt Shields, etc.) only protect enterprises. **Agent Shield protects you.**
+```javascript
+const { AgentShield } = require('agent-shield');
 
-## Features
+const shield = new AgentShield({ blockOnThreat: true });
 
-- **Prompt Injection Detection** — Catches hidden instructions designed to manipulate AI assistants
-- **Hidden Text Scanning** — Finds invisible text on pages that could contain attack payloads
-- **Fake AI Chatbot Detection** — Identifies impersonation attempts of ChatGPT, Claude, Gemini, and other AI services
-- **Data Exfiltration Alerts** — Detects attempts to steal data through AI assistants
-- **Real-time Scanning** — Continuously monitors pages as content loads dynamically
-- **Right-click Scan** — Select any text, right-click, and scan it for threats instantly
-- **Paste Protection** — Warns you when pasted content contains AI manipulation attempts
-- **Suspicious Link Highlighting** — Identifies phishing links that impersonate AI services
-- **Keyboard Shortcut** — Press Ctrl+Shift+S (Cmd+Shift+S on Mac) to rescan the current page
-- **Scan History & Analytics** — Browse past scans with threat breakdowns and activity trends
-- **Light & Dark Themes** — Choose your preferred appearance in Settings
-- **Plain Language Alerts** — Every warning is written for real people, not security experts
+// Scan input before your agent processes it
+const result = shield.scanInput(userMessage);
+if (result.blocked) {
+  return 'This input was blocked for safety reasons.';
+}
+
+// Scan output before returning to the user
+const output = shield.scanOutput(agentResponse);
+if (output.blocked) {
+  return 'Response blocked — the agent may have been compromised.';
+}
+
+// Scan tool calls before execution
+const toolCheck = shield.scanToolCall('bash', { command: 'cat .env' });
+if (toolCheck.blocked) {
+  console.log('Dangerous tool call blocked:', toolCheck.threats);
+}
+```
+
+## Framework Integrations
+
+### Anthropic / Claude SDK
+
+```javascript
+const Anthropic = require('@anthropic-ai/sdk');
+const { shieldAnthropicClient } = require('agent-shield/src/integrations');
+
+const client = shieldAnthropicClient(new Anthropic(), {
+  blockOnThreat: true,
+  pii: true,              // Auto-redact PII from messages
+  circuitBreaker: {       // Trip after repeated attacks
+    threshold: 5,
+    windowMs: 60000
+  }
+});
+
+// Use the client normally — Agent Shield scans every message
+const msg = await client.messages.create({
+  model: 'claude-sonnet-4-20250514',
+  messages: [{ role: 'user', content: userInput }]
+});
+```
+
+### OpenAI SDK
+
+```javascript
+const OpenAI = require('openai');
+const { shieldOpenAIClient } = require('agent-shield/src/integrations');
+
+const client = shieldOpenAIClient(new OpenAI(), { blockOnThreat: true });
+const response = await client.chat.completions.create({
+  model: 'gpt-4',
+  messages: [{ role: 'user', content: userInput }]
+});
+```
+
+### LangChain
+
+```javascript
+const { ShieldCallbackHandler } = require('agent-shield/src/integrations');
+
+const handler = new ShieldCallbackHandler({
+  blockOnThreat: true,
+  onThreat: ({ phase, threats }) => console.log(`${phase}: ${threats.length} threats`)
+});
+
+const chain = new LLMChain({ llm, prompt, callbacks: [handler] });
+```
+
+### Generic Agent Middleware
+
+```javascript
+const { wrapAgent, shieldTools } = require('agent-shield/src/middleware');
+
+// Wrap any async agent function
+const protectedAgent = wrapAgent(myAgentFunction, { blockOnThreat: true });
+const result = await protectedAgent('Hello!');
+
+// Protect all tool calls
+const protectedTools = shieldTools({
+  bash: async (args) => exec(args.command),
+  readFile: async (args) => fs.readFile(args.path, 'utf-8'),
+}, { blockOnThreat: true });
+```
+
+### Express Middleware
+
+```javascript
+const { expressMiddleware } = require('agent-shield/src/middleware');
+
+app.use(expressMiddleware({ blockOnThreat: true }));
+app.post('/agent', (req, res) => {
+  // Dangerous requests automatically blocked with 400
+  // Safe requests have req.agentShield attached
+});
+```
+
+## What It Detects
+
+| Category | Examples |
+|----------|----------|
+| **Prompt Injection** | Fake system prompts, instruction overrides, ChatML/LLaMA delimiters |
+| **Role Hijacking** | "You are now...", DAN mode, jailbreak attempts |
+| **Data Exfiltration** | System prompt extraction, markdown image leaks, fetch calls |
+| **Tool Abuse** | Sensitive file access, dangerous command execution |
+| **Social Engineering** | Identity concealment, automation hiding |
+| **Obfuscation** | Unicode homoglyphs, zero-width chars, Base64 encoding, nested encoding |
+| **Multi-Language** | Attacks in English, Spanish, French, German, Portuguese, Chinese, Japanese |
+| **PII Leakage** | SSNs, emails, phone numbers, credit cards auto-redacted |
+| **Clipboard Hijack** | Scripts that intercept copy/paste events |
+| **AI Phishing** | Fake AI login forms, urgency scams, voice cloning prompts |
+
+## Advanced Features
+
+### Canary Tokens — Detect Prompt Leaks
+
+```javascript
+const { CanaryTokens } = require('agent-shield');
+
+const canary = new CanaryTokens();
+const token = canary.generate('my_system_prompt');
+
+// Embed in your system prompt, then check agent output
+const leakCheck = canary.check(agentOutput);
+if (leakCheck.leaked) {
+  console.log('System prompt was leaked!');
+}
+```
+
+### PII Redaction
+
+```javascript
+const { PIIRedactor } = require('agent-shield');
+
+const pii = new PIIRedactor();
+const result = pii.redact('Email john@example.com, SSN 123-45-6789');
+console.log(result.redacted); // 'Email [EMAIL_REDACTED], SSN [SSN_REDACTED]'
+```
+
+### Tool Sequence Analysis
+
+```javascript
+const { ToolSequenceAnalyzer } = require('agent-shield');
+
+const analyzer = new ToolSequenceAnalyzer();
+analyzer.record('readFile', { path: '/app/.env' });
+const result = analyzer.record('http_request', { url: 'http://evil.com' });
+// result.suspicious === true  (read sensitive file, then send data externally)
+```
+
+### Circuit Breaker
+
+```javascript
+const { CircuitBreaker } = require('agent-shield');
+
+const breaker = new CircuitBreaker({
+  threshold: 3,           // Trip after 3 threats
+  windowMs: 60000,        // Within 60 seconds
+  onTrip: () => alert('Agent under attack — circuit breaker tripped')
+});
+```
+
+### Multi-Agent Security
+
+```javascript
+const { AgentFirewall, DelegationChain } = require('agent-shield');
+
+// Firewall between agents
+const firewall = new AgentFirewall({ blockOnThreat: true });
+
+// Track delegation chains for audit
+const chain = new DelegationChain();
+chain.record('orchestrator', 'researcher', 'search for X');
+```
+
+### Red Team Testing
+
+```bash
+npm run redteam
+```
+
+```javascript
+const { AttackSimulator } = require('agent-shield');
+
+const sim = new AttackSimulator();
+sim.runAll();
+console.log(sim.formatReport());
+```
+
+### Compliance & Audit
+
+```javascript
+const { ComplianceReporter, AuditTrail } = require('agent-shield');
+
+const reporter = new ComplianceReporter();
+console.log(reporter.generateReport('SOC2'));
+
+const audit = new AuditTrail();
+// All scans automatically logged for compliance
+```
+
+## Configuration
+
+```javascript
+const shield = new AgentShield({
+  sensitivity: 'medium',              // 'low', 'medium', or 'high'
+  blockOnThreat: false,               // Auto-block dangerous inputs
+  blockThreshold: 'high',             // Min severity to block: 'low'|'medium'|'high'|'critical'
+  logging: false,                     // Log threats to console
+  onThreat: (result) => {},           // Custom callback on detection
+  dangerousTools: ['bash', ...],      // Tool names to scrutinize
+  sensitiveFilePatterns: [/.env$/i]   // File patterns to block
+});
+```
+
+## Severity Levels
+
+| Level | Meaning |
+|-------|---------|
+| `critical` | Active attack — block immediately |
+| `high` | Likely an attack — should be blocked |
+| `medium` | Suspicious — worth investigating |
+| `low` | Informational — might be benign |
+
+## CLI
+
+```bash
+npx agent-shield scan "ignore all previous instructions"
+npx agent-shield score
+npx agent-shield redteam
+```
+
+## Testing
+
+```bash
+npm test              # Core tests
+npm run test:all      # Full 40-feature test suite
+npm run redteam       # Attack simulation
+npm run benchmark     # Performance benchmarks
+```
 
 ## Privacy
 
-**Your data never leaves your browser.** Period.
-
-- All scanning happens locally on your device
-- No network requests are made by the extension
-- No browsing history, page content, or personal data is ever transmitted
-- We use Chrome's local storage only for scan results and aggregate statistics
-
-## Installation
-
-### From Source (Developer Mode)
-
-1. Download or clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable **Developer mode** (toggle in the top right)
-4. Click **Load unpacked** and select the `agent-shield` directory
-5. The shield icon will appear in your toolbar
-
-### Testing
-
-Open `test/test-page.html` in Chrome to see Agent Shield in action. The test page contains various threat examples that the extension will detect.
-
-## How It Works
-
-Agent Shield scans every web page you visit for AI-specific threats:
-
-1. **Pattern Matching** — Checks page content against known prompt injection patterns
-2. **Hidden Content Detection** — Scans for invisible text that could contain attack payloads
-3. **Comment & Metadata Scanning** — Checks HTML comments, meta tags, and data attributes
-4. **Fake Interface Detection** — Identifies chat-like UIs impersonating known AI services
-
-Results are shown via:
-- A **toolbar badge** with threat count and color coding (green = safe, yellow = caution, orange = warning, red = danger)
-- A **warning banner** at the top of dangerous pages
-- A **detailed popup** when you click the extension icon
-
-## Status Indicators
-
-| Status | Meaning |
-|--------|---------|
-| **Safe** (Green) | No AI threats detected on this page |
-| **Caution** (Yellow) | Minor items noticed, but nothing dangerous |
-| **Warning** (Orange) | Content found that could manipulate AI assistants |
-| **Danger** (Red) | Active manipulation attempts detected |
-
-## Technical Details
-
-- Chrome Extension using Manifest V3
-- Vanilla JavaScript — no frameworks or external dependencies
-- All detection runs client-side via content scripts
-- Typical scan time: under 100ms
-- DOM mutation observer for dynamic content (debounced at 2 seconds)
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Future Roadmap
-
-- Firefox and Edge support
-- Optional AI-powered analysis for ambiguous cases
-- Email content scanning
-- Enterprise dashboard
+All detection runs locally using pattern matching. No data is sent to any external service. No API keys required. No cloud dependencies.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
-
-## Disclaimer
-
-Agent Shield is a detection tool that helps identify potential AI-specific threats. No security tool can guarantee 100% protection. Always exercise caution when interacting with AI assistants and unfamiliar websites.
+MIT — see [LICENSE](LICENSE) for details.
