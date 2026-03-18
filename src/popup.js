@@ -114,6 +114,9 @@
   const resumeLink = document.getElementById('resume-link');
   const exportJsonBtn = document.getElementById('export-json-btn');
   const settingsBtn = document.getElementById('settings-btn');
+  const quickActions = document.getElementById('quick-actions');
+  const trustSiteBtn = document.getElementById('trust-site-btn');
+  const siteReputation = document.getElementById('site-reputation');
 
   // Current scan result (for export)
   let currentResult = null;
@@ -218,6 +221,55 @@
    * Updates the stats bar.
    * @param {object} result - Scan result from the detector.
    */
+  /**
+   * Renders the module breakdown chips showing which categories found threats.
+   * @param {Array} threats - Array of threat objects.
+   */
+  const renderModuleBreakdown = (threats) => {
+    const moduleBreakdown = document.getElementById('module-breakdown');
+    const moduleChips = document.getElementById('module-chips');
+
+    if (!threats || threats.length === 0) {
+      moduleBreakdown.style.display = 'none';
+      return;
+    }
+
+    // Count threats per category
+    const catCounts = {};
+    for (const t of threats) {
+      const cat = t.category || 'unknown';
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+    }
+
+    const SEVERITY_COLORS = {
+      critical: '#ef4444',
+      high: '#f97316',
+      medium: '#eab308',
+      low: '#22c55e'
+    };
+
+    // Find max severity per category
+    const catMaxSev = {};
+    for (const t of threats) {
+      const cat = t.category || 'unknown';
+      const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+      if (!catMaxSev[cat] || sevOrder[t.severity] < sevOrder[catMaxSev[cat]]) {
+        catMaxSev[cat] = t.severity;
+      }
+    }
+
+    const sorted = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+
+    moduleChips.innerHTML = sorted.map(([cat, count]) => {
+      const name = CATEGORY_NAMES[cat] || cat;
+      const sev = catMaxSev[cat] || 'medium';
+      const color = SEVERITY_COLORS[sev];
+      return `<span class="module-chip"><span class="module-chip-count" style="background-color:${color};">${count}</span>${escapeHtml(name)}</span>`;
+    }).join('');
+
+    moduleBreakdown.style.display = 'block';
+  };
+
   const updateStats = (result) => {
     const timeText = result.stats.scanTimeMs + 'ms';
     statScanTime.textContent = timeText;
@@ -253,12 +305,90 @@
       statusTitle.textContent = 'No Data';
       statusDescription.textContent = 'Could not scan this page. It may be a browser internal page.';
       exportBtn.style.display = 'none';
+      quickActions.style.display = 'none';
       return;
     }
 
     updateStatusCard(result);
+    renderModuleBreakdown(result.threats);
     renderThreats(result.threats);
     updateStats(result);
+    showQuickActions(result);
+    showSiteReputation(result);
+  };
+
+  /**
+   * Shows quick action buttons based on scan results.
+   * @param {object} result - Scan result.
+   */
+  const showQuickActions = (result) => {
+    if (!result || !result.hostname) {
+      quickActions.style.display = 'none';
+      return;
+    }
+
+    // Check if site is already trusted
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || {};
+      const allowlist = settings.allowlist || [];
+      const hostname = result.hostname.toLowerCase().replace(/^www\./, '');
+
+      if (allowlist.includes(hostname)) {
+        trustSiteBtn.textContent = 'Site is Trusted';
+        trustSiteBtn.classList.add('done');
+        trustSiteBtn.disabled = true;
+      } else {
+        trustSiteBtn.textContent = 'Add to Trusted Sites';
+        trustSiteBtn.classList.remove('done');
+        trustSiteBtn.disabled = false;
+      }
+      quickActions.style.display = 'flex';
+    });
+  };
+
+  /**
+   * Shows site reputation info from scan history.
+   * @param {object} result - Scan result.
+   */
+  const showSiteReputation = (result) => {
+    if (!result || !result.hostname) {
+      siteReputation.style.display = 'none';
+      return;
+    }
+
+    chrome.runtime.sendMessage({ type: 'GET_HISTORY' }, (history) => {
+      if (chrome.runtime.lastError || !history) {
+        siteReputation.style.display = 'none';
+        return;
+      }
+
+      const hostname = result.hostname.toLowerCase();
+      const siteHistory = history.filter(h =>
+        h.hostname && h.hostname.toLowerCase() === hostname &&
+        h.timestamp !== result.timestamp
+      );
+
+      if (siteHistory.length === 0) {
+        siteReputation.style.display = 'none';
+        return;
+      }
+
+      const dangerCount = siteHistory.filter(h => h.status === 'danger').length;
+      const warningCount = siteHistory.filter(h => h.status === 'warning').length;
+      const totalVisits = siteHistory.length;
+
+      let reputationText;
+      if (dangerCount > 0) {
+        reputationText = `<strong>${hostname}</strong> has been flagged as dangerous ${dangerCount} time${dangerCount !== 1 ? 's' : ''} in ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
+      } else if (warningCount > 0) {
+        reputationText = `<strong>${hostname}</strong> had warnings in ${warningCount} of ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
+      } else {
+        reputationText = `<strong>${hostname}</strong> has been clean in ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
+      }
+
+      siteReputation.innerHTML = reputationText;
+      siteReputation.style.display = 'block';
+    });
   };
 
   // =========================================================================
@@ -525,6 +655,32 @@
   // Settings button
   settingsBtn.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
+  });
+
+  // Trust site button
+  trustSiteBtn.addEventListener('click', () => {
+    if (!currentResult || !currentResult.hostname) return;
+    const hostname = currentResult.hostname.toLowerCase().replace(/^www\./, '');
+
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || {};
+      const allowlist = settings.allowlist || [];
+      if (allowlist.includes(hostname)) return;
+
+      allowlist.push(hostname);
+      settings.allowlist = allowlist;
+
+      chrome.storage.local.set({ settings }, () => {
+        trustSiteBtn.textContent = 'Site is Trusted';
+        trustSiteBtn.classList.add('done');
+        trustSiteBtn.disabled = true;
+
+        chrome.runtime.sendMessage({
+          type: 'SETTINGS_CHANGED',
+          settings: settings
+        });
+      });
+    });
   });
 
   // =========================================================================

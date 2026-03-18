@@ -13,7 +13,7 @@
       <span class="header-icon">&#x1F6E1;&#xFE0F;</span>
       <div>
         <h1 class="header-title">AI Shield</h1>
-        <span class="header-version">v0.6.0</span>
+        <span class="header-version">v0.7.0</span>
       </div>
     </div>
     <div class="header-actions">
@@ -43,6 +43,12 @@
     </div>
   </div>
 
+  <!-- Module Breakdown -->
+  <div id="module-breakdown" class="module-breakdown" style="display:none;">
+    <h2 class="section-title">Detection Summary</h2>
+    <div id="module-chips" class="module-chips"></div>
+  </div>
+
   <!-- Threat List -->
   <div id="threat-list" class="threat-list" style="display:none;">
     <h2 class="section-title">Threats Found</h2>
@@ -64,6 +70,14 @@
       <span class="stat-value" id="stat-total-threats">—</span>
     </div>
   </div>
+
+  <!-- Quick Actions -->
+  <div id="quick-actions" class="quick-actions" style="display:none;">
+    <button id="trust-site-btn" class="quick-action-btn">Add to Trusted Sites</button>
+  </div>
+
+  <!-- Site Reputation -->
+  <div id="site-reputation" class="site-reputation" style="display:none;"></div>
 
   <!-- Action Buttons -->
   <div class="action-buttons">

@@ -361,7 +361,7 @@
   const exportHistory = () => {
     const data = {
       exported: new Date().toISOString(),
-      version: '0.6.0',
+      version: '0.7.0',
       totalEntries: allHistory.length,
       history: allHistory
     };
