@@ -33,6 +33,9 @@ const { SteganographyDetector, EncodingBruteforceDetector, StructuredDataScanner
 // Watermarking & Privacy
 const { OutputWatermark, DifferentialPrivacy } = require('./watermark');
 
+// Utilities
+const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } = require('./utils');
+
 // Integrations
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = require('./integrations');
 
@@ -113,6 +116,14 @@ module.exports = {
   // Watermarking & Privacy
   OutputWatermark,
   DifferentialPrivacy,
+
+  // Utilities
+  getGrade,
+  getGradeLabel,
+  makeBar,
+  truncate,
+  formatHeader,
+  generateId,
 
   // Integrations
   ShieldCallbackHandler,

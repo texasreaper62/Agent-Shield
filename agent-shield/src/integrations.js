@@ -187,8 +187,18 @@ function extractAnthropicText(msg) {
 function setAnthropicText(msg, text) {
   if (typeof msg.content === 'string') {
     msg.content = text;
-  } else if (Array.isArray(msg.content) && msg.content.length === 1) {
-    msg.content[0].text = text;
+  } else if (Array.isArray(msg.content)) {
+    // Replace text in all text blocks, distributing the redacted content to the first block
+    const textBlocks = msg.content.filter(b => b.type === 'text' || b.text);
+    if (textBlocks.length === 1) {
+      textBlocks[0].text = text;
+    } else if (textBlocks.length > 1) {
+      // Put redacted text in first block, clear others
+      textBlocks[0].text = text;
+      for (let i = 1; i < textBlocks.length; i++) {
+        textBlocks[i].text = '';
+      }
+    }
   }
 }
 

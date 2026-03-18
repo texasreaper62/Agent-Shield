@@ -152,9 +152,18 @@ class GitHubActionReporter {
     const blocked = results.blocked || false;
     const status = results.status || 'unknown';
 
-    console.log(`::set-output name=threat_count::${total}`);
-    console.log(`::set-output name=status::${status}`);
-    console.log(`::set-output name=blocked::${blocked}`);
+    // Use GITHUB_OUTPUT env file (modern) with fallback to deprecated ::set-output
+    const githubOutput = process.env.GITHUB_OUTPUT;
+    if (githubOutput) {
+      const fs = require('fs');
+      fs.appendFileSync(githubOutput, `threat_count=${total}\n`);
+      fs.appendFileSync(githubOutput, `status=${status}\n`);
+      fs.appendFileSync(githubOutput, `blocked=${blocked}\n`);
+    } else {
+      console.log(`::set-output name=threat_count::${total}`);
+      console.log(`::set-output name=status::${status}`);
+      console.log(`::set-output name=blocked::${blocked}`);
+    }
   }
 
   /**

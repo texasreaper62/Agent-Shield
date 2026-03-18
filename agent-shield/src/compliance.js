@@ -202,15 +202,16 @@ class AuditTrail {
    */
   record(event) {
     const entry = {
-      id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8).padEnd(6, '0')}`,
       timestamp: new Date().toISOString(),
       ...event
     };
 
     this.events.push(entry);
 
-    if (this.events.length > this.maxEvents) {
-      this.events = this.events.slice(-this.maxEvents);
+    // Remove oldest event when at capacity (O(1) vs slice which is O(n))
+    while (this.events.length > this.maxEvents) {
+      this.events.shift();
     }
 
     if (this.autoFlush && this.flushPath) {
@@ -238,13 +239,14 @@ class AuditTrail {
   /**
    * Record a block event.
    */
-  recordBlock(reason, input, threats = [], metadata = {}) {
+  recordBlock(reason, input, threats, metadata = {}) {
+    const threatList = Array.isArray(threats) ? threats : [];
     return this.record({
       type: 'block',
       reason,
       blocked: true,
       input: input.substring(0, 200),
-      threats: threats.map(t => ({ severity: t.severity, category: t.category })),
+      threats: threatList.map(t => ({ severity: t.severity, category: t.category })),
       ...metadata
     });
   }
@@ -314,15 +316,17 @@ class AuditTrail {
    * Query events.
    */
   query(filters = {}) {
-    let results = [...this.events];
+    const sinceDate = filters.since ? new Date(filters.since) : null;
+    const untilDate = filters.until ? new Date(filters.until) : null;
 
-    if (filters.type) results = results.filter(e => e.type === filters.type);
-    if (filters.blocked !== undefined) results = results.filter(e => e.blocked === filters.blocked);
-    if (filters.since) results = results.filter(e => new Date(e.timestamp) >= new Date(filters.since));
-    if (filters.until) results = results.filter(e => new Date(e.timestamp) <= new Date(filters.until));
-    if (filters.minThreats) results = results.filter(e => (e.threatCount || 0) >= filters.minThreats);
-
-    return results;
+    return this.events.filter(e => {
+      if (filters.type && e.type !== filters.type) return false;
+      if (filters.blocked !== undefined && e.blocked !== filters.blocked) return false;
+      if (sinceDate && new Date(e.timestamp) < sinceDate) return false;
+      if (untilDate && new Date(e.timestamp) > untilDate) return false;
+      if (filters.minThreats && (e.threatCount || 0) < filters.minThreats) return false;
+      return true;
+    });
   }
 
   /**

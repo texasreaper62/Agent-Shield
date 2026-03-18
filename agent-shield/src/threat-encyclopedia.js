@@ -489,6 +489,11 @@ class ThreatEncyclopedia {
   constructor() {
     this.threats = THREAT_ENCYCLOPEDIA;
     this.dailyPatterns = DAILY_PATTERNS;
+    // Build reverse index: ID → key for O(1) lookups
+    this._idIndex = {};
+    for (const [key, val] of Object.entries(this.threats)) {
+      this._idIndex[val.id] = key;
+    }
   }
 
   /**
@@ -504,8 +509,9 @@ class ThreatEncyclopedia {
   get(idOrKey) {
     // By key
     if (this.threats[idOrKey]) return this.threats[idOrKey];
-    // By ID
-    return Object.values(this.threats).find(t => t.id === idOrKey) || null;
+    // By ID (O(1) via reverse index)
+    const key = this._idIndex[idOrKey];
+    return key ? this.threats[key] : null;
   }
 
   /**
@@ -539,7 +545,7 @@ class ThreatEncyclopedia {
    * Get the attack pattern of the day (rotates daily).
    */
   getPatternOfTheDay() {
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 1)) / 86400000);
     const index = dayOfYear % this.dailyPatterns.length;
     return this.dailyPatterns[index];
   }

@@ -216,13 +216,10 @@ class RoleBasedPolicy {
    */
   scan(userId, text, options = {}) {
     const role = this.userRoles.get(userId) || 'user';
-    const roleConfig = this.roles[role];
 
+    // Reuse shield created in assignRole, or create lazily
     if (!this.shields.has(role)) {
-      this.shields.set(role, new AgentShield({
-        sensitivity: roleConfig.sensitivity,
-        blockOnThreat: roleConfig.blockOnThreat
-      }));
+      this.assignRole(userId, role);
     }
 
     const result = this.shields.get(role).scan(text, options);
@@ -282,72 +279,70 @@ class DebugShield {
    * Scan with full debug trace.
    */
   scan(text, options = {}) {
-    const startTime = process.hrtime.bigint();
-    const trace = {
-      id: `trace_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      timestamp: new Date().toISOString(),
-      input: text.substring(0, 500),
-      inputLength: text.length,
-      options,
-      steps: []
-    };
-
-    // Pre-processing trace
-    trace.steps.push({
-      step: 'input_received',
-      time: 0,
-      detail: { length: text.length, hasUnicode: /[^\x00-\x7F]/.test(text) }
-    });
+    const startTime = this.enabled ? process.hrtime.bigint() : null;
 
     // Scan
     const result = this.shield.scan(text, options);
 
-    const endTime = process.hrtime.bigint();
-    const elapsedMs = Number(endTime - startTime) / 1e6;
-
-    // Pattern matching trace
-    trace.steps.push({
-      step: 'pattern_matching',
-      time: elapsedMs,
-      detail: {
-        patternsChecked: this.shield.getPatterns().length,
-        threatsFound: result.threats.length,
-        threats: result.threats.map(t => ({
-          severity: t.severity,
-          category: t.category,
-          description: t.description,
-          confidence: t.confidence
-        }))
-      }
-    });
-
-    // Decision trace
-    trace.steps.push({
-      step: 'decision',
-      time: elapsedMs,
-      detail: {
-        status: result.status,
-        blocked: result.blocked,
-        threatCount: result.threats.length
-      }
-    });
-
-    trace.totalTimeMs = parseFloat(elapsedMs.toFixed(3));
-    trace.result = {
-      status: result.status,
-      blocked: result.blocked,
-      threatCount: result.threats.length
-    };
-
+    // Only build trace if debug is enabled
+    let trace = null;
     if (this.enabled) {
+      const endTime = process.hrtime.bigint();
+      const elapsedMs = Number(endTime - startTime) / 1e6;
+
+      trace = {
+        id: `trace_${Date.now()}_${Math.random().toString(36).slice(2, 8).padEnd(6, '0')}`,
+        timestamp: new Date().toISOString(),
+        input: text.substring(0, 500),
+        inputLength: text.length,
+        options,
+        steps: [
+          {
+            step: 'input_received',
+            time: 0,
+            detail: { length: text.length, hasUnicode: /[^\x00-\x7F]/.test(text) }
+          },
+          {
+            step: 'pattern_matching',
+            time: elapsedMs,
+            detail: {
+              patternsChecked: this.shield.getPatterns().length,
+              threatsFound: result.threats.length,
+              threats: result.threats.map(t => ({
+                severity: t.severity,
+                category: t.category,
+                description: t.description,
+                confidence: t.confidence
+              }))
+            }
+          },
+          {
+            step: 'decision',
+            time: elapsedMs,
+            detail: {
+              status: result.status,
+              blocked: result.blocked,
+              threatCount: result.threats.length
+            }
+          }
+        ],
+        totalTimeMs: parseFloat(elapsedMs.toFixed(3)),
+        result: {
+          status: result.status,
+          blocked: result.blocked,
+          threatCount: result.threats.length
+        }
+      };
+
       this.traces.push(trace);
-      if (this.traces.length > this.maxTraces) {
-        this.traces = this.traces.slice(-this.maxTraces);
+      while (this.traces.length > this.maxTraces) {
+        this.traces.shift();
       }
     }
 
     if (this.verbose) {
-      console.log(`[DEBUG] Scan: ${text.substring(0, 50)}... → ${result.status} (${elapsedMs.toFixed(1)}ms, ${result.threats.length} threats)`);
+      const ms = trace ? trace.totalTimeMs : 0;
+      console.log(`[DEBUG] Scan: ${text.substring(0, 50)}... → ${result.status} (${ms.toFixed(1)}ms, ${result.threats.length} threats)`);
     }
 
     return { ...result, _trace: trace };
@@ -396,8 +391,8 @@ class DebugShield {
       max: times[times.length - 1],
       avg: parseFloat((times.reduce((a, b) => a + b, 0) / times.length).toFixed(3)),
       median: times[Math.floor(times.length / 2)],
-      p95: times[Math.floor(times.length * 0.95)],
-      p99: times[Math.floor(times.length * 0.99)]
+      p95: times[Math.min(Math.floor(times.length * 0.95), times.length - 1)],
+      p99: times[Math.min(Math.floor(times.length * 0.99), times.length - 1)]
     };
   }
 }

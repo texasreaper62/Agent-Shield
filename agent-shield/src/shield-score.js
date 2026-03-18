@@ -9,6 +9,7 @@
 
 const { scanText, getPatterns } = require('./detector-core');
 const { ATTACK_PAYLOADS, AttackSimulator } = require('./redteam');
+const { getGrade: sharedGetGrade, makeBar: sharedMakeBar } = require('./utils');
 
 // =========================================================================
 // Shield Score Calculator
@@ -421,19 +422,8 @@ function calculateWeightedScore(details) {
   return (weightedHits / totalWeight) * 100;
 }
 
-function getGrade(score) {
-  if (score >= 95) return 'A+';
-  if (score >= 90) return 'A';
-  if (score >= 85) return 'A-';
-  if (score >= 80) return 'B+';
-  if (score >= 75) return 'B';
-  if (score >= 70) return 'B-';
-  if (score >= 65) return 'C+';
-  if (score >= 60) return 'C';
-  if (score >= 55) return 'C-';
-  if (score >= 50) return 'D';
-  return 'F';
-}
+// Use shared grade function from utils.js
+const getGrade = sharedGetGrade;
 
 function getLabel(score) {
   if (score >= 90) return 'Fortress-grade protection';
@@ -474,11 +464,8 @@ function generateRecommendations(categoryResults) {
   return recs.sort((a, b) => (a.priority === 'high' ? 0 : 1) - (b.priority === 'high' ? 0 : 1));
 }
 
-function makeBar(filled, total, width) {
-  const ratio = total > 0 ? filled / total : 0;
-  const filledCount = Math.round(ratio * width);
-  return '█'.repeat(filledCount) + '░'.repeat(width - filledCount);
-}
+// Use shared makeBar function from utils.js
+const makeBar = sharedMakeBar;
 
 module.exports = {
   ShieldScoreCalculator,

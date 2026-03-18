@@ -8,6 +8,7 @@
  */
 
 const { scanText, getPatterns } = require('./detector-core');
+const { getGradeLabel, makeBar } = require('./utils');
 
 // =========================================================================
 // Attack Payload Library
@@ -441,20 +442,8 @@ class PayloadFuzzer {
 // Helpers
 // =========================================================================
 
-function getGrade(rate) {
-  if (rate >= 95) return 'A+ — Excellent';
-  if (rate >= 90) return 'A — Strong';
-  if (rate >= 80) return 'B — Good';
-  if (rate >= 70) return 'C — Moderate';
-  if (rate >= 60) return 'D — Weak';
-  return 'F — Critical gaps';
-}
-
-function makeBar(filled, total, width) {
-  const ratio = total > 0 ? filled / total : 0;
-  const filledCount = Math.round(ratio * width);
-  return '█'.repeat(filledCount) + '░'.repeat(width - filledCount);
-}
+// getGrade and makeBar imported from utils.js
+const getGrade = getGradeLabel;
 
 /**
  * Get all available attack categories.
@@ -464,7 +453,7 @@ function getAttackCategories() {
     key,
     name: val.name,
     description: val.description,
-    payloadCount: (val.payloads || val.payloads || []).length
+    payloadCount: (val.payloads || []).length
   }));
 }
 
