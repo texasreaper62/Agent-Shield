@@ -57,6 +57,7 @@
         allHistory = history || [];
       }
       updateStats();
+      renderAnalytics();
       renderHistory();
     });
   };
@@ -84,6 +85,114 @@
     statThreats.textContent = totalThreats;
     statDanger.textContent = dangerCount;
     statSites.textContent = sites.size;
+  };
+
+  // =========================================================================
+  // ANALYTICS
+  // =========================================================================
+
+  const CATEGORY_DISPLAY = {
+    prompt_injection: 'Prompt Injection',
+    hidden_text: 'Hidden Text',
+    role_hijack: 'Role Hijack',
+    data_exfiltration: 'Data Exfiltration',
+    fake_ai_interface: 'Fake AI Interface',
+    social_engineering: 'Social Engineering',
+    instruction_override: 'Instruction Override',
+    clipboard_hijack: 'Clipboard Hijack',
+    malicious_plugin: 'Suspicious Plugin',
+    ai_phishing: 'AI Phishing'
+  };
+
+  const CATEGORY_COLORS = {
+    prompt_injection: '#ef4444',
+    hidden_text: '#f97316',
+    role_hijack: '#eab308',
+    data_exfiltration: '#ef4444',
+    fake_ai_interface: '#f97316',
+    social_engineering: '#eab308',
+    instruction_override: '#ef4444',
+    clipboard_hijack: '#f97316',
+    malicious_plugin: '#8b949e',
+    ai_phishing: '#ef4444'
+  };
+
+  const analyticsSection = document.getElementById('analytics-section');
+  const categoryChart = document.getElementById('category-chart');
+  const activityChart = document.getElementById('activity-chart');
+
+  /**
+   * Renders analytics charts from history data.
+   */
+  const renderAnalytics = () => {
+    if (allHistory.length === 0) {
+      analyticsSection.style.display = 'none';
+      return;
+    }
+    analyticsSection.style.display = 'block';
+
+    // Category breakdown
+    const categoryCounts = {};
+    for (const entry of allHistory) {
+      if (!entry.threats) continue;
+      for (const threat of entry.threats) {
+        const cat = threat.category || 'unknown';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      }
+    }
+
+    const sorted = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+    const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+
+    if (sorted.length > 0) {
+      categoryChart.innerHTML = sorted.map(([cat, count]) => {
+        const pct = Math.max(2, (count / maxCount) * 100);
+        const label = CATEGORY_DISPLAY[cat] || cat;
+        const color = CATEGORY_COLORS[cat] || '#58a6ff';
+        return `<div class="cat-bar-row">
+          <span class="cat-bar-label">${escapeHtml(label)}</span>
+          <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background-color:${color};"></div></div>
+          <span class="cat-bar-count">${count}</span>
+        </div>`;
+      }).join('');
+    } else {
+      categoryChart.innerHTML = '<div style="font-size:12px;color:#8b949e;">No threats recorded yet.</div>';
+    }
+
+    // Activity chart (last 7 days)
+    const days = [];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      days.push({
+        start: d.getTime(),
+        end: d.getTime() + 86400000,
+        label: dayLabels[d.getDay()],
+        count: 0
+      });
+    }
+
+    for (const entry of allHistory) {
+      for (const day of days) {
+        if (entry.timestamp >= day.start && entry.timestamp < day.end) {
+          day.count++;
+          break;
+        }
+      }
+    }
+
+    const maxDay = Math.max(1, ...days.map(d => d.count));
+    activityChart.innerHTML = days.map(day => {
+      const height = Math.max(2, (day.count / maxDay) * 48);
+      return `<div class="activity-bar-wrap">
+        <div class="activity-bar" style="height:${height}px;" title="${day.count} scans"></div>
+        <span class="activity-bar-label">${day.label}</span>
+      </div>`;
+    }).join('');
   };
 
   // =========================================================================
@@ -252,7 +361,7 @@
   const exportHistory = () => {
     const data = {
       exported: new Date().toISOString(),
-      version: '0.4.0',
+      version: '0.6.0',
       totalEntries: allHistory.length,
       history: allHistory
     };

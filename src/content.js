@@ -395,6 +395,125 @@
   };
 
   // =========================================================================
+  // SUSPICIOUS LINK HIGHLIGHTING
+  // =========================================================================
+
+  /** Known AI/tech brand domains for phishing detection. */
+  const BRAND_DOMAINS = {
+    'openai.com': 'OpenAI',
+    'chat.openai.com': 'ChatGPT',
+    'anthropic.com': 'Anthropic',
+    'claude.ai': 'Claude',
+    'google.com': 'Google',
+    'bard.google.com': 'Bard',
+    'gemini.google.com': 'Gemini',
+    'microsoft.com': 'Microsoft',
+    'copilot.microsoft.com': 'Copilot',
+    'github.com': 'GitHub'
+  };
+
+  /** Common homoglyph/typosquat patterns. */
+  const SUSPICIOUS_PATTERNS = [
+    /data:/i,
+    /javascript:/i,
+    /\.ru\//i,
+    /\.cn\//i,
+    /bit\.ly/i,
+    /tinyurl\.com/i,
+    /login|signin|verify|confirm|secure|account|update/i
+  ];
+
+  /**
+   * Checks if a URL looks like a phishing attempt targeting known AI brands.
+   * @param {string} href - The link URL.
+   * @returns {{suspicious: boolean, reason: string}} Result.
+   */
+  const checkLinkSuspicion = (href) => {
+    if (!href) return { suspicious: false, reason: '' };
+
+    try {
+      // Check data: and javascript: URIs
+      if (/^(data|javascript):/i.test(href)) {
+        return { suspicious: true, reason: 'Uses a potentially dangerous URL scheme.' };
+      }
+
+      const url = new URL(href, window.location.href);
+      const host = url.hostname.toLowerCase();
+
+      // Skip same-domain links
+      if (host === window.location.hostname) return { suspicious: false, reason: '' };
+
+      // Check for brand impersonation (e.g., openai-login.evil.com)
+      for (const [domain, brand] of Object.entries(BRAND_DOMAINS)) {
+        const brandWord = domain.split('.')[0];
+        if (host !== domain && !host.endsWith('.' + domain) && host.includes(brandWord)) {
+          return { suspicious: true, reason: `May be impersonating ${brand} (${domain}).` };
+        }
+      }
+
+      // Check for suspicious URL keywords (login/verify pages on external sites)
+      const fullUrl = url.href.toLowerCase();
+      if (/\/(login|signin|verify|confirm|auth|secure|account)/.test(url.pathname) &&
+          !BRAND_DOMAINS[host]) {
+        // Only flag if the link text mentions a brand
+        return { suspicious: false, reason: '', flagIfBrandText: true };
+      }
+
+      // Check for suspicious patterns
+      for (const pattern of SUSPICIOUS_PATTERNS) {
+        if (pattern.test(fullUrl)) {
+          return { suspicious: true, reason: 'Link has suspicious URL characteristics.' };
+        }
+      }
+
+      return { suspicious: false, reason: '' };
+    } catch (e) {
+      return { suspicious: false, reason: '' };
+    }
+  };
+
+  /**
+   * Scans all links on the page and highlights suspicious ones.
+   */
+  const scanLinks = () => {
+    const links = document.querySelectorAll('a[href]');
+    let flaggedCount = 0;
+
+    for (const link of links) {
+      // Skip already-processed links
+      if (link.dataset.aiShieldChecked) continue;
+      link.dataset.aiShieldChecked = 'true';
+
+      const href = link.getAttribute('href');
+      const result = checkLinkSuspicion(href);
+
+      // Check if link text mentions a brand while pointing elsewhere
+      if (!result.suspicious && result.flagIfBrandText) {
+        const text = (link.textContent || '').toLowerCase();
+        for (const [domain, brand] of Object.entries(BRAND_DOMAINS)) {
+          if (text.includes(brand.toLowerCase()) || text.includes(domain.split('.')[0])) {
+            result.suspicious = true;
+            result.reason = `Link text mentions "${brand}" but points to a different site.`;
+            break;
+          }
+        }
+      }
+
+      if (result.suspicious) {
+        flaggedCount++;
+        link.style.setProperty('outline', '2px dashed #f97316', 'important');
+        link.style.setProperty('outline-offset', '2px', 'important');
+        link.style.setProperty('position', 'relative', 'important');
+        link.title = `[AI Shield] ${result.reason}`;
+      }
+    }
+
+    if (flaggedCount > 0) {
+      console.log(`[AI Shield] Flagged ${flaggedCount} suspicious link${flaggedCount !== 1 ? 's' : ''}.`);
+    }
+  };
+
+  // =========================================================================
   // MESSAGING
   // =========================================================================
 
@@ -502,6 +621,9 @@
 
   // Set up paste monitoring
   setupPasteScanning();
+
+  // Scan links for suspicious URLs
+  scanLinks();
 
   // Set up mutation observer for dynamic content
   setupMutationObserver();

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Shield",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Protects you from AI threats while browsing. Detects hidden manipulation, prompt injection, and scams — all locally.",
   "permissions": [
     "activeTab",
@@ -39,6 +39,15 @@
   "options_ui": {
     "page": "src/options.html",
     "open_in_tab": true
+  },
+  "commands": {
+    "rescan-page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Rescan the current page with AI Shield"
+    }
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

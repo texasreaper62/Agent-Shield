@@ -22,6 +22,12 @@ Existing security solutions (CrowdStrike, Microsoft Prompt Shields, etc.) only p
 - **Fake AI Chatbot Detection** — Identifies impersonation attempts of ChatGPT, Claude, Gemini, and other AI services
 - **Data Exfiltration Alerts** — Detects attempts to steal data through AI assistants
 - **Real-time Scanning** — Continuously monitors pages as content loads dynamically
+- **Right-click Scan** — Select any text, right-click, and scan it for threats instantly
+- **Paste Protection** — Warns you when pasted content contains AI manipulation attempts
+- **Suspicious Link Highlighting** — Identifies phishing links that impersonate AI services
+- **Keyboard Shortcut** — Press Ctrl+Shift+S (Cmd+Shift+S on Mac) to rescan the current page
+- **Scan History & Analytics** — Browse past scans with threat breakdowns and activity trends
+- **Light & Dark Themes** — Choose your preferred appearance in Settings
 - **Plain Language Alerts** — Every warning is written for real people, not security experts
 
 ## Privacy
@@ -92,8 +98,6 @@ Contributions are welcome! Please:
 - Firefox and Edge support
 - Optional AI-powered analysis for ambiguous cases
 - Email content scanning
-- Configurable sensitivity levels
-- Domain allowlist/blocklist
 - Enterprise dashboard
 
 ## License

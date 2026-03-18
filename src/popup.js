@@ -112,6 +112,7 @@
   const pauseIcon = document.getElementById('pause-icon');
   const pausedBanner = document.getElementById('paused-banner');
   const resumeLink = document.getElementById('resume-link');
+  const exportJsonBtn = document.getElementById('export-json-btn');
   const settingsBtn = document.getElementById('settings-btn');
 
   // Current scan result (for export)
@@ -161,11 +162,13 @@
     if (!threats || threats.length === 0) {
       threatList.style.display = 'none';
       exportBtn.style.display = 'none';
+      exportJsonBtn.style.display = 'none';
       return;
     }
 
     threatList.style.display = 'block';
     exportBtn.style.display = 'block';
+    exportJsonBtn.style.display = 'block';
     threatsContainer.innerHTML = '';
 
     for (const threat of threats) {
@@ -494,8 +497,20 @@
     });
   });
 
-  // Export button
+  // Export buttons
   exportBtn.addEventListener('click', exportReport);
+  exportJsonBtn.addEventListener('click', () => {
+    if (!currentResult) return;
+    const blob = new Blob([JSON.stringify(currentResult, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-shield-report-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    exportJsonBtn.textContent = 'Downloaded!';
+    setTimeout(() => { exportJsonBtn.textContent = 'Download JSON'; }, 2000);
+  });
 
   // Pause/resume button
   pauseBtn.addEventListener('click', togglePause);
