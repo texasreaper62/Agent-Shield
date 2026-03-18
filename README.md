@@ -1,10 +1,10 @@
-# AI Shield
+# Agent Shield
 
 **Protect yourself from AI-specific threats while browsing the web.**
 
-AI Shield is a free, open-source Chrome extension that detects prompt injection attacks, hidden AI manipulation, AI-powered scams, and fake AI chatbots — all without sending any of your data anywhere.
+Agent Shield is a free, open-source Chrome extension that detects prompt injection attacks, hidden AI manipulation, AI-powered scams, and fake AI chatbots — all without sending any of your data anywhere.
 
-## Why AI Shield?
+## Why Agent Shield?
 
 As AI assistants become part of everyday life, a new category of threats has emerged:
 
@@ -13,7 +13,7 @@ As AI assistants become part of everyday life, a new category of threats has eme
 - **Prompt injection attacks** that trick AI tools into doing things you didn't ask for
 - **Data exfiltration** attempts that use AI assistants to leak your private information
 
-Existing security solutions (CrowdStrike, Microsoft Prompt Shields, etc.) only protect enterprises. **AI Shield protects you.**
+Existing security solutions (CrowdStrike, Microsoft Prompt Shields, etc.) only protect enterprises. **Agent Shield protects you.**
 
 ## Features
 
@@ -46,16 +46,16 @@ Existing security solutions (CrowdStrike, Microsoft Prompt Shields, etc.) only p
 1. Download or clone this repository
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable **Developer mode** (toggle in the top right)
-4. Click **Load unpacked** and select the `ai-shield` directory
+4. Click **Load unpacked** and select the `agent-shield` directory
 5. The shield icon will appear in your toolbar
 
 ### Testing
 
-Open `test/test-page.html` in Chrome to see AI Shield in action. The test page contains various threat examples that the extension will detect.
+Open `test/test-page.html` in Chrome to see Agent Shield in action. The test page contains various threat examples that the extension will detect.
 
 ## How It Works
 
-AI Shield scans every web page you visit for AI-specific threats:
+Agent Shield scans every web page you visit for AI-specific threats:
 
 1. **Pattern Matching** — Checks page content against known prompt injection patterns
 2. **Hidden Content Detection** — Scans for invisible text that could contain attack payloads
@@ -106,4 +106,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## Disclaimer
 
-AI Shield is a detection tool that helps identify potential AI-specific threats. No security tool can guarantee 100% protection. Always exercise caution when interacting with AI assistants and unfamiliar websites.
+Agent Shield is a detection tool that helps identify potential AI-specific threats. No security tool can guarantee 100% protection. Always exercise caution when interacting with AI assistants and unfamiliar websites.
