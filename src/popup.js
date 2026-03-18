@@ -90,6 +90,15 @@
     ai_phishing: 'A fake page pretending to be a real AI service (like ChatGPT) to steal your login or data.'
   };
 
+  const SEVERITY_COLORS = {
+    critical: '#ef4444',
+    high: '#f97316',
+    medium: '#eab308',
+    low: '#22c55e'
+  };
+
+  const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+
   // =========================================================================
   // DOM ELEMENTS
   // =========================================================================
@@ -218,10 +227,6 @@
   };
 
   /**
-   * Updates the stats bar.
-   * @param {object} result - Scan result from the detector.
-   */
-  /**
    * Renders the module breakdown chips showing which categories found threats.
    * @param {Array} threats - Array of threat objects.
    */
@@ -234,26 +239,13 @@
       return;
     }
 
-    // Count threats per category
+    // Count threats and find max severity per category in a single pass
     const catCounts = {};
-    for (const t of threats) {
-      const cat = t.category || 'unknown';
-      catCounts[cat] = (catCounts[cat] || 0) + 1;
-    }
-
-    const SEVERITY_COLORS = {
-      critical: '#ef4444',
-      high: '#f97316',
-      medium: '#eab308',
-      low: '#22c55e'
-    };
-
-    // Find max severity per category
     const catMaxSev = {};
     for (const t of threats) {
       const cat = t.category || 'unknown';
-      const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-      if (!catMaxSev[cat] || sevOrder[t.severity] < sevOrder[catMaxSev[cat]]) {
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+      if (!catMaxSev[cat] || SEVERITY_ORDER[t.severity] < SEVERITY_ORDER[catMaxSev[cat]]) {
         catMaxSev[cat] = t.severity;
       }
     }
@@ -331,7 +323,7 @@
     chrome.storage.local.get('settings', (data) => {
       const settings = data.settings || {};
       const allowlist = settings.allowlist || [];
-      const hostname = result.hostname.toLowerCase().replace(/^www\./, '');
+      const hostname = normalizeHostname(result.hostname);
 
       if (allowlist.includes(hostname)) {
         trustSiteBtn.textContent = 'Site is Trusted';
@@ -373,8 +365,12 @@
         return;
       }
 
-      const dangerCount = siteHistory.filter(h => h.status === 'danger').length;
-      const warningCount = siteHistory.filter(h => h.status === 'warning').length;
+      let dangerCount = 0;
+      let warningCount = 0;
+      for (const h of siteHistory) {
+        if (h.status === 'danger') dangerCount++;
+        else if (h.status === 'warning') warningCount++;
+      }
       const totalVisits = siteHistory.length;
 
       const safeHostname = escapeHtml(hostname);
@@ -520,11 +516,19 @@
    * @param {string} text - Text to escape.
    * @returns {string} Escaped text.
    */
+  const escapeDiv = document.createElement('div');
   const escapeHtml = (text) => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    escapeDiv.textContent = text;
+    return escapeDiv.innerHTML;
   };
+
+  /**
+   * Normalizes a hostname for comparison (lowercase, strip www).
+   * @param {string} hostname - Hostname to normalize.
+   * @returns {string} Normalized hostname.
+   */
+  const normalizeHostname = (hostname) =>
+    hostname.toLowerCase().replace(/^www\./, '');
 
   /**
    * Formats a number with commas for readability.
@@ -661,7 +665,7 @@
   // Trust site button
   trustSiteBtn.addEventListener('click', () => {
     if (!currentResult || !currentResult.hostname) return;
-    const hostname = currentResult.hostname.toLowerCase().replace(/^www\./, '');
+    const hostname = normalizeHostname(currentResult.hostname);
 
     chrome.storage.local.get('settings', (data) => {
       const settings = data.settings || {};

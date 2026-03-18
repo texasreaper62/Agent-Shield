@@ -21,10 +21,10 @@
    * @param {string} text - Text to escape.
    * @returns {string} Escaped text.
    */
+  const escapeDiv = document.createElement('div');
   const escapeHtml = (text) => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    escapeDiv.textContent = text;
+    return escapeDiv.innerHTML;
   };
 
   // =========================================================================
