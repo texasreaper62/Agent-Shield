@@ -57,6 +57,27 @@ const { MultiTenantShield, RoleBasedPolicy, DebugShield, DEFAULT_ROLES } = requi
 // Badges
 const { BadgeGenerator, GitHubActionReporter } = require('./badges');
 
+// Allowlist & Feedback
+const { Allowlist, ConfidenceCalibrator, FeedbackLoop, ScanCache } = require('./allowlist');
+
+// Presets & Config Builder
+const { PRESETS, ConfigBuilder, SnippetGenerator, getPresets, getPreset } = require('./presets');
+
+// Advanced Scanners
+const { RAGScanner, RAG_INJECTION_PATTERNS, PromptLinter, LINT_RULES, ToolSchemaValidator, DANGEROUS_TOOL_PATTERNS } = require('./scanners');
+
+// Production
+const { SamplingScanner, ShadowComparison, GracefulScanner, ThreatReplay, AttackAttributionChain, DiffReporter, PostureTracker } = require('./production');
+
+// Testing & Contracts
+const { TestSuiteGenerator, ATTACK_TEMPLATES, AgentContract, BreakglassProtocol } = require('./testing');
+
+// Multi-Agent Trust
+const { MessageSigner, CapabilityToken, DelegationManager, BlastRadiusContainer } = require('./multi-agent-trust');
+
+// Extended Policy & Intelligence
+const { ABTestRunner, ThreatIntelFeed, PatternBuilder, Doctor, GitHubActionGenerator, SOCIntegration, MigrationGuide, Playground } = require('./policy-extended');
+
 module.exports = {
   // Core
   AgentShield,
@@ -166,5 +187,57 @@ module.exports = {
 
   // Badges
   BadgeGenerator,
-  GitHubActionReporter
+  GitHubActionReporter,
+
+  // Allowlist & Feedback (Features 21-23, 29)
+  Allowlist,
+  ConfidenceCalibrator,
+  FeedbackLoop,
+  ScanCache,
+
+  // Presets & Config Builder (Features 1-4)
+  PRESETS,
+  ConfigBuilder,
+  SnippetGenerator,
+  getPresets,
+  getPreset,
+
+  // Advanced Scanners (Features 24-26)
+  RAGScanner,
+  RAG_INJECTION_PATTERNS,
+  PromptLinter,
+  LINT_RULES,
+  ToolSchemaValidator,
+  DANGEROUS_TOOL_PATTERNS,
+
+  // Production (Features 27-28, 30-33, 40)
+  SamplingScanner,
+  ShadowComparison,
+  GracefulScanner,
+  ThreatReplay,
+  AttackAttributionChain,
+  DiffReporter,
+  PostureTracker,
+
+  // Testing & Contracts (Features 34-36)
+  TestSuiteGenerator,
+  ATTACK_TEMPLATES,
+  AgentContract,
+  BreakglassProtocol,
+
+  // Multi-Agent Trust (Features 37-39)
+  MessageSigner,
+  CapabilityToken,
+  DelegationManager,
+  BlastRadiusContainer,
+
+  // Extended Policy & Intelligence (Features 5-7, 9-10, 13-16, 17-20)
+  ABTestRunner,
+  ThreatIntelFeed,
+  PatternBuilder,
+  Doctor,
+  GitHubActionGenerator,
+  SOCIntegration,
+  MigrationGuide,
+  Playground
 };
