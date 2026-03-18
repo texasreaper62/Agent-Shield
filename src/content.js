@@ -14,6 +14,18 @@
   let lastScanResult = null;
   let debounceTimer = null;
   let bannerDismissed = false;
+  let pendingBatches = 0;
+
+  /**
+   * Escapes HTML special characters to prevent XSS.
+   * @param {string} text - Text to escape.
+   * @returns {string} Escaped text.
+   */
+  const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
 
   // =========================================================================
   // WARNING BANNER
@@ -249,7 +261,7 @@
     if (result.threats.length > 0) {
       const items = result.threats.slice(0, 5).map(t => {
         const sevColor = t.severity === 'critical' ? '#ef4444' : t.severity === 'high' ? '#f97316' : t.severity === 'medium' ? '#eab308' : '#22c55e';
-        return `<div style="margin-top:6px!important;font-size:12px!important;color:#e6edf3!important;"><span style="color:${sevColor}!important;font-weight:700!important;text-transform:uppercase!important;font-size:10px!important;">${t.severity}</span> ${t.description}</div>`;
+        return `<div style="margin-top:6px!important;font-size:12px!important;color:#e6edf3!important;"><span style="color:${sevColor}!important;font-weight:700!important;text-transform:uppercase!important;font-size:10px!important;">${escapeHtml(t.severity)}</span> ${escapeHtml(t.description)}</div>`;
       }).join('');
       threatHtml = items;
     }
@@ -522,13 +534,11 @@
    */
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'GET_SCAN_RESULT') {
-      if (lastScanResult) {
-        sendResponse(lastScanResult);
-      } else {
-        // Run a scan if we don't have results yet
+      if (!lastScanResult) {
+        // Trigger a scan; results will be sent via SCAN_COMPLETE when ready
         runScan();
-        sendResponse(lastScanResult);
       }
+      sendResponse(lastScanResult);
       return true;
     }
 
@@ -541,7 +551,7 @@
 
     if (message.type === 'SCAN_SELECTION') {
       try {
-        if (typeof AIShieldDetector === 'undefined') return;
+        if (typeof AIShieldDetector === 'undefined') return true;
         const result = AIShieldDetector.scanText({
           text: message.text,
           source: 'selected text (context menu)',
@@ -567,8 +577,6 @@
 
   /** Maximum number of mutation batches to accumulate before forcing a rescan. */
   const MAX_PENDING_BATCHES = 10;
-
-  let pendingBatches = 0;
 
   const setupMutationObserver = () => {
     mutationObserver = new MutationObserver((mutations) => {

@@ -377,13 +377,14 @@
       const warningCount = siteHistory.filter(h => h.status === 'warning').length;
       const totalVisits = siteHistory.length;
 
+      const safeHostname = escapeHtml(hostname);
       let reputationText;
       if (dangerCount > 0) {
-        reputationText = `<strong>${hostname}</strong> has been flagged as dangerous ${dangerCount} time${dangerCount !== 1 ? 's' : ''} in ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
+        reputationText = `<strong>${safeHostname}</strong> has been flagged as dangerous ${dangerCount} time${dangerCount !== 1 ? 's' : ''} in ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
       } else if (warningCount > 0) {
-        reputationText = `<strong>${hostname}</strong> had warnings in ${warningCount} of ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
+        reputationText = `<strong>${safeHostname}</strong> had warnings in ${warningCount} of ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
       } else {
-        reputationText = `<strong>${hostname}</strong> has been clean in ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
+        reputationText = `<strong>${safeHostname}</strong> has been clean in ${totalVisits} previous scan${totalVisits !== 1 ? 's' : ''}.`;
       }
 
       siteReputation.innerHTML = reputationText;
