@@ -48,6 +48,18 @@
   // =========================================================================
 
   /**
+   * Applies the selected theme to the page body.
+   * @param {string} theme - 'dark' or 'light'.
+   */
+  const applyTheme = (theme) => {
+    if (theme === 'light') {
+      document.body.classList.add('theme-light');
+    } else {
+      document.body.classList.remove('theme-light');
+    }
+  };
+
+  /**
    * Loads settings from chrome.storage.local and populates the UI.
    */
   const loadSettings = () => {
@@ -64,6 +76,9 @@
       showNotificationsToggle.checked = settings.notifications !== false;
       themeSelect.value = settings.theme || 'dark';
       historyRetentionSelect.value = String(settings.historyRetention || 90);
+
+      // Apply theme
+      applyTheme(settings.theme || 'dark');
 
       // Render allowlist
       renderAllowlist(settings.allowlist);
@@ -267,7 +282,10 @@
   showBannerToggle.addEventListener('change', saveSettings);
   showBadgeToggle.addEventListener('change', saveSettings);
   showNotificationsToggle.addEventListener('change', saveSettings);
-  themeSelect.addEventListener('change', saveSettings);
+  themeSelect.addEventListener('change', () => {
+    applyTheme(themeSelect.value);
+    saveSettings();
+  });
   historyRetentionSelect.addEventListener('change', saveSettings);
 
   // Export settings

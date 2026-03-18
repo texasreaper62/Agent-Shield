@@ -1,9 +1,33 @@
 /*
  * AI Shield Popup Styles
  *
- * Dark theme inspired by GitHub dark mode.
+ * Supports dark and light themes.
  * 360px width, clean and professional.
  */
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-hover: #1c2128;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --border-color: #21262d;
+  --border-hover: #363b42;
+  --accent-blue: #58a6ff;
+}
+
+body.theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #d0d7de;
+  --bg-hover: #eaeef2;
+  --text-primary: #1f2328;
+  --text-secondary: #656d76;
+  --border-color: #d0d7de;
+  --border-hover: #afb8c1;
+  --accent-blue: #0969da;
+}
 
 * {
   margin: 0;
@@ -14,8 +38,8 @@
 body {
   width: 360px;
   min-height: 200px;
-  background-color: #0d1117;
-  color: #e6edf3;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13px;
   line-height: 1.5;
@@ -28,8 +52,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #21262d;
-  background-color: #161b22;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
 }
 
 .header-left {
@@ -46,12 +70,12 @@ body {
 .header-title {
   font-size: 16px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .header-version {
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 .header-actions {
@@ -71,7 +95,7 @@ body {
 }
 
 .icon-btn:hover {
-  background-color: #21262d;
+  background-color: var(--bg-tertiary);
 }
 
 /* ========== Paused Banner ========== */
@@ -107,7 +131,7 @@ body {
   padding: 20px;
   border-radius: 8px;
   text-align: center;
-  border: 1px solid #21262d;
+  border: 1px solid var(--border-color);
 }
 
 .status-icon {
@@ -124,7 +148,7 @@ body {
 
 .status-description {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-secondary);
   line-height: 1.4;
 }
 
@@ -178,7 +202,7 @@ body {
 .safety-score-bar {
   flex: 1;
   height: 6px;
-  background-color: #21262d;
+  background-color: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -192,7 +216,7 @@ body {
 .safety-score-text {
   font-size: 11px;
   font-weight: 600;
-  color: #8b949e;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -218,15 +242,15 @@ body {
 .section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #8b949e;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
 }
 
 .threat-item {
-  background-color: #161b22;
-  border: 1px solid #21262d;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   margin-bottom: 8px;
   overflow: hidden;
@@ -242,12 +266,12 @@ body {
 }
 
 .threat-header:hover {
-  background-color: #1c2128;
+  background-color: var(--bg-hover);
 }
 
 .threat-chevron {
   font-size: 10px;
-  color: #8b949e;
+  color: var(--text-secondary);
   transition: transform 0.15s ease;
   flex-shrink: 0;
 }
@@ -294,7 +318,7 @@ body {
 .threat-description {
   flex: 1;
   font-size: 12px;
-  color: #e6edf3;
+  color: var(--text-primary);
   line-height: 1.4;
 }
 
@@ -302,9 +326,9 @@ body {
   display: none;
   padding: 0 12px 10px 34px;
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-secondary);
   line-height: 1.5;
-  border-top: 1px solid #21262d;
+  border-top: 1px solid var(--border-color);
   padding-top: 8px;
 }
 
@@ -316,10 +340,10 @@ body {
   display: inline-block;
   margin-top: 4px;
   padding: 1px 5px;
-  background-color: #21262d;
+  background-color: var(--bg-tertiary);
   border-radius: 3px;
   font-size: 10px;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 .threat-confidence {
@@ -334,6 +358,20 @@ body {
   color: #58a6ff;
 }
 
+.threat-tooltip {
+  display: inline-block;
+  margin-top: 4px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  background-color: rgba(139, 148, 158, 0.1);
+  border: 1px dashed rgba(139, 148, 158, 0.3);
+  border-radius: 3px;
+  font-size: 10px;
+  color: #8b949e;
+  cursor: help;
+  text-decoration: underline dotted;
+}
+
 /* ========== Stats Bar ========== */
 
 .stats-bar {
@@ -341,9 +379,9 @@ body {
   justify-content: space-around;
   padding: 12px 16px;
   margin: 0 16px;
-  background-color: #161b22;
+  background-color: var(--bg-secondary);
   border-radius: 6px;
-  border: 1px solid #21262d;
+  border: 1px solid var(--border-color);
 }
 
 .stat {
@@ -353,7 +391,7 @@ body {
 .stat-label {
   display: block;
   font-size: 10px;
-  color: #8b949e;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
@@ -362,7 +400,7 @@ body {
   display: block;
   font-size: 16px;
   font-weight: 700;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin-top: 2px;
 }
 
@@ -378,9 +416,9 @@ body {
 .rescan-btn {
   flex: 1;
   padding: 8px 16px;
-  background-color: #21262d;
-  color: #e6edf3;
-  border: 1px solid #363b42;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hover);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -389,11 +427,11 @@ body {
 }
 
 .rescan-btn:hover {
-  background-color: #30363d;
+  background-color: var(--bg-hover);
 }
 
 .rescan-btn:active {
-  background-color: #282e33;
+  background-color: var(--bg-tertiary);
 }
 
 .rescan-btn:disabled {
@@ -403,9 +441,9 @@ body {
 
 .export-btn {
   padding: 8px 16px;
-  background-color: #161b22;
-  color: #8b949e;
-  border: 1px solid #363b42;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-hover);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -415,8 +453,8 @@ body {
 }
 
 .export-btn:hover {
-  background-color: #21262d;
-  color: #e6edf3;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .export-btn.copied {
@@ -431,7 +469,7 @@ body {
   padding: 12px 16px;
   text-align: center;
   font-size: 11px;
-  color: #8b949e;
-  border-top: 1px solid #21262d;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
   margin-top: 4px;
 }

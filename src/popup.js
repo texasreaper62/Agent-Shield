@@ -12,6 +12,30 @@
   // STATUS DEFINITIONS
   // =========================================================================
 
+  // =========================================================================
+  // THEME
+  // =========================================================================
+
+  /**
+   * Applies the saved theme to the popup body.
+   */
+  const applyTheme = () => {
+    chrome.storage.local.get('settings', (data) => {
+      const settings = data.settings || {};
+      if (settings.theme === 'light') {
+        document.body.classList.add('theme-light');
+      } else {
+        document.body.classList.remove('theme-light');
+      }
+    });
+  };
+
+  applyTheme();
+
+  // =========================================================================
+  // STATUS DEFINITIONS
+  // =========================================================================
+
   const STATUS_CONFIG = {
     safe: {
       icon: '\u2705',
@@ -39,7 +63,7 @@
     }
   };
 
-  // Category display names
+  // Category display names and plain-language tooltips
   const CATEGORY_NAMES = {
     prompt_injection: 'Prompt Injection',
     hidden_text: 'Hidden Text',
@@ -51,6 +75,19 @@
     clipboard_hijack: 'Clipboard Hijack',
     malicious_plugin: 'Suspicious Plugin',
     ai_phishing: 'AI Phishing'
+  };
+
+  const CATEGORY_TOOLTIPS = {
+    prompt_injection: 'Hidden instructions that try to take control of AI assistants when you paste text from this page.',
+    hidden_text: 'Text hidden from your view (invisible, tiny, or same-color-as-background) that AI assistants can still read.',
+    role_hijack: 'Attempts to change what an AI assistant thinks it is, making it behave in unexpected ways.',
+    data_exfiltration: 'Tricks that try to make AI assistants leak your private information to outsiders.',
+    fake_ai_interface: 'A fake AI chat or assistant interface designed to trick you into sharing personal information.',
+    social_engineering: 'Manipulative language designed to pressure you into doing something risky with AI tools.',
+    instruction_override: 'Commands that tell AI assistants to ignore their safety rules and follow new, harmful instructions.',
+    clipboard_hijack: 'Code that secretly changes what gets copied to your clipboard, so you paste something different than expected.',
+    malicious_plugin: 'A suspicious browser plugin or script that may interfere with AI assistants.',
+    ai_phishing: 'A fake page pretending to be a real AI service (like ChatGPT) to steal your login or data.'
   };
 
   // =========================================================================
@@ -145,6 +182,11 @@
         ? `<span class="threat-action">${escapeHtml(threat.action)}</span>`
         : '';
 
+      const tooltipText = CATEGORY_TOOLTIPS[threat.category] || '';
+      const tooltipHtml = tooltipText
+        ? `<span class="threat-tooltip" title="${escapeHtml(tooltipText)}">What is this?</span>`
+        : '';
+
       item.innerHTML = `
         <div class="threat-header">
           <span class="threat-chevron">&#x25B6;</span>
@@ -154,7 +196,7 @@
         <div class="threat-detail">
           ${escapeHtml(threat.detail)}
           <br>
-          <span class="threat-category">${escapeHtml(categoryName)}</span>${confidenceHtml}
+          <span class="threat-category">${escapeHtml(categoryName)}</span>${tooltipHtml}${confidenceHtml}
           ${actionHtml}
         </div>
       `;

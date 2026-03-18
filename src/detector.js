@@ -1702,6 +1702,71 @@ const AIShieldDetector = (() => {
     return result;
   };
 
+  /**
+   * Scans arbitrary text for AI threats (used by context menu and paste scanning).
+   * @param {string} text - The text to scan.
+   * @param {object} [options] - Optional settings.
+   * @param {string} [options.sensitivity] - Sensitivity level (low, medium, high).
+   * @param {string} [options.source] - Description of where the text came from.
+   * @returns {object} Scan result with status, threats, and stats.
+   */
+  const scanText = (options) => {
+    const text = (options && options.text) || '';
+    const sensitivity = (options && options.sensitivity) || 'medium';
+    const source = (options && options.source) || 'selected text';
+    const startTime = performance.now();
+
+    if (!text || text.trim().length < 10) {
+      return {
+        status: 'safe',
+        threats: [],
+        stats: { totalThreats: 0, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: 0 },
+        timestamp: Date.now()
+      };
+    }
+
+    let threats = scanTextForPatterns(text, source);
+    const hostname = window.location.hostname;
+
+    // Adjust and filter
+    threats = adjustForContext(threats, hostname);
+    threats = filterBySensitivity(threats, sensitivity);
+
+    // Sort by severity
+    const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    threats.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+    // Stats
+    const scanTimeMs = Math.round(performance.now() - startTime);
+    const stats = {
+      totalThreats: threats.length,
+      critical: 0, high: 0, medium: 0, low: 0,
+      scanTimeMs
+    };
+    for (const t of threats) {
+      stats[t.severity]++;
+    }
+
+    // Status
+    let status = 'safe';
+    if (stats.critical > 0) status = 'danger';
+    else if (stats.high > 0) status = 'warning';
+    else if (stats.medium > 0) status = 'caution';
+
+    // Strip non-serializable fields
+    const serializableThreats = threats.map(t => {
+      const { element, ...rest } = t;
+      return rest;
+    });
+
+    return {
+      status,
+      threats: serializableThreats,
+      stats,
+      timestamp: Date.now()
+    };
+  };
+
   // Public API
-  return { scan };
+  return { scan, scanText };
 })();

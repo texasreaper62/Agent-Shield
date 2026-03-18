@@ -356,3 +356,23 @@ console.log('[AI Shield] Background service worker started.');
 
 // Run auto-cleanup on startup
 runAutoCleanup();
+
+// =========================================================================
+// CONTEXT MENU
+// =========================================================================
+
+// Create "Scan selection with AI Shield" context menu item
+chrome.contextMenus.create({
+  id: 'ai-shield-scan-selection',
+  title: 'Scan selection with AI Shield',
+  contexts: ['selection']
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'ai-shield-scan-selection' && tab && tab.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: 'SCAN_SELECTION',
+      text: info.selectionText
+    });
+  }
+});

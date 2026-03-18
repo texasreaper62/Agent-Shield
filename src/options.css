@@ -1,7 +1,39 @@
 /*
  * AI Shield Options Page Styles
- * Dark theme consistent with popup UI.
+ * Supports dark and light themes.
  */
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-hover: #1c2128;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
+  --border-color: #21262d;
+  --border-hover: #363b42;
+  --accent-blue: #58a6ff;
+  --accent-green: #238636;
+  --accent-green-hover: #2ea043;
+  --accent-red: #f85149;
+}
+
+body.theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #d0d7de;
+  --bg-hover: #eaeef2;
+  --text-primary: #1f2328;
+  --text-secondary: #656d76;
+  --text-muted: #8c959f;
+  --border-color: #d0d7de;
+  --border-hover: #afb8c1;
+  --accent-blue: #0969da;
+  --accent-green: #1a7f37;
+  --accent-green-hover: #218843;
+  --accent-red: #cf222e;
+}
 
 * {
   margin: 0;
@@ -10,8 +42,8 @@
 }
 
 body {
-  background-color: #0d1117;
-  color: #e6edf3;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -30,7 +62,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 20px;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 24px;
 }
 
@@ -48,12 +80,12 @@ body {
 .header-title {
   font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .header-version {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 /* ========== Sections ========== */
@@ -61,7 +93,7 @@ body {
 .section {
   margin-bottom: 28px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .section:last-of-type {
@@ -71,13 +103,13 @@ body {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .section-description {
   font-size: 13px;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin-bottom: 16px;
   line-height: 1.5;
 }
@@ -95,19 +127,19 @@ body {
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  background-color: #161b22;
-  border: 1px solid #21262d;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .radio-card:hover {
-  background-color: #1c2128;
+  background-color: var(--bg-hover);
 }
 
 .radio-card:has(input:checked) {
-  border-color: #58a6ff;
+  border-color: var(--accent-blue);
   background-color: rgba(88, 166, 255, 0.06);
 }
 
@@ -115,7 +147,7 @@ body {
   appearance: none;
   width: 18px;
   height: 18px;
-  border: 2px solid #363b42;
+  border: 2px solid var(--border-hover);
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 2px;
@@ -124,7 +156,7 @@ body {
 }
 
 .radio-card input[type="radio"]:checked {
-  border-color: #58a6ff;
+  border-color: var(--accent-blue);
 }
 
 .radio-card input[type="radio"]:checked::after {
@@ -134,7 +166,7 @@ body {
   left: 3px;
   width: 8px;
   height: 8px;
-  background-color: #58a6ff;
+  background-color: var(--accent-blue);
   border-radius: 50%;
 }
 
@@ -145,13 +177,13 @@ body {
 .radio-label {
   font-size: 14px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin-bottom: 2px;
 }
 
 .radio-description {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-secondary);
   line-height: 1.4;
 }
 
@@ -180,10 +212,10 @@ body {
 .text-input {
   flex: 1;
   padding: 8px 12px;
-  background-color: #161b22;
-  border: 1px solid #363b42;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-hover);
   border-radius: 6px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
   outline: none;
@@ -191,11 +223,11 @@ body {
 }
 
 .text-input:focus {
-  border-color: #58a6ff;
+  border-color: var(--accent-blue);
 }
 
 .text-input::placeholder {
-  color: #484f58;
+  color: var(--text-muted);
 }
 
 .btn {
@@ -210,18 +242,18 @@ body {
 }
 
 .btn-primary {
-  background-color: #238636;
+  background-color: var(--accent-green);
   color: #ffffff;
   border-color: rgba(240, 246, 252, 0.1);
 }
 
 .btn-primary:hover {
-  background-color: #2ea043;
+  background-color: var(--accent-green-hover);
 }
 
 .btn-danger {
   background: none;
-  color: #f85149;
+  color: var(--accent-red);
   border: none;
   padding: 4px 8px;
   font-size: 12px;
@@ -233,7 +265,7 @@ body {
 }
 
 .error-text {
-  color: #f85149;
+  color: var(--accent-red);
   font-size: 12px;
   margin-bottom: 8px;
 }
@@ -243,7 +275,7 @@ body {
 }
 
 .empty-state {
-  color: #484f58;
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
   padding: 12px 0;
@@ -254,15 +286,15 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background-color: #161b22;
-  border: 1px solid #21262d;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   margin-bottom: 6px;
 }
 
 .allowlist-domain {
   font-size: 13px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-family: monospace;
 }
 
@@ -274,7 +306,7 @@ body {
   justify-content: space-between;
   padding: 12px 0;
   cursor: pointer;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .toggle-row:last-child {
@@ -283,7 +315,7 @@ body {
 
 .toggle-label {
   font-size: 14px;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .toggle-input {
@@ -294,7 +326,7 @@ body {
   position: relative;
   width: 40px;
   height: 22px;
-  background-color: #363b42;
+  background-color: var(--border-hover);
   border-radius: 11px;
   flex-shrink: 0;
   transition: background-color 0.2s ease;
@@ -307,13 +339,13 @@ body {
   left: 2px;
   width: 18px;
   height: 18px;
-  background-color: #e6edf3;
+  background-color: #ffffff;
   border-radius: 50%;
   transition: transform 0.2s ease;
 }
 
 .toggle-input:checked + .toggle-switch {
-  background-color: #238636;
+  background-color: var(--accent-green);
 }
 
 .toggle-input:checked + .toggle-switch::after {
@@ -327,7 +359,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .select-row:last-child {
@@ -336,15 +368,15 @@ body {
 
 .select-label {
   font-size: 14px;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .select-input {
   padding: 6px 12px;
-  background-color: #161b22;
-  border: 1px solid #363b42;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-hover);
   border-radius: 6px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
   outline: none;
@@ -352,7 +384,7 @@ body {
 }
 
 .select-input:focus {
-  border-color: #58a6ff;
+  border-color: var(--accent-blue);
 }
 
 /* ========== Button Row ========== */
@@ -364,13 +396,13 @@ body {
 }
 
 .btn-secondary {
-  background-color: #21262d;
-  color: #e6edf3;
-  border-color: #363b42;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
 }
 
 .btn-secondary:hover {
-  background-color: #30363d;
+  background-color: var(--bg-hover);
 }
 
 /* ========== Save Status ========== */
@@ -391,7 +423,7 @@ body {
 .footer {
   text-align: center;
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-secondary);
   padding-top: 16px;
-  border-top: 1px solid #21262d;
+  border-top: 1px solid var(--border-color);
 }

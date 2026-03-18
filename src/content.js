@@ -218,6 +218,183 @@
   };
 
   // =========================================================================
+  // SELECTION SCAN OVERLAY
+  // =========================================================================
+
+  const OVERLAY_ID = 'ai-shield-selection-overlay';
+
+  /**
+   * Shows a floating overlay with scan results for selected text.
+   * @param {object} result - Scan result from scanText.
+   */
+  const showSelectionOverlay = (result) => {
+    removeSelectionOverlay();
+
+    const overlay = document.createElement('div');
+    overlay.id = OVERLAY_ID;
+
+    const isSafe = result.status === 'safe';
+    const bgColor = isSafe ? '#161b22' : (result.status === 'danger' ? '#dc2626' : (result.status === 'warning' ? '#f97316' : '#eab308'));
+    const borderColor = isSafe ? '#22c55e' : bgColor;
+
+    let statusText;
+    if (isSafe) {
+      statusText = 'No AI threats found in selected text.';
+    } else {
+      const count = result.stats.totalThreats;
+      statusText = `${count} threat${count !== 1 ? 's' : ''} found in selected text.`;
+    }
+
+    let threatHtml = '';
+    if (result.threats.length > 0) {
+      const items = result.threats.slice(0, 5).map(t => {
+        const sevColor = t.severity === 'critical' ? '#ef4444' : t.severity === 'high' ? '#f97316' : t.severity === 'medium' ? '#eab308' : '#22c55e';
+        return `<div style="margin-top:6px!important;font-size:12px!important;color:#e6edf3!important;"><span style="color:${sevColor}!important;font-weight:700!important;text-transform:uppercase!important;font-size:10px!important;">${t.severity}</span> ${t.description}</div>`;
+      }).join('');
+      threatHtml = items;
+    }
+
+    overlay.innerHTML = `
+      <div style="display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important;">
+        <div style="flex:1!important;">
+          <div style="font-weight:700!important;font-size:13px!important;margin-bottom:4px!important;color:${isSafe ? '#22c55e' : 'white'}!important;">${isSafe ? '&#x2705;' : '&#x26A0;&#xFE0F;'} ${statusText}</div>
+          ${threatHtml}
+        </div>
+        <button id="ai-shield-overlay-close" style="background:none!important;border:none!important;color:#8b949e!important;font-size:18px!important;cursor:pointer!important;padding:0 4px!important;line-height:1!important;" aria-label="Close">&times;</button>
+      </div>
+    `;
+
+    const styles = {
+      position: 'fixed',
+      bottom: '20px',
+      right: '20px',
+      zIndex: '2147483646',
+      backgroundColor: '#0d1117',
+      color: '#e6edf3',
+      border: `2px solid ${borderColor}`,
+      borderRadius: '10px',
+      padding: '14px 16px',
+      maxWidth: '380px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize: '13px',
+      lineHeight: '1.4',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+      opacity: '0',
+      transform: 'translateY(10px)',
+      transition: 'opacity 0.2s ease, transform 0.2s ease'
+    };
+
+    for (const [prop, val] of Object.entries(styles)) {
+      overlay.style.setProperty(prop, val, 'important');
+    }
+
+    document.documentElement.appendChild(overlay);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        overlay.style.setProperty('opacity', '1', 'important');
+        overlay.style.setProperty('transform', 'translateY(0)', 'important');
+      });
+    });
+
+    const closeBtn = document.getElementById('ai-shield-overlay-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeSelectionOverlay();
+      });
+    }
+
+    // Auto-dismiss after 8 seconds
+    setTimeout(removeSelectionOverlay, 8000);
+  };
+
+  /**
+   * Removes the selection scan overlay.
+   */
+  const removeSelectionOverlay = () => {
+    const existing = document.getElementById(OVERLAY_ID);
+    if (existing) existing.remove();
+  };
+
+  // =========================================================================
+  // PASTE SCANNING
+  // =========================================================================
+
+  /**
+   * Monitors paste events and warns if pasted content contains threats.
+   */
+  const setupPasteScanning = () => {
+    document.addEventListener('paste', (e) => {
+      try {
+        if (typeof AIShieldDetector === 'undefined') return;
+
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        if (!text || text.trim().length < 20) return;
+
+        const result = AIShieldDetector.scanText({
+          text: text,
+          source: 'pasted text',
+          sensitivity: 'medium'
+        });
+
+        if (result.status !== 'safe') {
+          showSelectionOverlay(result);
+        }
+      } catch (err) {
+        // Fail silently — don't interfere with paste
+      }
+    }, true);
+  };
+
+  // =========================================================================
+  // FORM INPUT MONITORING
+  // =========================================================================
+
+  /**
+   * Scans pre-filled form inputs for hidden injections.
+   * Only checks hidden inputs and inputs with suspicious pre-filled values.
+   */
+  const scanFormInputs = () => {
+    try {
+      if (typeof AIShieldDetector === 'undefined') return;
+
+      const hiddenInputs = document.querySelectorAll(
+        'input[type="hidden"], textarea[style*="display:none"], textarea[style*="visibility:hidden"]'
+      );
+
+      for (const input of hiddenInputs) {
+        const val = input.value || '';
+        if (val.length < 20) continue;
+
+        const result = AIShieldDetector.scanText({
+          text: val,
+          source: 'hidden form field',
+          sensitivity: 'medium'
+        });
+
+        if (result.threats.length > 0) {
+          // Merge threats into the page scan result
+          if (lastScanResult && lastScanResult.threats) {
+            for (const threat of result.threats) {
+              const isDupe = lastScanResult.threats.some(t =>
+                t.description === threat.description && t.category === threat.category
+              );
+              if (!isDupe) {
+                lastScanResult.threats.push(threat);
+                lastScanResult.stats.totalThreats++;
+                lastScanResult.stats[threat.severity]++;
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[AI Shield] Form input scan failed:', err.message);
+    }
+  };
+
+  // =========================================================================
   // MESSAGING
   // =========================================================================
 
@@ -240,6 +417,21 @@
       bannerDismissed = false;
       runScan();
       sendResponse(lastScanResult);
+      return true;
+    }
+
+    if (message.type === 'SCAN_SELECTION') {
+      try {
+        if (typeof AIShieldDetector === 'undefined') return;
+        const result = AIShieldDetector.scanText({
+          text: message.text,
+          source: 'selected text (context menu)',
+          sensitivity: 'medium'
+        });
+        showSelectionOverlay(result);
+      } catch (err) {
+        console.warn('[AI Shield] Selection scan failed:', err.message);
+      }
       return true;
     }
   });
@@ -304,6 +496,12 @@
 
   // Run initial scan
   runScan();
+
+  // Scan pre-filled form inputs
+  scanFormInputs();
+
+  // Set up paste monitoring
+  setupPasteScanning();
 
   // Set up mutation observer for dynamic content
   setupMutationObserver();
