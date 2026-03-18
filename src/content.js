@@ -426,8 +426,6 @@
 
   /** Common homoglyph/typosquat patterns. */
   const SUSPICIOUS_PATTERNS = [
-    /data:/i,
-    /javascript:/i,
     /\.ru\//i,
     /\.cn\//i,
     /bit\.ly/i,

@@ -243,6 +243,15 @@
   };
 
   /**
+   * Safely extracts the pathname from a URL string.
+   * @param {string} url - URL string.
+   * @returns {string} Pathname or empty string if URL is invalid.
+   */
+  const getPathname = (url) => {
+    try { return new URL(url).pathname; } catch (e) { return ''; }
+  };
+
+  /**
    * Returns the color for a safety score.
    * @param {number} score - Safety score 0-100.
    * @returns {string} Color hex code.
@@ -313,7 +322,7 @@
       el.innerHTML = `
         <span class="history-status-dot dot-${entry.status}"></span>
         <div class="history-info">
-          <div class="history-url" title="${escapeHtml(entry.url)}">${escapeHtml(entry.hostname)}${escapeHtml(new URL(entry.url).pathname)}</div>
+          <div class="history-url" title="${escapeHtml(entry.url)}">${escapeHtml(entry.hostname)}${escapeHtml(getPathname(entry.url))}</div>
           <div class="history-meta">${formatDate(entry.timestamp)} &middot; ${entry.stats.scanTimeMs}ms</div>
         </div>
         ${scoreHtml}

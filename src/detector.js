@@ -1624,13 +1624,13 @@ const AIShieldDetector = (() => {
 
     try {
       // Run all detection modules
-      allThreats = allThreats.concat(scanVisibleContent());
-      allThreats = allThreats.concat(scanHiddenText());
-      allThreats = allThreats.concat(scanComments());
-      allThreats = allThreats.concat(scanMetadata());
-      allThreats = allThreats.concat(scanFakeAIInterfaces(hostname));
-      allThreats = allThreats.concat(scanClipboardHijacking());
-      allThreats = allThreats.concat(scanAIPhishing(hostname));
+      allThreats.push(...scanVisibleContent());
+      allThreats.push(...scanHiddenText());
+      allThreats.push(...scanComments());
+      allThreats.push(...scanMetadata());
+      allThreats.push(...scanFakeAIInterfaces(hostname));
+      allThreats.push(...scanClipboardHijacking());
+      allThreats.push(...scanAIPhishing(hostname));
     } catch (e) {
       console.error('[AI Shield] Scan error:', e);
     }
