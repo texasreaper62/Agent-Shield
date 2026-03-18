@@ -2,7 +2,20 @@
 
 **Security SDK for AI agents.** Protect your agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats.
 
-Drop it into any agent pipeline — Claude SDK, OpenAI, LangChain, or your own custom agents. Runs as a sub-agent or middleware. All detection happens locally. No data ever leaves your environment.
+Drop it into any agent pipeline — Claude SDK, OpenAI, LangChain, or your own custom agents. Runs as a sub-agent or middleware. All detection happens locally. No API keys required. No data ever leaves your environment.
+
+**Zero dependencies. Works with Node.js >= 16.**
+
+## Benchmark Results
+
+| Metric | Score |
+|--------|-------|
+| Internal red team (49 attacks) | **100% detection** |
+| External benchmark (108 attacks) | **99.1% detection** |
+| False positive rate (103 benign inputs) | **0%** |
+| Shield score | **100/100 A+** |
+| Throughput | **~48,000 scans/sec** |
+| Avg latency | **< 0.03ms** |
 
 ## Install
 
@@ -60,6 +73,8 @@ const msg = await client.messages.create({
 });
 ```
 
+See [`examples/anthropic-agent.js`](examples/anthropic-agent.js) for a full working example with tools, canary tokens, PII redaction, and circuit breakers.
+
 ### OpenAI SDK
 
 ```javascript
@@ -72,6 +87,8 @@ const response = await client.chat.completions.create({
   messages: [{ role: 'user', content: userInput }]
 });
 ```
+
+See [`examples/openai-agent.js`](examples/openai-agent.js) for a full working example with function calling and tool permissions.
 
 ### LangChain
 
@@ -118,16 +135,16 @@ app.post('/agent', (req, res) => {
 
 | Category | Examples |
 |----------|----------|
-| **Prompt Injection** | Fake system prompts, instruction overrides, ChatML/LLaMA delimiters |
-| **Role Hijacking** | "You are now...", DAN mode, jailbreak attempts |
-| **Data Exfiltration** | System prompt extraction, markdown image leaks, fetch calls |
-| **Tool Abuse** | Sensitive file access, dangerous command execution |
-| **Social Engineering** | Identity concealment, automation hiding |
-| **Obfuscation** | Unicode homoglyphs, zero-width chars, Base64 encoding, nested encoding |
+| **Prompt Injection** | Fake system prompts, instruction overrides, ChatML/LLaMA delimiters, markdown headers |
+| **Role Hijacking** | "You are now...", DAN mode, developer mode, jailbreak attempts, persona attacks |
+| **Data Exfiltration** | System prompt extraction, markdown image leaks, fetch calls, tag extraction |
+| **Tool Abuse** | Sensitive file access, shell execution, SQL injection, path traversal, recursive calls |
+| **Social Engineering** | Identity concealment, urgency + authority, gaslighting, false pre-approval |
+| **Obfuscation** | Unicode homoglyphs, zero-width chars, Base64, hex, ROT13, leetspeak, reversed text, whitespace padding |
 | **Multi-Language** | Attacks in English, Spanish, French, German, Portuguese, Chinese, Japanese |
 | **PII Leakage** | SSNs, emails, phone numbers, credit cards auto-redacted |
-| **Clipboard Hijack** | Scripts that intercept copy/paste events |
-| **AI Phishing** | Fake AI login forms, urgency scams, voice cloning prompts |
+| **Indirect Injection** | Image alt-text attacks, multi-turn conversation injection, multimodal vectors |
+| **AI Phishing** | Fake AI login forms, voice cloning, deepfake tools, urgency scams |
 
 ## Advanced Features
 
@@ -182,7 +199,7 @@ const breaker = new CircuitBreaker({
 ### Multi-Agent Security
 
 ```javascript
-const { AgentFirewall, DelegationChain } = require('agent-shield');
+const { AgentFirewall, DelegationChain, MessageSigner } = require('agent-shield');
 
 // Firewall between agents
 const firewall = new AgentFirewall({ blockOnThreat: true });
@@ -190,6 +207,10 @@ const firewall = new AgentFirewall({ blockOnThreat: true });
 // Track delegation chains for audit
 const chain = new DelegationChain();
 chain.record('orchestrator', 'researcher', 'search for X');
+
+// Sign messages between agents (HMAC-based)
+const signer = new MessageSigner('shared-secret');
+const signed = signer.sign({ from: 'agent-a', content: 'data' });
 ```
 
 ### Red Team Testing
@@ -212,7 +233,7 @@ console.log(sim.formatReport());
 const { ComplianceReporter, AuditTrail } = require('agent-shield');
 
 const reporter = new ComplianceReporter();
-console.log(reporter.generateReport('SOC2'));
+console.log(reporter.generateReport('SOC2'));  // Also: OWASP, NIST, EU_AI_Act
 
 const audit = new AuditTrail();
 // All scans automatically logged for compliance
@@ -232,6 +253,21 @@ const shield = new AgentShield({
 });
 ```
 
+### Presets
+
+```javascript
+const { getPreset, ConfigBuilder } = require('agent-shield');
+
+// Use a preset
+const config = getPreset('chatbot');         // Also: coding_agent, rag_pipeline, customer_support
+
+// Or build a custom config
+const custom = new ConfigBuilder()
+  .sensitivity('high')
+  .blockOnThreat(true)
+  .build();
+```
+
 ## Severity Levels
 
 | Level | Meaning |
@@ -247,20 +283,29 @@ const shield = new AgentShield({
 npx agent-shield scan "ignore all previous instructions"
 npx agent-shield score
 npx agent-shield redteam
+npx agent-shield audit
+npx agent-shield patterns
 ```
 
 ## Testing
 
 ```bash
-npm test              # Core tests
-npm run test:all      # Full 40-feature test suite
-npm run redteam       # Attack simulation
-npm run benchmark     # Performance benchmarks
+npm test                 # Core tests (238 assertions)
+npm run test:all         # Full 40-feature suite (149 assertions)
+npm run test:benchmark   # External benchmark (108 real-world attacks)
+npm run test:fp          # False positive test (103 benign inputs)
+npm run redteam          # Attack simulation
+npm run benchmark        # Performance benchmarks
+npm run lint             # Code style checks
 ```
+
+## CI/CD
+
+A GitHub Actions workflow is included at `.github/workflows/ci.yml`. It runs all tests across Node.js 16, 18, 20, and 22 on every push and PR.
 
 ## Privacy
 
-All detection runs locally using pattern matching. No data is sent to any external service. No API keys required. No cloud dependencies.
+All detection runs locally using pattern matching. No data is sent to any external service. No API keys required. No cloud dependencies. See [PRIVACY.md](PRIVACY.md) for details.
 
 ## License
 

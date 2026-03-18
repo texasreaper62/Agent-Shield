@@ -41,39 +41,60 @@ const now = () => {
 const INJECTION_PATTERNS = [
   // --- Instruction Override ---
   {
-    regex: /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions|rules|guidelines|prompts|context)/i,
+    regex: /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions|rules|guidelines|prompts|context|directions|directives|text|commands)/i,
     severity: 'high',
     category: 'instruction_override',
     description: 'Text tells AI assistants to ignore their safety rules.',
     detail: 'Instruction override pattern: attempts to nullify prior AI instructions.'
   },
   {
-    regex: /disregard\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions|rules|guidelines|prompts)/i,
+    regex: /disregard\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|guidelines|prompts|training|training\s+data)/i,
     severity: 'high',
     category: 'instruction_override',
     description: 'Text tells AI assistants to throw out their rules.',
     detail: 'Instruction disregard pattern: attempts to nullify prior AI instructions.'
   },
   {
-    regex: /forget\s+(your|all|any)\s+(training|instructions|rules|guidelines|programming)/i,
+    regex: /forget\s+(your|all|any|everything)\s+(training|instructions|rules|guidelines|programming|above|previous|prior)/i,
     severity: 'high',
     category: 'instruction_override',
     description: 'Text tries to make AI assistants forget their training.',
     detail: 'Training override pattern: attempts to reset AI behavioral constraints.'
   },
   {
-    regex: /override\s+(system|safety|security)\s+(settings|prompt|instructions|rules)/i,
+    regex: /override\s+(?:all\s+)?(?:system|safety|security)\s+(?:settings|prompt|instructions|rules|mechanisms|filters|checks|protocols)/i,
     severity: 'critical',
     category: 'instruction_override',
     description: 'Text tries to override AI safety settings.',
     detail: 'System override pattern: direct attempt to bypass AI safety mechanisms.'
   },
   {
-    regex: /(?:^|\n)\s*(?:new|updated|revised|replacement)\s+instructions\s*:/i,
+    regex: /(?:^|\n)\s*(?:new|updated|revised|replacement)\s+(?:instructions|policy)\s*:/i,
     severity: 'high',
     category: 'instruction_override',
     description: 'Text contains fake "new instructions" for AI assistants.',
     detail: 'Instruction replacement pattern: attempts to inject new behavioral directives.'
+  },
+  {
+    regex: /(?:abandon|drop|ditch|clear)\s+(?:all\s+)?(?:prior|previous|above|earlier|initial)\s+(?:context|instructions|rules|constraints|guidelines)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tells AI to abandon its prior context or instructions.',
+    detail: 'Context abandonment pattern: attempts to clear AI behavioral constraints.'
+  },
+  {
+    regex: /(?:STOP|HALT|END)\s*[.!]?\s*(?:new|updated|your\s+new|revised)\s+(?:instructions|task|orders|role|objective)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text uses a STOP command followed by new instructions.',
+    detail: 'Stop-and-replace pattern: halts current behavior and injects new instructions.'
+  },
+  {
+    regex: /(?:you\s+are\s+)?(?:no\s+longer\s+bound|not\s+bound|free\s+from|freed?\s+from)\s+(?:by\s+)?(?:your\s+)?(?:initial|original|previous|prior)?\s*(?:instructions|rules|constraints|guidelines|restrictions)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text claims the AI is no longer bound by its rules.',
+    detail: 'Constraint removal pattern: declares AI rules no longer apply.'
   },
 
   // --- Role Hijacking ---
@@ -190,6 +211,27 @@ const INJECTION_PATTERNS = [
     category: 'prompt_injection',
     description: 'Text tries to set a fake "system prompt" for AI assistants.',
     detail: 'System prompt injection: attempts to define system-level instructions.'
+  },
+  {
+    regex: /#{2,}\s*(?:system\s+(?:message|prompt|instruction)|new\s+(?:system|admin)\s+(?:message|prompt))\s*#{0,}/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text uses markdown headers to inject fake system messages.',
+    detail: 'Markdown-formatted system message injection: uses heading syntax to appear authoritative.'
+  },
+  {
+    regex: /(?:Human|User|Assistant)\s*:\s*(?:ignore|forget|override|disregard)[\s\S]{0,50}(?:Human|User|Assistant)\s*:/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text simulates a multi-turn conversation to inject instructions.',
+    detail: 'Multi-turn conversation injection: fakes a dialogue format to embed hidden instructions.'
+  },
+  {
+    regex: /(?:show|display|print|reveal|output)\s+(?:me\s+)?(?:the\s+)?(?:exact\s+)?(?:text|content)\s+(?:between|inside|within|from)\s+(?:the\s+)?(?:<|&lt;)/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text tries to extract content between specific tags.',
+    detail: 'Tag extraction attempt: instructs agent to reveal content between markup tags.'
   },
 
   // --- Data Exfiltration ---
@@ -413,7 +455,7 @@ const INJECTION_PATTERNS = [
     detail: 'AI plugin/extension installation prompt detected.'
   },
   {
-    regex: /(?:requires?\s+(?:your\s+)?(?:API|access)\s*key|enter\s+(?:your\s+)?(?:API|OpenAI|Anthropic|Claude)\s*key)/i,
+    regex: /(?:requires?\s+(?:your\s+)?(?:API|access)\s*key|enter\s+(?:your\s+)?(?:API|OpenAI|Anthropic|Claude)\s*(?:API\s*)?key|(?:provide|give|share|input|type|paste)\s+(?:your\s+)?(?:API|OpenAI|Anthropic|Claude)\s*(?:API\s*)?key)/i,
     severity: 'high',
     category: 'malicious_plugin',
     description: 'Text asks for an AI service API key. Legitimate services rarely ask for this.',
@@ -498,7 +540,7 @@ const INJECTION_PATTERNS = [
     detail: 'Indirect prompt injection via image alt/title attribute. Text-in-image targeting multimodal AI.'
   },
   {
-    regex: /(?:OCR|read\s+(?:the\s+)?text\s+(?:in|from)\s+(?:this|the)\s+image|extract\s+text\s+from\s+(?:this|the)\s+image)/i,
+    regex: /(?:(?:use|perform|do|run|apply)\s+OCR\s+(?:on|to)\s+(?:this|the)|read\s+(?:the\s+)?text\s+(?:in|from)\s+(?:this|the)\s+image|extract\s+text\s+from\s+(?:this|the)\s+image)\s*(?:and\s+(?:follow|execute|run|process))?/i,
     severity: 'medium',
     category: 'prompt_injection',
     description: 'Text instructs AI to read text from an image — could deliver hidden attack payloads.',
@@ -507,7 +549,7 @@ const INJECTION_PATTERNS = [
 
   // --- Agent-Specific Patterns ---
   {
-    regex: /(?:execute|run|call)\s+(?:the\s+)?(?:shell|bash|terminal|command|cmd)\s*(?::|tool)/i,
+    regex: /(?:execute|run|call)\s+(?:the\s+)?(?:shell|bash|terminal|command|cmd)[\s:]+(?:command|tool)?/i,
     severity: 'critical',
     category: 'tool_abuse',
     description: 'Text tries to make an AI agent execute shell commands.',
@@ -558,7 +600,7 @@ const INJECTION_PATTERNS = [
 
   // --- Prompt Injection: System Reveal & Continuation ---
   {
-    regex: /(?:print|show|display|output|reveal|repeat|reproduce)\s+(?:your\s+)?(?:full\s+)?(?:system\s+)?(?:prompt|instructions|rules)\s*(?:verbatim|exactly|in\s+full|word\s+for\s+word)?/i,
+    regex: /(?:print|show|display|output|reveal|repeat|reproduce)\s+(?:me\s+)?(?:your|the|its)?\s*(?:full\s+|entire\s+|complete\s+|exact\s+)?(?:system\s+)?(?:prompt|instructions|rules)\s*(?:verbatim|exactly|in\s+full|word\s+for\s+word)?/i,
     severity: 'high',
     category: 'data_exfiltration',
     description: 'Text tries to make the AI reveal its system prompt or instructions.',
