@@ -1,13 +1,17 @@
 {
   "name": "agent-shield",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Protect AI agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI threats. All detection runs locally.",
   "main": "src/index.js",
+  "types": "types/index.d.ts",
   "bin": {
     "agent-shield": "bin/agent-shield.js"
   },
   "scripts": {
-    "test": "node test/test.js && node test/test-modules.js"
+    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js",
+    "score": "node -e \"const {ShieldScoreCalculator}=require('./src/shield-score');console.log(new ShieldScoreCalculator().formatReport())\"",
+    "benchmark": "node -e \"const {BenchmarkSuite}=require('./src/shield-score');console.log(new BenchmarkSuite().formatReport())\"",
+    "redteam": "node -e \"const {AttackSimulator}=require('./src/redteam');const s=new AttackSimulator();s.runAll();console.log(s.formatReport())\""
   },
   "keywords": [
     "ai",
@@ -22,7 +26,13 @@
     "pii",
     "dlp",
     "canary",
-    "watermark"
+    "watermark",
+    "red-team",
+    "compliance",
+    "enterprise",
+    "langchain",
+    "openai",
+    "anthropic"
   ],
   "author": "",
   "license": "MIT",

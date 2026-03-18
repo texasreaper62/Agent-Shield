@@ -1,0 +1,65 @@
+{
+  "sensitivity": "high",
+  "blockOnThreat": true,
+  "blockThreshold": "high",
+  "logging": true,
+
+  "circuitBreaker": {
+    "threshold": 5,
+    "windowMs": 60000,
+    "cooldownMs": 300000
+  },
+
+  "rateLimiter": {
+    "maxRequests": 100,
+    "windowMs": 60000,
+    "maxThreatsPerWindow": 10
+  },
+
+  "permissions": {
+    "allowedTools": ["search", "calculator", "readFile", "writeFile"],
+    "blockedTools": ["bash", "shell", "exec", "eval"],
+    "tools": {
+      "readFile": {
+        "allowPaths": ["/app/data/", "/app/uploads/"],
+        "blockPaths": ["/etc/", "/root/", "/home/", "/var/"],
+        "maxCallsPerMinute": 30
+      },
+      "writeFile": {
+        "allowPaths": ["/app/output/"],
+        "blockPaths": ["/app/config/", "/app/data/"],
+        "blockArgs": [".env", "credentials", "secret"],
+        "maxCallsPerMinute": 10
+      },
+      "search": {
+        "maxCallsPerMinute": 60
+      }
+    }
+  },
+
+  "pii": {
+    "categories": ["email", "ssn", "credit_card", "phone"]
+  },
+
+  "dlp": {
+    "rules": [
+      {
+        "name": "internal_project",
+        "pattern": "Project\\s+Phoenix",
+        "action": "block",
+        "severity": "high"
+      },
+      {
+        "name": "employee_id",
+        "pattern": "EMP-\\d{6}",
+        "action": "redact",
+        "replacement": "[EMPLOYEE ID]",
+        "severity": "medium"
+      }
+    ]
+  },
+
+  "contentPolicy": {
+    "blockedCategories": ["medical_advice", "legal_advice", "financial_advice"]
+  }
+}

@@ -595,7 +595,7 @@ console.log('\n--- CLI Smoke Test ---');
 
   // Help command
   const helpOutput = execSync('node bin/agent-shield.js help', { cwd: require('path').join(__dirname, '..') }).toString();
-  assert(helpOutput.includes('Agent Shield CLI'), 'CLI help works');
+  assert(helpOutput.includes('Commands:'), 'CLI help works');
 
   // Patterns command
   const patternsOutput = execSync('node bin/agent-shield.js patterns', { cwd: require('path').join(__dirname, '..') }).toString();

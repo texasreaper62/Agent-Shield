@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Agent Shield CLI (#47)
+ * Agent Shield CLI
  *
  * Usage:
  *   npx agent-shield scan "text to check"
@@ -10,6 +10,13 @@
  *   npx agent-shield scan --json '{"message": "ignore instructions"}'
  *   npx agent-shield audit ./my-agent/
  *   npx agent-shield patterns
+ *   npx agent-shield score              # Shield Score benchmark
+ *   npx agent-shield benchmark          # Performance benchmark
+ *   npx agent-shield redteam            # Run red team suite
+ *   npx agent-shield threat <id>        # Threat encyclopedia lookup
+ *   npx agent-shield checklist          # Security checklist generator
+ *   npx agent-shield init               # Interactive setup wizard
+ *   npx agent-shield dashboard          # Open dashboard
  */
 
 const fs = require('fs');
@@ -24,10 +31,25 @@ const COLORS = {
   yellow: '\x1b[33m',
   green: '\x1b[32m',
   cyan: '\x1b[36m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
   gray: '\x1b[90m',
+  white: '\x1b[37m',
   bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  underline: '\x1b[4m',
   reset: '\x1b[0m'
 };
+
+const ASCII_BANNER = `
+${COLORS.cyan}    ___                    __     _____ __    _      __    __
+   /   | ____ ____  ____  / /_   / ___// /_  (_)__  / /___/ /
+  / /| |/ __ \`/ _ \\/ __ \\/ __/   \\__ \\/ __ \\/ / _ \\/ / __  /
+ / ___ / /_/ /  __/ / / / /_    ___/ / / / / /  __/ / /_/ /
+/_/  |_\\__, /\\___/_/ /_/\\__/   /____/_/ /_/_/\\___/_/\\__,_/
+      /____/${COLORS.reset}
+${COLORS.dim}  Protecting AI agents from prompt injection & beyond${COLORS.reset}
+`;
 
 const severityColor = (severity) => {
   switch (severity) {
@@ -318,11 +340,158 @@ const parseArgs = (argv) => {
 };
 
 // =========================================================================
+// NEW COMMANDS: score, benchmark, redteam, threat, checklist, init
+// =========================================================================
+
+const commandScore = () => {
+  console.log(ASCII_BANNER);
+  const { ShieldScoreCalculator } = require('../src/shield-score');
+  const calc = new ShieldScoreCalculator();
+  console.log(calc.formatReport());
+};
+
+const commandBenchmark = () => {
+  console.log(ASCII_BANNER);
+  const { BenchmarkSuite } = require('../src/shield-score');
+  const suite = new BenchmarkSuite({ iterations: 200 });
+  console.log(suite.formatReport());
+};
+
+const commandRedteam = (args) => {
+  console.log(ASCII_BANNER);
+  const { AttackSimulator } = require('../src/redteam');
+  const sim = new AttackSimulator({ sensitivity: args.sensitivity || 'high' });
+  sim.runAll();
+  console.log(sim.formatReport());
+};
+
+const commandThreat = (args) => {
+  const { ThreatEncyclopedia } = require('../src/threat-encyclopedia');
+  const enc = new ThreatEncyclopedia();
+
+  if (!args.text) {
+    // List all threats
+    console.log(`\n${COLORS.bold}Threat Encyclopedia${COLORS.reset}\n`);
+    for (const t of enc.getAll()) {
+      console.log(`  ${COLORS.cyan}${t.id}${COLORS.reset}  ${severityColor(t.severity)}[${t.severity}]${COLORS.reset}  ${t.name}`);
+      console.log(`  ${COLORS.gray}${t.summary}${COLORS.reset}\n`);
+    }
+    console.log(`\n${COLORS.bold}Attack Pattern of the Day${COLORS.reset}\n`);
+    const apod = enc.getPatternOfTheDay();
+    console.log(`  ${COLORS.cyan}${apod.title}${COLORS.reset}`);
+    console.log(`  ${apod.description}\n`);
+    console.log(`  ${COLORS.bold}Defense:${COLORS.reset} ${apod.howToDefend}\n`);
+    return;
+  }
+
+  const threat = enc.get(args.text);
+  if (threat) {
+    console.log(enc.formatThreat(args.text));
+  } else {
+    // Try search
+    const results = enc.search(args.text);
+    if (results.length > 0) {
+      console.log(`\n${COLORS.bold}Search results for "${args.text}"${COLORS.reset}\n`);
+      for (const t of results) {
+        console.log(`  ${COLORS.cyan}${t.id}${COLORS.reset}  ${t.name} — ${t.summary}`);
+      }
+      console.log();
+    } else {
+      console.log(`No threats found for "${args.text}". Use "agent-shield threat" to list all.`);
+    }
+  }
+};
+
+const commandChecklist = (args) => {
+  console.log(ASCII_BANNER);
+  const { SecurityChecklistGenerator } = require('../src/compliance');
+  const gen = new SecurityChecklistGenerator();
+  const checklist = gen.generate(args.text || 'production');
+  console.log(gen.format(checklist));
+};
+
+const commandInit = () => {
+  console.log(ASCII_BANNER);
+  console.log(`${COLORS.bold}  Interactive Setup Wizard${COLORS.reset}\n`);
+
+  const configPath = path.join(process.cwd(), 'agent-shield.json');
+
+  if (fs.existsSync(configPath)) {
+    console.log(`  ${COLORS.yellow}Config already exists:${COLORS.reset} ${configPath}`);
+    console.log(`  Delete it first to re-run the wizard.\n`);
+    return;
+  }
+
+  // Generate a sensible default config
+  const config = {
+    sensitivity: 'high',
+    blockOnThreat: true,
+    blockThreshold: 'high',
+    logging: true,
+    circuitBreaker: {
+      threshold: 5,
+      windowMs: 60000,
+      cooldownMs: 300000
+    },
+    rateLimiter: {
+      maxRequests: 100,
+      windowMs: 60000
+    },
+    permissions: {
+      allowedTools: [],
+      blockedTools: ['bash', 'shell', 'exec', 'eval']
+    },
+    pii: {
+      categories: ['email', 'ssn', 'credit_card', 'phone']
+    }
+  };
+
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  console.log(`  ${COLORS.green}Created:${COLORS.reset} ${configPath}\n`);
+  console.log(`  Edit this file to customize your security policy.`);
+  console.log(`  Then load it in your code:\n`);
+  console.log(`  ${COLORS.cyan}const { loadPolicyFile } = require('agent-shield/src/policy');${COLORS.reset}`);
+  console.log(`  ${COLORS.cyan}const policy = loadPolicyFile('./agent-shield.json');${COLORS.reset}\n`);
+  console.log(`  Or use the Express middleware:\n`);
+  console.log(`  ${COLORS.cyan}const { expressMiddleware } = require('agent-shield');${COLORS.reset}`);
+  console.log(`  ${COLORS.cyan}app.use('/api/agent', expressMiddleware({ configPath: './agent-shield.json' }));${COLORS.reset}\n`);
+};
+
+const commandDashboard = () => {
+  const dashboardPath = path.resolve(__dirname, '..', 'dashboard', 'index.html');
+  if (!fs.existsSync(dashboardPath)) {
+    console.log(`Dashboard not found at: ${dashboardPath}`);
+    console.log('The dashboard HTML file should be at dashboard/index.html');
+    return;
+  }
+  console.log(`\n${COLORS.bold}Agent Shield Dashboard${COLORS.reset}\n`);
+  console.log(`Open this file in your browser:\n`);
+  console.log(`  ${COLORS.cyan}${dashboardPath}${COLORS.reset}\n`);
+
+  // Try to open in browser
+  const { execSync } = require('child_process');
+  try {
+    const platform = process.platform;
+    if (platform === 'darwin') execSync(`open "${dashboardPath}"`);
+    else if (platform === 'win32') execSync(`start "${dashboardPath}"`);
+    else execSync(`xdg-open "${dashboardPath}" 2>/dev/null || echo ""`);
+    console.log(`  ${COLORS.green}Opened in browser.${COLORS.reset}\n`);
+  } catch (e) {
+    console.log(`  ${COLORS.gray}Could not auto-open. Please open manually.${COLORS.reset}\n`);
+  }
+};
+
+// =========================================================================
 // MAIN
 // =========================================================================
 
 const main = () => {
   const args = parseArgs(process.argv);
+
+  // Show banner for top-level help
+  if (!args.command || args.command === 'help' || args.command === '--help' || args.command === '-h') {
+    console.log(ASCII_BANNER);
+  }
 
   switch (args.command) {
     case 'scan':
@@ -334,21 +503,51 @@ const main = () => {
     case 'patterns':
       commandPatterns();
       break;
+    case 'score':
+      commandScore();
+      break;
+    case 'benchmark':
+    case 'bench':
+      commandBenchmark();
+      break;
+    case 'redteam':
+    case 'red-team':
+      commandRedteam(args);
+      break;
+    case 'threat':
+    case 'threats':
+      commandThreat(args);
+      break;
+    case 'checklist':
+      commandChecklist(args);
+      break;
+    case 'init':
+    case 'setup':
+      commandInit();
+      break;
+    case 'dashboard':
+    case 'dash':
+      commandDashboard();
+      break;
     case 'help':
     case '--help':
     case '-h':
     default:
       console.log(`
-${COLORS.bold}Agent Shield CLI${COLORS.reset}
-Protect AI agents from prompt injection and other threats.
-
 ${COLORS.bold}Commands:${COLORS.reset}
-  scan <text>             Scan text for threats
-  scan --file <path>      Scan a file for threats
-  scan --json <json>      Scan JSON data for threats
-  scan --pii              Also check for PII
-  audit [dir]             Audit a directory for security issues
-  patterns                List all detection patterns
+  ${COLORS.cyan}scan${COLORS.reset} <text>             Scan text for threats
+  ${COLORS.cyan}scan${COLORS.reset} --file <path>      Scan a file for threats
+  ${COLORS.cyan}scan${COLORS.reset} --json <json>      Scan JSON data for threats
+  ${COLORS.cyan}scan${COLORS.reset} --pii              Also check for PII
+  ${COLORS.cyan}audit${COLORS.reset} [dir]             Audit a directory for security issues
+  ${COLORS.cyan}patterns${COLORS.reset}                List all detection patterns
+  ${COLORS.cyan}score${COLORS.reset}                   Calculate your Shield Score (0-100)
+  ${COLORS.cyan}benchmark${COLORS.reset}               Run performance benchmarks
+  ${COLORS.cyan}redteam${COLORS.reset}                 Run red team attack suite
+  ${COLORS.cyan}threat${COLORS.reset} [id|query]       Threat encyclopedia & search
+  ${COLORS.cyan}checklist${COLORS.reset} [env]         Generate security checklist
+  ${COLORS.cyan}init${COLORS.reset}                    Interactive setup wizard
+  ${COLORS.cyan}dashboard${COLORS.reset}               Open security dashboard
 
 ${COLORS.bold}Options:${COLORS.reset}
   -s, --sensitivity       Sensitivity: low, medium, high (default: high)
@@ -358,10 +557,14 @@ ${COLORS.bold}Options:${COLORS.reset}
   -h, --help              Show this help
 
 ${COLORS.bold}Examples:${COLORS.reset}
-  agent-shield scan "ignore all previous instructions"
-  agent-shield scan -f suspicious-input.txt --pii
-  agent-shield audit ./my-agent-project/
-  agent-shield patterns
+  ${COLORS.gray}$${COLORS.reset} agent-shield scan "ignore all previous instructions"
+  ${COLORS.gray}$${COLORS.reset} agent-shield scan -f suspicious-input.txt --pii
+  ${COLORS.gray}$${COLORS.reset} agent-shield audit ./my-agent-project/
+  ${COLORS.gray}$${COLORS.reset} agent-shield score
+  ${COLORS.gray}$${COLORS.reset} agent-shield redteam
+  ${COLORS.gray}$${COLORS.reset} agent-shield threat prompt_injection
+  ${COLORS.gray}$${COLORS.reset} agent-shield checklist production
+  ${COLORS.gray}$${COLORS.reset} agent-shield init
 `);
       break;
   }
