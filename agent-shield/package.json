@@ -1,0 +1,24 @@
+{
+  "name": "agent-shield",
+  "version": "0.1.0",
+  "description": "Protect AI agents from prompt injection, data exfiltration, and tool abuse. All detection runs locally.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "keywords": [
+    "ai",
+    "security",
+    "prompt-injection",
+    "agent",
+    "llm",
+    "protection",
+    "shield",
+    "safety"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
