@@ -139,6 +139,9 @@ const { PrometheusExporter, DatadogLogger, MetricsCollector } = safeRequire('./o
 // Adaptive Detection
 const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequire('./adaptive', 'adaptive');
 
+// OpenClaw
+const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = safeRequire('./openclaw', 'openclaw');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -367,7 +370,12 @@ const _exports = {
   // Adaptive Detection
   AdaptiveDetector,
   SemanticAnalysisHook,
-  CommunityPatterns
+  CommunityPatterns,
+
+  // OpenClaw
+  OpenClawShieldSkill,
+  shieldOpenClawMessages,
+  generateOpenClawSkill
 };
 
 // Filter out undefined exports (from modules that failed to load)

@@ -49,7 +49,7 @@ This document outlines the planned features and improvements for Agent Shield. O
 - ~~Native Claude Agent SDK sub-agent mode~~ ✓ Implemented
 - ~~Streaming message scanning (scan as tokens arrive)~~ ✓ Stream scanner module
 - ~~Async scanning hooks for high-throughput pipelines~~ ✓ Worker scanner module
-- OpenClaw framework integration
+- ~~OpenClaw framework integration~~ ✓ OpenClaw skill + message hook
 - AutoGen / CrewAI framework support
 
 ---

@@ -121,7 +121,7 @@ class OpenClawShieldSkill {
       blocked: result.blocked || false,
       threats: result.threats,
       text: processedText,
-      pii: piiResult ? piiResult.found : [],
+      pii: piiResult ? piiResult.findings : [],
       stats: this.shield.getStats()
     };
   }
