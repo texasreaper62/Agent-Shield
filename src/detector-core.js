@@ -223,7 +223,7 @@ const INJECTION_PATTERNS = [
     detail: 'Markdown-formatted system message injection: uses heading syntax to appear authoritative.'
   },
   {
-    regex: /(?:Human|User|Assistant)\s*:\s*(?:ignore|forget|override|disregard)[\s\S]{0,50}(?:Human|User|Assistant)\s*:/i,
+    regex: /(?:Human|User|Assistant)\s*:\s*(?:ignore|forget|override|disregard).{0,50}(?:Human|User|Assistant)\s*:/is,
     severity: 'high',
     category: 'prompt_injection',
     description: 'Text simulates a multi-turn conversation to inject instructions.',
@@ -543,7 +543,7 @@ const INJECTION_PATTERNS = [
     detail: 'Indirect prompt injection via image alt/title attribute. Text-in-image targeting multimodal AI.'
   },
   {
-    regex: /(?:(?:use|perform|do|run|apply)\s+OCR\s+(?:on|to)\s+(?:this|the)|read\s+(?:the\s+)?text\s+(?:in|from)\s+(?:this|the)\s+image|extract\s+text\s+from\s+(?:this|the)\s+image)\s*(?:and\s+(?:follow|execute|run|process))?/i,
+    regex: /(?:(?:use|perform|do|run|apply)\s+OCR\s+(?:on|to)\s+(?:this|the)|read\s+(?:the\s+)?text\s+(?:in|from)\s+(?:this|the)\s+image|extract\s+text\s+from\s+(?:this|the)\s+image)(?:\s+and\s+(?:follow|execute|run|process))?/i,
     severity: 'medium',
     category: 'prompt_injection',
     description: 'Text instructs AI to read text from an image — could deliver hidden attack payloads.',
@@ -1476,6 +1476,11 @@ const scanText = (text, options = {}) => {
   if (stats.critical > 0) status = 'danger';
   else if (stats.high > 0) status = 'warning';
   else if (stats.medium > 0) status = 'caution';
+
+  // Enrich threats with actionable guidance
+  for (const t of threats) {
+    t.remediation = `To allowlist this detection, add a rule for category "${t.category}" matching your expected input pattern. See: Allowlist.addRule({ pattern: '...', category: '${t.category}', reason: 'Known safe pattern' })`;
+  }
 
   const result = { status, threats, stats, timestamp: Date.now() };
   if (truncated) {

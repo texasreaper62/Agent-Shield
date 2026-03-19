@@ -74,7 +74,7 @@ class AgentFirewall {
         threats: [],
         reason: `Messages from "${fromAgent}" to "${toAgent}" are blocked by firewall policy.`
       };
-      if (this.onViolation) this.onViolation(result);
+      if (this.onViolation) { try { this.onViolation(result); } catch (e) { console.error('[Agent Shield] onViolation callback error:', e.message); } }
       return result;
     }
 
@@ -100,13 +100,15 @@ class AgentFirewall {
     if (this.messageLog.length > 500) this.messageLog.shift();
 
     if (!allowed && this.onViolation) {
-      this.onViolation({
-        allowed: false,
-        from: fromAgent,
-        to: toAgent,
-        threats: scanResult.threats,
-        reason: `Inter-agent message from "${fromAgent}" contains threats.`
-      });
+      try {
+        this.onViolation({
+          allowed: false,
+          from: fromAgent,
+          to: toAgent,
+          threats: scanResult.threats,
+          reason: `Inter-agent message from "${fromAgent}" contains threats.`
+        });
+      } catch (e) { console.error('[Agent Shield] onViolation callback error:', e.message); }
     }
 
     return {
@@ -143,6 +145,7 @@ class DelegationChain {
     this.onMaxDepth = options.onMaxDepth || null;
     this.chains = new Map(); // requestId -> chain
     this.activeChains = new Map(); // agentId -> requestId
+    this.maxChains = options.maxChains || 1000;
   }
 
   /**
@@ -167,6 +170,14 @@ class DelegationChain {
       status: 'active',
       createdAt: Date.now()
     };
+
+    // Prune completed chains if over limit
+    if (this.chains.size >= this.maxChains) {
+      for (const [id, c] of this.chains) {
+        if (c.status === 'completed') { this.chains.delete(id); }
+        if (this.chains.size < this.maxChains) break;
+      }
+    }
 
     this.chains.set(requestId, chain);
     this.activeChains.set(originAgent, requestId);
@@ -193,7 +204,7 @@ class DelegationChain {
 
     if (depth >= this.maxDepth) {
       if (this.onMaxDepth) {
-        this.onMaxDepth({ requestId, depth, fromAgent, toAgent });
+        try { this.onMaxDepth({ requestId, depth, fromAgent, toAgent }); } catch (e) { console.error('[Agent Shield] onMaxDepth callback error:', e.message); }
       }
       return {
         allowed: false,
@@ -333,12 +344,12 @@ class SharedThreatState {
     // Notify all subscribers except the reporter
     for (const [agentId, callback] of this.subscribers) {
       if (agentId !== reportingAgent) {
-        callback(entry);
+        try { callback(entry); } catch (e) { console.error(`[Agent Shield] subscriber ${agentId} callback error:`, e.message); }
       }
     }
 
     if (this.onBroadcast) {
-      this.onBroadcast(entry);
+      try { this.onBroadcast(entry); } catch (e) { console.error('[Agent Shield] onBroadcast callback error:', e.message); }
     }
   }
 

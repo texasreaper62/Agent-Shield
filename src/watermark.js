@@ -225,7 +225,9 @@ class DifferentialPrivacy {
    * @returns {number}
    */
   _laplacianNoise(scale) {
-    const u = Math.random() - 0.5;
+    // Use crypto for proper randomness instead of Math.random()
+    const bytes = crypto.randomBytes(4);
+    const u = (bytes.readUInt32BE(0) / 0xFFFFFFFF) - 0.5;
     return -scale * Math.sign(u) * Math.log(1 - 2 * Math.abs(u));
   }
 }

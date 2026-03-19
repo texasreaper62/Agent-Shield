@@ -381,7 +381,7 @@ class FeedbackLoop {
       this.pendingReviews.shift();
     }
 
-    if (this.onFeedback) this.onFeedback(entry);
+    if (this.onFeedback) { try { this.onFeedback(entry); } catch (e) { console.error('[Agent Shield] onFeedback callback error:', e.message); } }
     return entry.id;
   }
 
@@ -410,7 +410,7 @@ class FeedbackLoop {
       this.pendingReviews.shift();
     }
 
-    if (this.onFeedback) this.onFeedback(entry);
+    if (this.onFeedback) { try { this.onFeedback(entry); } catch (e) { console.error('[Agent Shield] onFeedback callback error:', e.message); } }
     return entry.id;
   }
 

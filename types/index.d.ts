@@ -347,6 +347,7 @@ export declare const LOG_LEVEL: {
   INFO: 'info';
   WARN: 'warn';
   ERROR: 'error';
+  CRITICAL: 'critical';
 };
 
 export declare class StructuredLogger {
@@ -383,6 +384,7 @@ export declare function shieldAnthropicClient(client: any, options?: ShieldOptio
 
 export declare function shieldOpenAIClient(client: any, options?: ShieldOptions & {
   pii?: boolean;
+  circuitBreaker?: CircuitBreakerOptions;
   onThreat?: (info: any) => void;
 }): any;
 
@@ -917,6 +919,293 @@ export declare class Playground {
   test(text: string): ScanResult & { latencyMs: number };
   getHistory(): any[];
   clear(): void;
+}
+
+// =========================================================================
+// Streaming
+// =========================================================================
+
+export declare class StreamScanner {
+  constructor(options?: { sensitivity?: string; chunkSize?: number; onThreat?: (threat: Threat) => void });
+  write(chunk: string): { threats: Threat[]; buffered: number };
+  flush(): { threats: Threat[] };
+  reset(): void;
+}
+
+export declare class TokenStreamScanner {
+  constructor(options?: { sensitivity?: string; windowSize?: number });
+  addToken(token: string): { threats: Threat[] };
+  flush(): { threats: Threat[] };
+}
+
+// =========================================================================
+// Plugin System
+// =========================================================================
+
+export declare class PluginManager {
+  constructor();
+  register(plugin: { name: string; version?: string; hooks?: Record<string, Function> }): void;
+  unregister(name: string): boolean;
+  getPlugins(): Array<{ name: string; version: string }>;
+}
+
+export declare class PluginTemplate {
+  static create(options: { name: string; version?: string }): any;
+}
+
+export declare class PluginSandbox {
+  constructor(options?: { timeoutMs?: number });
+  run(fn: Function, ...args: any[]): any;
+}
+
+// =========================================================================
+// Token Analysis
+// =========================================================================
+
+export declare class EntropyAnalyzer {
+  constructor();
+  analyze(text: string): { entropy: number; suspicious: boolean; charDistribution: Record<string, number> };
+}
+
+export declare class PerplexityEstimator {
+  constructor();
+  estimate(text: string): { perplexity: number; suspicious: boolean };
+}
+
+export declare class BurstDetector {
+  constructor(options?: { windowSize?: number; threshold?: number });
+  addEvent(event?: any): { burst: boolean; count: number };
+  reset(): void;
+}
+
+export declare class TextStatistics {
+  static analyze(text: string): { wordCount: number; charCount: number; avgWordLength: number; uniqueWords: number; entropy: number };
+}
+
+// =========================================================================
+// Document Scanner
+// =========================================================================
+
+export declare class DocumentScanner {
+  constructor(options?: { sensitivity?: string });
+  scan(document: string, metadata?: any): ScanResult;
+}
+
+export declare class TextExtractor {
+  static fromHTML(html: string): string;
+  static fromMarkdown(md: string): string;
+}
+
+export declare class IndirectInjectionScanner {
+  constructor(options?: { sensitivity?: string });
+  scan(text: string, source?: string): ScanResult;
+}
+
+// =========================================================================
+// Tool Output Validator
+// =========================================================================
+
+export declare class ToolOutputValidator {
+  constructor(options?: { sensitivity?: string; maxOutputSize?: number });
+  validate(toolName: string, output: any): { safe: boolean; threats: Threat[]; sanitized?: any };
+}
+
+export declare class OutputSanitizer {
+  constructor(options?: { stripHTML?: boolean; maxLength?: number });
+  sanitize(output: string): string;
+}
+
+// =========================================================================
+// Response Handler
+// =========================================================================
+
+export declare class ResponseHandler {
+  constructor(options?: { templates?: Record<string, string>; defaultAction?: string });
+  handle(scanResult: ScanResult): { action: string; response: string; original?: any };
+}
+
+export declare class ResponseTemplates {
+  static get(name: string): string;
+  static getAll(): Record<string, string>;
+}
+
+export declare class ReviewQueue {
+  constructor(options?: { maxSize?: number });
+  add(item: any): string;
+  approve(id: string): any;
+  reject(id: string): any;
+  getPending(): any[];
+  getStats(): { pending: number; approved: number; rejected: number };
+}
+
+// =========================================================================
+// Worker Scanner
+// =========================================================================
+
+export declare class WorkerScanner {
+  constructor(options?: { workerCount?: number });
+  scan(text: string): Promise<ScanResult>;
+  shutdown(): void;
+}
+
+export declare class ScanQueue {
+  constructor(options?: { concurrency?: number; maxQueue?: number });
+  enqueue(text: string): Promise<ScanResult>;
+  getStats(): { queued: number; processing: number; completed: number };
+}
+
+// =========================================================================
+// Alert Tuning
+// =========================================================================
+
+export declare class AlertFatigueAnalyzer {
+  constructor(options?: { windowMs?: number; maxAlerts?: number });
+  record(alert: any): { fatigued: boolean; suppressed: boolean; count: number };
+  getStats(): { total: number; suppressed: number; fatigueRate: string };
+}
+
+export declare class AutoTuner {
+  constructor(options?: { targetFPRate?: number });
+  record(scanResult: ScanResult, wasActuallyMalicious: boolean): void;
+  getSuggestions(): Array<{ action: string; reason: string }>;
+}
+
+export declare class AlertCorrelator {
+  constructor(options?: { windowMs?: number });
+  correlate(alert: any): { correlated: boolean; group?: string; relatedAlerts?: any[] };
+}
+
+// =========================================================================
+// OpenTelemetry
+// =========================================================================
+
+export declare class ShieldMetrics {
+  constructor(options?: { serviceName?: string });
+  recordScan(result: ScanResult, durationMs: number): void;
+  recordBlock(reason: string): void;
+  getMetrics(): Record<string, number>;
+}
+
+export declare class ShieldTracer {
+  constructor(options?: { serviceName?: string });
+  startSpan(name: string): { end: () => void; setAttribute: (key: string, value: any) => void };
+}
+
+export declare class MetricsDashboard {
+  constructor(options?: { refreshInterval?: number });
+  getSummary(): any;
+}
+
+// =========================================================================
+// Certification
+// =========================================================================
+
+export declare class CertificationRunner {
+  constructor(options?: { sensitivity?: string });
+  runCertification(): Promise<{ passed: boolean; score: number; certificate: Certificate }>;
+}
+
+export declare class Certificate {
+  constructor(data: any);
+  toText(): string;
+  toJSON(): any;
+}
+
+export declare class CertificationHistory {
+  constructor();
+  record(cert: Certificate): void;
+  getHistory(): Certificate[];
+}
+
+// =========================================================================
+// MCP Server
+// =========================================================================
+
+export declare class MCPServer {
+  constructor(options?: { port?: number });
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+
+export declare class MCPToolHandler {
+  constructor(shield: AgentShield);
+  handleToolCall(name: string, args: any): Promise<any>;
+}
+
+// =========================================================================
+// CTF
+// =========================================================================
+
+export declare class CTFEngine {
+  constructor(options?: { difficulty?: string });
+  getChallenge(id: string): any;
+  submitAnswer(id: string, answer: string): { correct: boolean; score: number };
+  getScoreboard(): any;
+}
+
+export declare class CTFReporter {
+  constructor();
+  formatReport(scoreboard: any): string;
+}
+
+export declare const CHALLENGES: any[];
+
+// =========================================================================
+// Observability
+// =========================================================================
+
+export declare class PrometheusExporter {
+  constructor(options?: { prefix?: string });
+  increment(name: string, labels?: Record<string, string>): void;
+  observe(name: string, value: number, labels?: Record<string, string>): void;
+  set(name: string, value: number, labels?: Record<string, string>): void;
+  metrics(): string;
+  wrapShield(shield: AgentShield): AgentShield;
+}
+
+export declare class DatadogLogger {
+  constructor(options?: { service?: string; env?: string; version?: string; maxBuffer?: number });
+  log(event: string, data?: any): void;
+  logScan(result: ScanResult, metadata?: any): void;
+  logThreat(threat: Threat, metadata?: any): void;
+  logBlock(reason: string, metadata?: any): void;
+  flush(): any[];
+}
+
+export declare class MetricsCollector {
+  constructor(options?: { ttlMs?: number; maxEvents?: number });
+  record(event: { type: string; durationMs?: number; threats?: number; category?: string }): void;
+  getSummary(windowMs?: number): { scansPerSec: number; threatsPerSec: number; p50: number; p95: number; p99: number; topCategories: Array<{ category: string; count: number }> };
+}
+
+// =========================================================================
+// Adaptive Detection
+// =========================================================================
+
+export declare class AdaptiveDetector {
+  constructor(options?: { storagePath?: string });
+  recordFalsePositive(text: string, category: string): void;
+  recordFalseNegative(text: string, category: string): void;
+  shouldSuppress(text: string, category: string): boolean;
+  getBoost(text: string, category: string): number;
+  adjustResult(scanResult: ScanResult): ScanResult;
+  getStats(): { falsePositives: number; falseNegatives: number };
+  save(): void;
+  load(): void;
+}
+
+export declare class SemanticAnalysisHook {
+  constructor(options: { classifier: (text: string, threats: Threat[]) => Promise<{ override: boolean; reason: string }>; timeoutMs?: number });
+  analyze(text: string, scanResult: ScanResult): Promise<ScanResult>;
+  getStats(): { overrides: number; errors: number; avgLatencyMs: number };
+}
+
+export declare class CommunityPatterns {
+  constructor(options?: { path?: string });
+  load(): void;
+  getPatterns(): Pattern[];
+  merge(existingPatterns: Pattern[]): Pattern[];
+  getVersion(): string;
 }
 
 // =========================================================================

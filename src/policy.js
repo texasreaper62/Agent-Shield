@@ -182,7 +182,7 @@ class StructuredLogger {
     }
 
     if (this.transport) {
-      this.transport(entry);
+      try { this.transport(entry); } catch (e) { console.error('[Agent Shield] transport callback error:', e.message); }
     }
 
     return entry;
@@ -348,6 +348,14 @@ class WebhookAlert {
     // Cap alert history
     if (this.alertHistory.length > 100) {
       this.alertHistory = this.alertHistory.slice(-100);
+    }
+
+    // Prune stale cooldown entries (older than 2x cooldown period)
+    if (this.lastAlertTimes.size > 100) {
+      const staleThreshold = now - this.cooldownMs * 2;
+      for (const [url, time] of this.lastAlertTimes) {
+        if (time < staleThreshold) this.lastAlertTimes.delete(url);
+      }
     }
 
     return results;

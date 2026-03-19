@@ -103,11 +103,15 @@ class CircuitBreaker {
     this.state = STATE.OPEN;
     this.trippedAt = Date.now();
     if (this.onTrip) {
-      this.onTrip({
-        state: STATE.OPEN,
-        threatCount: this.threatTimestamps.length,
-        timestamp: this.trippedAt
-      });
+      try {
+        this.onTrip({
+          state: STATE.OPEN,
+          threatCount: this.threatTimestamps.length,
+          timestamp: this.trippedAt
+        });
+      } catch (err) {
+        console.error('[Agent Shield] onTrip callback error:', err.message);
+      }
     }
   }
 
@@ -117,7 +121,11 @@ class CircuitBreaker {
     this.threatTimestamps = [];
     this.trippedAt = null;
     if (this.onReset) {
-      this.onReset({ state: STATE.CLOSED, timestamp: Date.now() });
+      try {
+        this.onReset({ state: STATE.CLOSED, timestamp: Date.now() });
+      } catch (err) {
+        console.error('[Agent Shield] onReset callback error:', err.message);
+      }
     }
   }
 
@@ -170,7 +178,7 @@ const shadowMode = (shield, options = {}) => {
           log.push(entry);
           if (log.length > 1000) log.shift();
           if (res.threats && res.threats.length > 0) {
-            logger(`[Agent Shield Shadow] ${methodName}: ${res.threats.length} threat(s) detected (not blocked)`, res.threats.map(t => t.description));
+            try { logger(`[Agent Shield Shadow] ${methodName}: ${res.threats.length} threat(s) detected (not blocked)`, res.threats.map(t => t.description)); } catch (e) { /* logger error */ }
           }
           // Never block in shadow mode
           if ('blocked' in res) res.blocked = false;
@@ -183,7 +191,7 @@ const shadowMode = (shield, options = {}) => {
       if (log.length > 1000) log.shift();
 
       if (result.threats && result.threats.length > 0) {
-        logger(`[Agent Shield Shadow] ${methodName}: ${result.threats.length} threat(s) detected (not blocked)`, result.threats.map(t => t.description));
+        try { logger(`[Agent Shield Shadow] ${methodName}: ${result.threats.length} threat(s) detected (not blocked)`, result.threats.map(t => t.description)); } catch (e) { /* logger error */ }
       }
 
       // Never block in shadow mode
@@ -241,7 +249,11 @@ class RateLimiter {
 
     if (this.requestTimestamps.length > this.maxRequests) {
       if (this.onLimit) {
-        this.onLimit({ count: this.requestTimestamps.length, windowMs: this.windowMs });
+        try {
+          this.onLimit({ count: this.requestTimestamps.length, windowMs: this.windowMs });
+        } catch (err) {
+          console.error('[Agent Shield] onLimit callback error:', err.message);
+        }
       }
       return {
         allowed: false,
@@ -272,7 +284,11 @@ class RateLimiter {
 
     const isAnomaly = this.threatTimestamps.length >= this.maxThreatsPerWindow;
     if (isAnomaly && this.onAnomaly) {
-      this.onAnomaly({ threatCount: this.threatTimestamps.length, windowMs: this.windowMs });
+      try {
+        this.onAnomaly({ threatCount: this.threatTimestamps.length, windowMs: this.windowMs });
+      } catch (err) {
+        console.error('[Agent Shield] onAnomaly callback error:', err.message);
+      }
     }
 
     return {

@@ -65,7 +65,7 @@ class FragmentationDetector {
     }));
 
     if (fragmentedThreats.length > 0 && this.onDetection) {
-      this.onDetection({ threats: fragmentedThreats, window: windowMessages });
+      try { this.onDetection({ threats: fragmentedThreats, window: windowMessages }); } catch (e) { console.error('[Agent Shield] onDetection callback error:', e.message); }
     }
 
     return {
@@ -143,12 +143,14 @@ class LanguageSwitchDetector {
         suspiciousSwitch = suspiciousTargets.includes(dominantScript);
 
         if (suspiciousSwitch && this.onSwitch) {
-          this.onSwitch({
-            from: prev.dominantScript,
-            to: dominantScript,
-            text: text.substring(0, 200),
-            timestamp: Date.now()
-          });
+          try {
+            this.onSwitch({
+              from: prev.dominantScript,
+              to: dominantScript,
+              text: text.substring(0, 200),
+              timestamp: Date.now()
+            });
+          } catch (e) { console.error('[Agent Shield] onSwitch callback error:', e.message); }
         }
       }
     }
@@ -253,7 +255,7 @@ class TokenBudgetAnalyzer {
     }
 
     if (warning && this.onWarning) {
-      this.onWarning({ status, warning, budgetUsed, estimatedTokens });
+      try { this.onWarning({ status, warning, budgetUsed, estimatedTokens }); } catch (e) { console.error('[Agent Shield] onWarning callback error:', e.message); }
     }
 
     return {
@@ -330,7 +332,7 @@ class InstructionHierarchy {
     }
 
     if (violations.length > 0 && this.onViolation) {
-      this.onViolation({ violations, text: text.substring(0, 200) });
+      try { this.onViolation({ violations, text: text.substring(0, 200) }); } catch (e) { console.error('[Agent Shield] onViolation callback error:', e.message); }
     }
 
     return { allowed: violations.length === 0, violations };
@@ -345,10 +347,13 @@ class InstructionHierarchy {
     const words = rule.split(/\s+/).filter(w => w.length > 3);
     if (words.length === 0) return false;
 
-    // Check if text mentions the rule topic with negation
-    const ruleKeywords = words.slice(0, 5).join('|');
+    // Escape regex special characters in keywords to prevent ReDoS
+    const escaped = words.slice(0, 5).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const ruleKeywords = escaped.join('|');
+
+    // Use .{0,80} instead of .* to prevent catastrophic backtracking
     const negationPattern = new RegExp(
-      `(?:don'?t|do\\s+not|never|stop|disable|remove|ignore|skip|bypass|override)\\s+.*(?:${ruleKeywords})`,
+      `(?:don'?t|do\\s+not|never|stop|disable|remove|ignore|skip|bypass|override)\\s+.{0,80}(?:${ruleKeywords})`,
       'i'
     );
 
@@ -446,7 +451,7 @@ class BehavioralFingerprint {
     if (this.metrics.threatFrequency.length > maxMetrics) this.metrics.threatFrequency = this.metrics.threatFrequency.slice(-maxMetrics);
 
     if (anomalies.length > 0 && this.onAnomaly) {
-      this.onAnomaly({ anomalies, timestamp: Date.now() });
+      try { this.onAnomaly({ anomalies, timestamp: Date.now() }); } catch (e) { console.error('[Agent Shield] onAnomaly callback error:', e.message); }
     }
 
     return { anomalies, isLearning };

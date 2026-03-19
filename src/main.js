@@ -5,118 +5,142 @@
  *
  * Import everything from a single module:
  *   const shield = require('agent-shield');
+ *
+ * Each module is loaded safely — if one fails, the rest still work.
  */
 
-// Core
-const { AgentShield } = require('./index');
-const { scanText, getPatterns, SEVERITY_ORDER } = require('./detector-core');
-const { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody } = require('./middleware');
+/**
+ * Safely require a module. Returns its exports or an empty object on failure.
+ * @param {string} path - Module path
+ * @param {string} label - Label for error logging
+ * @returns {object}
+ */
+function safeRequire(path, label) {
+  try {
+    return require(path);
+  } catch (err) {
+    console.warn(`[Agent Shield] Failed to load ${label}: ${err.message}`);
+    return {};
+  }
+}
+
+// Core (these are critical — if they fail, we still export what we can)
+const { AgentShield } = safeRequire('./index', 'core');
+const { scanText, getPatterns, SEVERITY_ORDER } = safeRequire('./detector-core', 'detector-core');
+const { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody } = safeRequire('./middleware', 'middleware');
 
 // Protection
-const { CircuitBreaker, shadowMode, RateLimiter, STATE } = require('./circuit-breaker');
-const { CanaryTokens, PromptLeakDetector, API_KEY_PATTERNS } = require('./canary');
-const { PIIRedactor, DLPEngine, ContentPolicy, PII_PATTERNS, CONTENT_CATEGORIES } = require('./pii');
-const { ToolSequenceAnalyzer, PermissionBoundary, InputQuarantine, SUSPICIOUS_SEQUENCES } = require('./tool-guard');
+const { CircuitBreaker, shadowMode, RateLimiter, STATE } = safeRequire('./circuit-breaker', 'circuit-breaker');
+const { CanaryTokens, PromptLeakDetector, API_KEY_PATTERNS } = safeRequire('./canary', 'canary');
+const { PIIRedactor, DLPEngine, ContentPolicy, PII_PATTERNS, CONTENT_CATEGORIES } = safeRequire('./pii', 'pii');
+const { ToolSequenceAnalyzer, PermissionBoundary, InputQuarantine, SUSPICIOUS_SEQUENCES } = safeRequire('./tool-guard', 'tool-guard');
 
 // Conversation
-const { FragmentationDetector, LanguageSwitchDetector, TokenBudgetAnalyzer, InstructionHierarchy, BehavioralFingerprint } = require('./conversation');
+const { FragmentationDetector, LanguageSwitchDetector, TokenBudgetAnalyzer, InstructionHierarchy, BehavioralFingerprint } = safeRequire('./conversation', 'conversation');
 
 // Policy & Logging
-const { loadPolicy, loadPolicyFile, StructuredLogger, WebhookAlert, LOG_LEVEL } = require('./policy');
+const { loadPolicy, loadPolicyFile, StructuredLogger, WebhookAlert, LOG_LEVEL } = safeRequire('./policy', 'policy');
 
 // Multi-Agent
-const { AgentFirewall, DelegationChain, SharedThreatState } = require('./multi-agent');
+const { AgentFirewall, DelegationChain, SharedThreatState } = safeRequire('./multi-agent', 'multi-agent');
 
 // Advanced Detection
-const { SteganographyDetector, EncodingBruteforceDetector, StructuredDataScanner, STEGO_PATTERNS } = require('./encoding');
+const { SteganographyDetector, EncodingBruteforceDetector, StructuredDataScanner, STEGO_PATTERNS } = safeRequire('./encoding', 'encoding');
 
 // Watermarking & Privacy
-const { OutputWatermark, DifferentialPrivacy } = require('./watermark');
+const { OutputWatermark, DifferentialPrivacy } = safeRequire('./watermark', 'watermark');
 
 // Utilities
-const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } = require('./utils');
+const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } = safeRequire('./utils', 'utils');
 
 // Integrations
-const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = require('./integrations');
+const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
 // Red Team
-const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK_PAYLOADS } = require('./redteam');
+const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK_PAYLOADS } = safeRequire('./redteam', 'redteam');
 
 // Shield Score
-const { ShieldScoreCalculator, SCORE_CATEGORIES } = require('./shield-score');
+const { ShieldScoreCalculator, SCORE_CATEGORIES } = safeRequire('./shield-score', 'shield-score');
 
 // Threat Encyclopedia
-const { ThreatEncyclopedia, THREAT_ENCYCLOPEDIA, DAILY_PATTERNS } = require('./threat-encyclopedia');
+const { ThreatEncyclopedia, THREAT_ENCYCLOPEDIA, DAILY_PATTERNS } = safeRequire('./threat-encyclopedia', 'threat-encyclopedia');
 
 // Compliance & Audit
-const { ComplianceReporter, AuditTrail, IncidentPlaybook, SecurityChecklistGenerator, COMPLIANCE_FRAMEWORKS, INCIDENT_PLAYBOOKS } = require('./compliance');
+const { ComplianceReporter, AuditTrail, IncidentPlaybook, SecurityChecklistGenerator, COMPLIANCE_FRAMEWORKS, INCIDENT_PLAYBOOKS } = safeRequire('./compliance', 'compliance');
 
 // Enterprise
-const { MultiTenantShield, RoleBasedPolicy, DebugShield, DEFAULT_ROLES } = require('./enterprise');
+const { MultiTenantShield, RoleBasedPolicy, DebugShield, DEFAULT_ROLES } = safeRequire('./enterprise', 'enterprise');
 
 // Badges
-const { BadgeGenerator, GitHubActionReporter } = require('./badges');
+const { BadgeGenerator, GitHubActionReporter } = safeRequire('./badges', 'badges');
 
 // Allowlist & Feedback
-const { Allowlist, ConfidenceCalibrator, FeedbackLoop, ScanCache } = require('./allowlist');
+const { Allowlist, ConfidenceCalibrator, FeedbackLoop, ScanCache } = safeRequire('./allowlist', 'allowlist');
 
 // Presets & Config Builder
-const { PRESETS, ConfigBuilder, SnippetGenerator, getPresets, getPreset } = require('./presets');
+const { PRESETS, ConfigBuilder, SnippetGenerator, getPresets, getPreset } = safeRequire('./presets', 'presets');
 
 // Advanced Scanners
-const { RAGScanner, RAG_INJECTION_PATTERNS, PromptLinter, LINT_RULES, ToolSchemaValidator, DANGEROUS_TOOL_PATTERNS } = require('./scanners');
+const { RAGScanner, RAG_INJECTION_PATTERNS, PromptLinter, LINT_RULES, ToolSchemaValidator, DANGEROUS_TOOL_PATTERNS } = safeRequire('./scanners', 'scanners');
 
 // Production
-const { SamplingScanner, ShadowComparison, GracefulScanner, ThreatReplay, AttackAttributionChain, DiffReporter, PostureTracker } = require('./production');
+const { SamplingScanner, ShadowComparison, GracefulScanner, ThreatReplay, AttackAttributionChain, DiffReporter, PostureTracker } = safeRequire('./production', 'production');
 
 // Testing & Contracts
-const { TestSuiteGenerator, ATTACK_TEMPLATES, AgentContract, BreakglassProtocol } = require('./testing');
+const { TestSuiteGenerator, ATTACK_TEMPLATES, AgentContract, BreakglassProtocol } = safeRequire('./testing', 'testing');
 
 // Multi-Agent Trust
-const { MessageSigner, CapabilityToken, DelegationManager, BlastRadiusContainer } = require('./multi-agent-trust');
+const { MessageSigner, CapabilityToken, DelegationManager, BlastRadiusContainer } = safeRequire('./multi-agent-trust', 'multi-agent-trust');
 
 // Extended Policy & Intelligence
-const { ABTestRunner, ThreatIntelFeed, PatternBuilder, Doctor, GitHubActionGenerator, SOCIntegration, MigrationGuide, Playground } = require('./policy-extended');
+const { ABTestRunner, ThreatIntelFeed, PatternBuilder, Doctor, GitHubActionGenerator, SOCIntegration, MigrationGuide, Playground } = safeRequire('./policy-extended', 'policy-extended');
 
 // --- New Modules ---
 
 // Streaming
-const { StreamScanner, TokenStreamScanner } = require('./stream-scanner');
+const { StreamScanner, TokenStreamScanner } = safeRequire('./stream-scanner', 'stream-scanner');
 
 // Plugin System
-const { PluginManager, PluginTemplate, PluginSandbox } = require('./plugin-system');
+const { PluginManager, PluginTemplate, PluginSandbox } = safeRequire('./plugin-system', 'plugin-system');
 
 // Token Analysis
-const { EntropyAnalyzer, PerplexityEstimator, BurstDetector, TextStatistics } = require('./token-analysis');
+const { EntropyAnalyzer, PerplexityEstimator, BurstDetector, TextStatistics } = safeRequire('./token-analysis', 'token-analysis');
 
 // Document Scanner
-const { DocumentScanner, TextExtractor, IndirectInjectionScanner } = require('./document-scanner');
+const { DocumentScanner, TextExtractor, IndirectInjectionScanner } = safeRequire('./document-scanner', 'document-scanner');
 
 // Tool Output Validator
-const { ToolOutputValidator, OutputSanitizer } = require('./tool-output-validator');
+const { ToolOutputValidator, OutputSanitizer } = safeRequire('./tool-output-validator', 'tool-output-validator');
 
 // Response Handler
-const { ResponseHandler, ResponseTemplates, ReviewQueue } = require('./response-handler');
+const { ResponseHandler, ResponseTemplates, ReviewQueue } = safeRequire('./response-handler', 'response-handler');
 
 // Worker Scanner
-const { WorkerScanner, ScanQueue } = require('./worker-scanner');
+const { WorkerScanner, ScanQueue } = safeRequire('./worker-scanner', 'worker-scanner');
 
 // Alert Tuning
-const { AlertFatigueAnalyzer, AutoTuner, AlertCorrelator } = require('./alert-tuning');
+const { AlertFatigueAnalyzer, AutoTuner, AlertCorrelator } = safeRequire('./alert-tuning', 'alert-tuning');
 
 // OpenTelemetry
-const { ShieldMetrics, ShieldTracer, MetricsDashboard } = require('./otel');
+const { ShieldMetrics, ShieldTracer, MetricsDashboard } = safeRequire('./otel', 'otel');
 
 // Certification
-const { CertificationRunner, Certificate, CertificationHistory } = require('./certification');
+const { CertificationRunner, Certificate, CertificationHistory } = safeRequire('./certification', 'certification');
 
 // MCP Server
-const { MCPServer, MCPToolHandler } = require('./mcp-server');
+const { MCPServer, MCPToolHandler } = safeRequire('./mcp-server', 'mcp-server');
 
 // CTF
-const { CTFEngine, CTFReporter, CHALLENGES } = require('./ctf');
+const { CTFEngine, CTFReporter, CHALLENGES } = safeRequire('./ctf', 'ctf');
 
-module.exports = {
+// Observability
+const { PrometheusExporter, DatadogLogger, MetricsCollector } = safeRequire('./observability', 'observability');
+
+// Adaptive Detection
+const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequire('./adaptive', 'adaptive');
+
+// Build exports, filtering out undefined values from failed imports
+const _exports = {
   // Core
   AgentShield,
   scanText,
@@ -226,20 +250,20 @@ module.exports = {
   BadgeGenerator,
   GitHubActionReporter,
 
-  // Allowlist & Feedback (Features 21-23, 29)
+  // Allowlist & Feedback
   Allowlist,
   ConfidenceCalibrator,
   FeedbackLoop,
   ScanCache,
 
-  // Presets & Config Builder (Features 1-4)
+  // Presets & Config Builder
   PRESETS,
   ConfigBuilder,
   SnippetGenerator,
   getPresets,
   getPreset,
 
-  // Advanced Scanners (Features 24-26)
+  // Advanced Scanners
   RAGScanner,
   RAG_INJECTION_PATTERNS,
   PromptLinter,
@@ -247,7 +271,7 @@ module.exports = {
   ToolSchemaValidator,
   DANGEROUS_TOOL_PATTERNS,
 
-  // Production (Features 27-28, 30-33, 40)
+  // Production
   SamplingScanner,
   ShadowComparison,
   GracefulScanner,
@@ -256,19 +280,19 @@ module.exports = {
   DiffReporter,
   PostureTracker,
 
-  // Testing & Contracts (Features 34-36)
+  // Testing & Contracts
   TestSuiteGenerator,
   ATTACK_TEMPLATES,
   AgentContract,
   BreakglassProtocol,
 
-  // Multi-Agent Trust (Features 37-39)
+  // Multi-Agent Trust
   MessageSigner,
   CapabilityToken,
   DelegationManager,
   BlastRadiusContainer,
 
-  // Extended Policy & Intelligence (Features 5-7, 9-10, 13-16, 17-20)
+  // Extended Policy & Intelligence
   ABTestRunner,
   ThreatIntelFeed,
   PatternBuilder,
@@ -277,8 +301,6 @@ module.exports = {
   SOCIntegration,
   MigrationGuide,
   Playground,
-
-  // --- New Modules ---
 
   // Streaming
   StreamScanner,
@@ -335,5 +357,24 @@ module.exports = {
   // CTF
   CTFEngine,
   CTFReporter,
-  CHALLENGES
+  CHALLENGES,
+
+  // Observability
+  PrometheusExporter,
+  DatadogLogger,
+  MetricsCollector,
+
+  // Adaptive Detection
+  AdaptiveDetector,
+  SemanticAnalysisHook,
+  CommunityPatterns
 };
+
+// Filter out undefined exports (from modules that failed to load)
+for (const key of Object.keys(_exports)) {
+  if (_exports[key] === undefined) {
+    delete _exports[key];
+  }
+}
+
+module.exports = _exports;

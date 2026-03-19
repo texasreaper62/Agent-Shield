@@ -136,7 +136,11 @@ class AgentShield {
     }
 
     if (this.config.onThreat && result.threats.length > 0) {
-      this.config.onThreat(result);
+      try {
+        this.config.onThreat(result);
+      } catch (err) {
+        console.error('[Agent Shield] onThreat callback error:', err.message);
+      }
     }
 
     return result;

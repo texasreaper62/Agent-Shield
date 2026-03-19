@@ -382,16 +382,20 @@ class BreakglassProtocol {
     this._log('activated', this.activatedBy, this.reason);
 
     if (this.onActivate) {
-      this.onActivate({
-        activatedBy: this.activatedBy,
-        reason: this.reason,
-        expiresAt: this.expiresAt
-      });
+      try {
+        this.onActivate({
+          activatedBy: this.activatedBy,
+          reason: this.reason,
+          expiresAt: this.expiresAt
+        });
+      } catch (e) { console.error('[Agent Shield] onActivate callback error:', e.message); }
     }
 
-    // Auto-deactivate timer
-    setTimeout(() => {
+    // Auto-deactivate timer (clear any existing timer first)
+    if (this._timer) clearTimeout(this._timer);
+    this._timer = setTimeout(() => {
       if (this.active) this.deactivate('auto_expire');
+      this._timer = null;
     }, this.durationMs);
 
     return {
@@ -411,12 +415,15 @@ class BreakglassProtocol {
     this._log('deactivated', deactivatedBy, `Was active since ${this.activatedAt}`);
 
     if (this.onDeactivate) {
-      this.onDeactivate({
-        deactivatedBy,
-        wasActiveFor: Date.now() - new Date(this.activatedAt).getTime()
-      });
+      try {
+        this.onDeactivate({
+          deactivatedBy,
+          wasActiveFor: Date.now() - new Date(this.activatedAt).getTime()
+        });
+      } catch (e) { console.error('[Agent Shield] onDeactivate callback error:', e.message); }
     }
 
+    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
     this.activatedAt = null;
     this.activatedBy = null;
     this.reason = null;

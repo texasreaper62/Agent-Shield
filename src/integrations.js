@@ -42,7 +42,7 @@ class ShieldCallbackHandler {
     for (const prompt of prompts) {
       const result = this.shield.scanInput(prompt);
       if (result.threats.length > 0 && this.onThreat) {
-        this.onThreat({ phase: 'input', threats: result.threats, text: prompt });
+        try { this.onThreat({ phase: 'input', threats: result.threats, text: prompt }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
       }
       if (result.blocked) {
         throw new ShieldBlockError('Input blocked by Agent Shield', result.threats);
@@ -56,7 +56,7 @@ class ShieldCallbackHandler {
 
     const result = this.shield.scanOutput(text);
     if (result.threats.length > 0 && this.onThreat) {
-      this.onThreat({ phase: 'output', threats: result.threats, text });
+      try { this.onThreat({ phase: 'output', threats: result.threats, text }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
     }
     if (result.blocked) {
       throw new ShieldBlockError('Output blocked by Agent Shield', result.threats);
@@ -131,7 +131,7 @@ function shieldAnthropicClient(client, options = {}) {
 
       const result = shield.scanInput(text);
       if (result.threats.length > 0) {
-        if (onThreat) onThreat({ phase: 'input', role: msg.role, threats: result.threats });
+        if (onThreat) { try { onThreat({ phase: 'input', role: msg.role, threats: result.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); } }
         if (breaker) breaker.recordThreat(result.threats.length);
         if (result.blocked) {
           throw new ShieldBlockError('Message blocked by Agent Shield', result.threats);
@@ -156,7 +156,7 @@ function shieldAnthropicClient(client, options = {}) {
     if (outputText) {
       const outputResult = shield.scanOutput(outputText);
       if (outputResult.threats.length > 0 && onThreat) {
-        onThreat({ phase: 'output', threats: outputResult.threats });
+        try { onThreat({ phase: 'output', threats: outputResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
       }
       if (outputResult.blocked) {
         throw new ShieldBlockError('Response blocked by Agent Shield', outputResult.threats);
@@ -188,15 +188,26 @@ function setAnthropicText(msg, text) {
   if (typeof msg.content === 'string') {
     msg.content = text;
   } else if (Array.isArray(msg.content)) {
-    // Replace text in all text blocks, distributing the redacted content to the first block
+    // Replace text across text blocks proportionally to preserve multi-block structure.
+    // Non-text blocks (images, tool_use, etc.) are left untouched.
     const textBlocks = msg.content.filter(b => b.type === 'text' || b.text);
     if (textBlocks.length === 1) {
       textBlocks[0].text = text;
     } else if (textBlocks.length > 1) {
-      // Put redacted text in first block, clear others
-      textBlocks[0].text = text;
-      for (let i = 1; i < textBlocks.length; i++) {
-        textBlocks[i].text = '';
+      // Split redacted text across blocks proportionally to original lengths
+      const totalLen = textBlocks.reduce((sum, b) => sum + (b.text || '').length, 0);
+      if (totalLen === 0) {
+        textBlocks[0].text = text;
+      } else {
+        let offset = 0;
+        for (let i = 0; i < textBlocks.length; i++) {
+          const ratio = (textBlocks[i].text || '').length / totalLen;
+          const chunkLen = i === textBlocks.length - 1
+            ? text.length - offset
+            : Math.round(text.length * ratio);
+          textBlocks[i].text = text.slice(offset, offset + chunkLen);
+          offset += chunkLen;
+        }
       }
     }
   }
@@ -221,16 +232,26 @@ function shieldOpenAIClient(client, options = {}) {
     blockOnThreat: options.blockOnThreat || false
   });
   const piiRedactor = options.pii ? new PIIRedactor() : null;
+  const breaker = options.circuitBreaker ? new CircuitBreaker(options.circuitBreaker) : null;
   const onThreat = options.onThreat || null;
 
   const originalCreate = client.chat.completions.create.bind(client.chat.completions);
 
   client.chat.completions.create = async function shieldedCreate(params) {
+    // Circuit breaker check
+    if (breaker) {
+      const status = breaker.check();
+      if (!status.allowed) {
+        throw new ShieldBlockError(`Circuit breaker open: ${status.reason}`, []);
+      }
+    }
+
     // Scan all messages
     for (const msg of params.messages || []) {
       const text = typeof msg.content === 'string' ? msg.content : (msg.content || []).map(p => p.text || '').join(' ');
       if (!text) continue;
 
+      // PII redaction
       if (piiRedactor && msg.role === 'user') {
         const piiResult = piiRedactor.redact(text);
         if (piiResult.count > 0) {
@@ -239,11 +260,21 @@ function shieldOpenAIClient(client, options = {}) {
       }
 
       const result = shield.scanInput(text);
-      if (result.threats.length > 0 && onThreat) {
-        onThreat({ phase: 'input', role: msg.role, threats: result.threats });
+      if (result.threats.length > 0) {
+        if (onThreat) { try { onThreat({ phase: 'input', role: msg.role, threats: result.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); } }
+        if (breaker) breaker.recordThreat(result.threats.length);
+        if (result.blocked) {
+          throw new ShieldBlockError('Message blocked by Agent Shield', result.threats);
+        }
       }
-      if (result.blocked) {
-        throw new ShieldBlockError('Message blocked by Agent Shield', result.threats);
+    }
+
+    // Scan system message if present
+    const systemMsg = (params.messages || []).find(m => m.role === 'system');
+    if (systemMsg && typeof systemMsg.content === 'string') {
+      const sysResult = shield.scanInput(systemMsg.content);
+      if (sysResult.blocked) {
+        throw new ShieldBlockError('System message contains threats', sysResult.threats);
       }
     }
 
@@ -254,7 +285,7 @@ function shieldOpenAIClient(client, options = {}) {
     if (outputText) {
       const outputResult = shield.scanOutput(outputText);
       if (outputResult.threats.length > 0 && onThreat) {
-        onThreat({ phase: 'output', threats: outputResult.threats });
+        try { onThreat({ phase: 'output', threats: outputResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
       }
       if (outputResult.blocked) {
         throw new ShieldBlockError('Response blocked by Agent Shield', outputResult.threats);
@@ -295,7 +326,7 @@ function shieldVercelAI(options = {}) {
         const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
         const result = shield.scanInput(text);
         if (result.threats.length > 0 && onThreat) {
-          onThreat({ phase: 'input', threats: result.threats });
+          try { onThreat({ phase: 'input', threats: result.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
         }
         if (result.blocked) {
           throw new ShieldBlockError('Blocked by Agent Shield', result.threats);
@@ -309,7 +340,7 @@ function shieldVercelAI(options = {}) {
       if (text) {
         const scanResult = shield.scanOutput(text);
         if (scanResult.threats.length > 0 && onThreat) {
-          onThreat({ phase: 'output', threats: scanResult.threats });
+          try { onThreat({ phase: 'output', threats: scanResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
         }
         if (scanResult.blocked) {
           throw new ShieldBlockError('Response blocked by Agent Shield', scanResult.threats);
