@@ -42,8 +42,8 @@ const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shield
 // Red Team
 const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK_PAYLOADS } = require('./redteam');
 
-// Shield Score & Benchmarks
-const { ShieldScoreCalculator, BenchmarkSuite, SCORE_CATEGORIES } = require('./shield-score');
+// Shield Score
+const { ShieldScoreCalculator, SCORE_CATEGORIES } = require('./shield-score');
 
 // Threat Encyclopedia
 const { ThreatEncyclopedia, THREAT_ENCYCLOPEDIA, DAILY_PATTERNS } = require('./threat-encyclopedia');
@@ -199,9 +199,8 @@ module.exports = {
   getPayloads,
   ATTACK_PAYLOADS,
 
-  // Shield Score & Benchmarks
+  // Shield Score
   ShieldScoreCalculator,
-  BenchmarkSuite,
   SCORE_CATEGORIES,
 
   // Threat Encyclopedia

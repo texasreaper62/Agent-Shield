@@ -10,8 +10,7 @@
  *   npx agent-shield scan --json '{"message": "ignore instructions"}'
  *   npx agent-shield audit ./my-agent/
  *   npx agent-shield patterns
- *   npx agent-shield score              # Shield Score benchmark
- *   npx agent-shield benchmark          # Performance benchmark
+ *   npx agent-shield score              # Shield Score
  *   npx agent-shield redteam            # Run red team suite
  *   npx agent-shield threat <id>        # Threat encyclopedia lookup
  *   npx agent-shield checklist          # Security checklist generator
@@ -340,7 +339,7 @@ const parseArgs = (argv) => {
 };
 
 // =========================================================================
-// NEW COMMANDS: score, benchmark, redteam, threat, checklist, init
+// NEW COMMANDS: score, redteam, threat, checklist, init
 // =========================================================================
 
 const commandScore = () => {
@@ -348,13 +347,6 @@ const commandScore = () => {
   const { ShieldScoreCalculator } = require('../src/shield-score');
   const calc = new ShieldScoreCalculator();
   console.log(calc.formatReport());
-};
-
-const commandBenchmark = () => {
-  console.log(ASCII_BANNER);
-  const { BenchmarkSuite } = require('../src/shield-score');
-  const suite = new BenchmarkSuite({ iterations: 200 });
-  console.log(suite.formatReport());
 };
 
 const commandRedteam = (args) => {
@@ -506,10 +498,6 @@ const main = () => {
     case 'score':
       commandScore();
       break;
-    case 'benchmark':
-    case 'bench':
-      commandBenchmark();
-      break;
     case 'redteam':
     case 'red-team':
       commandRedteam(args);
@@ -542,7 +530,6 @@ ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}audit${COLORS.reset} [dir]             Audit a directory for security issues
   ${COLORS.cyan}patterns${COLORS.reset}                List all detection patterns
   ${COLORS.cyan}score${COLORS.reset}                   Calculate your Shield Score (0-100)
-  ${COLORS.cyan}benchmark${COLORS.reset}               Run performance benchmarks
   ${COLORS.cyan}redteam${COLORS.reset}                 Run red team attack suite
   ${COLORS.cyan}threat${COLORS.reset} [id|query]       Threat encyclopedia & search
   ${COLORS.cyan}checklist${COLORS.reset} [env]         Generate security checklist

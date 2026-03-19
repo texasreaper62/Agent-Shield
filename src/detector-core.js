@@ -18,6 +18,9 @@
 /** Default scan time budget in ms. */
 const DEFAULT_SCAN_TIME_BUDGET_MS = 200;
 
+/** Maximum input size in characters (1MB of UTF-16). */
+const MAX_INPUT_SIZE = 1_000_000;
+
 /**
  * Get current time in ms. Works in Node.js and browsers.
  * @returns {number}
@@ -869,10 +872,22 @@ const HOMOGLYPH_MAP = {
   '\u041A': 'K', '\u043A': 'k', '\u041C': 'M', '\u041D': 'H', '\u043E': 'o',
   '\u041E': 'O', '\u0440': 'p', '\u0420': 'P', '\u0441': 'c', '\u0421': 'C',
   '\u0422': 'T', '\u0443': 'y', '\u0445': 'x', '\u0425': 'X', '\u0456': 'i',
+  '\u0458': 'j', '\u0455': 's', '\u0405': 'S',
   // Greek look-alikes
   '\u0391': 'A', '\u0392': 'B', '\u0395': 'E', '\u0396': 'Z', '\u0397': 'H',
   '\u0399': 'I', '\u039A': 'K', '\u039C': 'M', '\u039D': 'N', '\u039F': 'O',
   '\u03A1': 'P', '\u03A4': 'T', '\u03A5': 'Y', '\u03A7': 'X', '\u03BF': 'o',
+  '\u03B1': 'a', '\u03B5': 'e', '\u03B9': 'i', '\u03BA': 'k', '\u03BD': 'v',
+  // Armenian look-alikes
+  '\u0555': 'O', '\u0585': 'o', '\u0578': 'n', '\u057C': 'n',
+  '\u0570': 'h', '\u0561': 'a', '\u0575': 'u', '\u0572': 'q',
+  // Latin Extended-A/B (accented → base)
+  '\u0101': 'a', '\u0103': 'a', '\u0105': 'a', '\u0113': 'e', '\u0115': 'e',
+  '\u0117': 'e', '\u0119': 'e', '\u012B': 'i', '\u012D': 'i', '\u012F': 'i',
+  '\u014D': 'o', '\u014F': 'o', '\u0151': 'o', '\u016B': 'u', '\u016D': 'u',
+  '\u016F': 'u', '\u0171': 'u', '\u0144': 'n', '\u0146': 'n', '\u0148': 'n',
+  '\u015B': 's', '\u015D': 's', '\u015F': 's', '\u0161': 's',
+  '\u010D': 'c', '\u010F': 'd', '\u0159': 'r', '\u0165': 't', '\u017E': 'z',
   // Mathematical/fullwidth
   '\uFF41': 'a', '\uFF42': 'b', '\uFF43': 'c', '\uFF44': 'd', '\uFF45': 'e',
   '\uFF46': 'f', '\uFF47': 'g', '\uFF48': 'h', '\uFF49': 'i', '\uFF4A': 'j',
@@ -880,6 +895,13 @@ const HOMOGLYPH_MAP = {
   '\uFF50': 'p', '\uFF51': 'q', '\uFF52': 'r', '\uFF53': 's', '\uFF54': 't',
   '\uFF55': 'u', '\uFF56': 'v', '\uFF57': 'w', '\uFF58': 'x', '\uFF59': 'y',
   '\uFF5A': 'z',
+  // Fullwidth uppercase
+  '\uFF21': 'A', '\uFF22': 'B', '\uFF23': 'C', '\uFF24': 'D', '\uFF25': 'E',
+  '\uFF26': 'F', '\uFF27': 'G', '\uFF28': 'H', '\uFF29': 'I', '\uFF2A': 'J',
+  '\uFF2B': 'K', '\uFF2C': 'L', '\uFF2D': 'M', '\uFF2E': 'N', '\uFF2F': 'O',
+  '\uFF30': 'P', '\uFF31': 'Q', '\uFF32': 'R', '\uFF33': 'S', '\uFF34': 'T',
+  '\uFF35': 'U', '\uFF36': 'V', '\uFF37': 'W', '\uFF38': 'X', '\uFF39': 'Y',
+  '\uFF3A': 'Z',
   // Common symbol substitutions
   '\u0131': 'i', '\u0237': 'j', '\u1D00': 'A', '\u0261': 'g',
   // Zero-width characters (used to split keywords)
@@ -1168,12 +1190,16 @@ const HAS_ENCODED_ENTITIES = /&#\w+;|%[0-9a-fA-F]{2}/;
  * @param {string} source - Where the text came from.
  * @returns {Array} Array of threat objects found.
  */
-const scanTextForPatterns = (text, source) => {
+const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDGET_MS, scanStartTime = now()) => {
   const threats = [];
   if (!text || text.length < 10) return threats;
 
+  /** Returns true if the time budget has been exceeded. */
+  const isOverBudget = () => (now() - scanStartTime) > timeBudgetMs;
+
   let patternMatchCount = 0;
   for (const pattern of INJECTION_PATTERNS) {
+    if (isOverBudget()) break;
     if (pattern.regex.test(text)) {
       patternMatchCount++;
       const threat = {
@@ -1221,28 +1247,32 @@ const scanTextForPatterns = (text, source) => {
   }
 
   // Check for hex-encoded content
-  const hexMatch = text.match(/(?:^|[\s:])([0-9a-fA-F]{20,})(?:[\s,.]|$)/);
-  if (hexMatch) {
-    try {
-      const hexDecoded = hexMatch[1].match(/.{1,2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
-      const printable = hexDecoded.split('').filter(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126).length;
-      if (printable / hexDecoded.length > 0.8 && hexDecoded.length > 10) {
-        for (const pattern of INJECTION_PATTERNS) {
-          if (pattern.regex.test(hexDecoded)) {
-            const threat = {
-              severity: 'critical',
-              category: 'prompt_injection',
-              description: 'Text hides attack instructions inside hex encoding.',
-              detail: `Hex-encoded injection found in ${source}. Decoded: "${hexDecoded.substring(0, 100)}"`
-            };
-            threat.confidence = 90;
-            threat.confidenceLabel = confidenceLabel(90);
-            threats.push(threat);
-            break;
+  if (!isOverBudget()) {
+    const hexMatch = text.match(/(?:^|[\s:])([0-9a-fA-F]{20,})(?:[\s,.]|$)/);
+    if (hexMatch) {
+      try {
+        const hexDecoded = hexMatch[1].match(/.{1,2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
+        const printable = hexDecoded.split('').filter(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126).length;
+        if (printable / hexDecoded.length > 0.8 && hexDecoded.length > 10) {
+          for (const pattern of INJECTION_PATTERNS) {
+            if (pattern.regex.test(hexDecoded)) {
+              const threat = {
+                severity: 'critical',
+                category: 'prompt_injection',
+                description: 'Text hides attack instructions inside hex encoding.',
+                detail: `Hex-encoded injection found in ${source}. Decoded: "${hexDecoded.substring(0, 100)}"`
+              };
+              threat.confidence = 90;
+              threat.confidenceLabel = confidenceLabel(90);
+              threats.push(threat);
+              break;
+            }
           }
         }
+      } catch (e) {
+        // Invalid hex sequence — not a threat, continue scanning
       }
-    } catch (e) { /* invalid hex */ }
+    }
   }
 
   // Check for ROT13-encoded content
@@ -1250,11 +1280,13 @@ const scanTextForPatterns = (text, source) => {
     const base = c <= 'Z' ? 65 : 97;
     return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
   });
-  if (/^[a-zA-Z\s]{10,}$/.test(text.trim())) {
-    const decoded = rot13Decode(text);
-    if (decoded !== text) {
+  // Strip zero-width characters before ROT13 check so mixed content is handled
+  const textForRot13 = text.replace(/[\u200B\u200C\u200D\uFEFF\u00AD]/g, '');
+  if (!isOverBudget() && /^[a-zA-Z\s]{10,}$/.test(textForRot13.trim())) {
+    const decoded = rot13Decode(textForRot13);
+    if (decoded !== textForRot13) {
       for (const pattern of INJECTION_PATTERNS) {
-        if (pattern.regex.test(decoded) && !pattern.regex.test(text)) {
+        if (pattern.regex.test(decoded) && !pattern.regex.test(textForRot13)) {
           const threat = {
             severity: 'high',
             category: 'prompt_injection',
@@ -1272,7 +1304,7 @@ const scanTextForPatterns = (text, source) => {
 
   // Check for leetspeak obfuscation
   const leetspeakNormalize = (s) => s.replace(/4/g, 'a').replace(/3/g, 'e').replace(/1/g, 'i').replace(/0/g, 'o').replace(/5/g, 's').replace(/7/g, 't').replace(/@/g, 'a');
-  if (/[0-9]/.test(text) && /[a-zA-Z]/.test(text)) {
+  if (!isOverBudget() && /[0-9]/.test(text) && /[a-zA-Z]/.test(text)) {
     const normalized = leetspeakNormalize(text);
     if (normalized !== text) {
       for (const pattern of INJECTION_PATTERNS) {
@@ -1294,7 +1326,7 @@ const scanTextForPatterns = (text, source) => {
 
   // Check for whitespace-padded text (letters separated by spaces)
   // Detect patterns like "i g n o r e" or "i g n o r e   a l l"
-  if (/^[a-zA-Z]\s+[a-zA-Z]\s+[a-zA-Z]/.test(text.trim())) {
+  if (!isOverBudget() && /^[a-zA-Z]\s+[a-zA-Z]\s+[a-zA-Z]/.test(text.trim())) {
     // Reconstruct words: split on multi-space (word boundary), then collapse single-space chars
     const words = text.trim().split(/\s{2,}/).map(w => w.replace(/\s/g, ''));
     const reconstructed = words.join(' ');
@@ -1317,7 +1349,7 @@ const scanTextForPatterns = (text, source) => {
   }
 
   // Check for reversed text
-  if (text.length >= 20 && text.length <= 500) {
+  if (!isOverBudget() && text.length >= 20 && text.length <= 500) {
     const reversed = text.split('').reverse().join('');
     for (const pattern of INJECTION_PATTERNS) {
       if (pattern.regex.test(reversed) && !pattern.regex.test(text)) {
@@ -1335,8 +1367,8 @@ const scanTextForPatterns = (text, source) => {
     }
   }
 
-  const hasBase64 = HAS_BASE64_CANDIDATE.test(text);
-  const hasEntities = HAS_ENCODED_ENTITIES.test(text);
+  const hasBase64 = !isOverBudget() && HAS_BASE64_CANDIDATE.test(text);
+  const hasEntities = !isOverBudget() && HAS_ENCODED_ENTITIES.test(text);
   let foundNested = false;
 
   if (hasEntities || hasBase64) {
@@ -1401,6 +1433,8 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const scanText = (text, options = {}) => {
   const source = options.source || 'unknown';
   const sensitivity = options.sensitivity || 'medium';
+  const timeBudgetMs = options.timeBudgetMs || DEFAULT_SCAN_TIME_BUDGET_MS;
+  const maxSize = options.maxInputSize || MAX_INPUT_SIZE;
   const startTime = now();
 
   if (typeof text !== 'string' || text.length < 10 || text.trim().length < 10) {
@@ -1412,7 +1446,14 @@ const scanText = (text, options = {}) => {
     };
   }
 
-  let threats = scanTextForPatterns(text, source);
+  // Enforce maximum input size to prevent resource exhaustion
+  let truncated = false;
+  if (text.length > maxSize) {
+    text = text.slice(0, maxSize);
+    truncated = true;
+  }
+
+  let threats = scanTextForPatterns(text, source, timeBudgetMs, startTime);
 
   // Filter by sensitivity
   if (sensitivity === 'low') {
@@ -1436,7 +1477,12 @@ const scanText = (text, options = {}) => {
   else if (stats.high > 0) status = 'warning';
   else if (stats.medium > 0) status = 'caution';
 
-  return { status, threats, stats, timestamp: Date.now() };
+  const result = { status, threats, stats, timestamp: Date.now() };
+  if (truncated) {
+    result.truncated = true;
+    result.warnings = [`Input exceeded ${maxSize} characters and was truncated for scanning.`];
+  }
+  return result;
 };
 
 /**
@@ -1457,4 +1503,4 @@ const getPatterns = () => {
 // EXPORTS
 // =========================================================================
 
-module.exports = { scanText, getPatterns, SEVERITY_ORDER };
+module.exports = { scanText, getPatterns, SEVERITY_ORDER, MAX_INPUT_SIZE };

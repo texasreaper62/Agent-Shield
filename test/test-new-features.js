@@ -102,7 +102,7 @@ assert(fuzzResult.detected >= 0, `Fuzzer: ${fuzzResult.detected} detected`);
 // Shield Score
 // =========================================================================
 console.log('\n=== Shield Score ===');
-const { ShieldScoreCalculator, BenchmarkSuite } = require('../src/shield-score');
+const { ShieldScoreCalculator } = require('../src/shield-score');
 
 const scoreCalc = new ShieldScoreCalculator();
 const score = scoreCalc.calculate();
@@ -113,14 +113,6 @@ assert(score.benchmarkTimeMs >= 0, `Benchmark time: ${score.benchmarkTimeMs}ms`)
 
 const scoreReport = scoreCalc.formatReport();
 assert(scoreReport.includes('SHIELD SCORE'), 'Shield Score report has banner');
-
-// Benchmark (quick)
-const bench = new BenchmarkSuite({ iterations: 10 });
-const benchResult = bench.run();
-assert(benchResult.throughput.scansPerSecond > 0, `Throughput: ${benchResult.throughput.scansPerSecond} scans/sec`);
-assert(benchResult.latency.avgMs >= 0, `Avg latency: ${benchResult.latency.avgMs}ms`);
-assert(benchResult.accuracy.detectionRate, `Detection rate: ${benchResult.accuracy.detectionRate}`);
-assert(benchResult.scalability.byInputSize.length > 0, 'Scalability data present');
 
 // =========================================================================
 // Threat Encyclopedia

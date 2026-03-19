@@ -486,21 +486,6 @@ export declare class ShieldScoreCalculator {
   formatReport(): string;
 }
 
-export interface BenchmarkResults {
-  throughput: { totalScans: number; elapsedMs: number; scansPerSecond: number };
-  latency: { minMs: number; maxMs: number; avgMs: number; medianMs: number; p95Ms: number; p99Ms: number; samples: number };
-  accuracy: { truePositives: number; falseNegatives: number; trueNegatives: number; falsePositives: number; accuracy: string; detectionRate: string; falsePositiveRate: string; precision: string; recall: string };
-  scalability: { byInputSize: Array<{ inputChars: number; scanTimeMs: number; charsPerMs: number }>; linearScaling: boolean };
-  summary: { avgLatencyMs: number; p95LatencyMs: number; p99LatencyMs: number; scansPerSecond: number; detectionRate: string; falsePositiveRate: string; grade: string };
-  timestamp: string;
-}
-
-export declare class BenchmarkSuite {
-  constructor(options?: { sensitivity?: string; iterations?: number });
-  run(): BenchmarkResults;
-  formatReport(): string;
-}
-
 // =========================================================================
 // Threat Encyclopedia
 // =========================================================================

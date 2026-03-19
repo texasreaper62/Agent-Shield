@@ -205,6 +205,39 @@ for (const text of paragraphs) {
 }
 
 // =========================================================================
+// Multilingual Legitimate Content
+// =========================================================================
+console.log('=== Multilingual Legitimate Content ===');
+
+const multilingual = [
+  // Spanish — educational/benign
+  'Hola, ¿puedes ayudarme con mi tarea de matemáticas?',
+  '¿Cómo funciona la inyección de prompts? Es para mi clase de seguridad.',
+  'Necesito instrucciones para instalar Node.js en mi computadora.',
+  // French — educational/benign
+  'Bonjour, pouvez-vous m\'aider avec mon projet de programmation?',
+  'Comment fonctionne la sécurité des modèles de langage?',
+  'Je voudrais apprendre les règles de grammaire française.',
+  // German — educational/benign
+  'Können Sie mir bei meinem Programmierungsprojekt helfen?',
+  'Wie funktioniert die Sicherheit bei KI-Systemen?',
+  'Ich möchte die Regeln der deutschen Grammatik lernen.',
+  // Portuguese — educational/benign
+  'Você pode me ajudar com meu projeto de programação?',
+  'Como funciona a segurança em sistemas de inteligência artificial?',
+  // Chinese — educational/benign
+  '你能帮我解决这个编程问题吗？',
+  '人工智能安全是一个重要的研究领域。',
+  // Japanese — educational/benign
+  'プログラミングの問題を手伝ってもらえますか？',
+  'AIセキュリティについて教えてください。',
+];
+
+for (const text of multilingual) {
+  assertSafe(text, 'Multilingual legitimate');
+}
+
+// =========================================================================
 // Edge Cases
 // =========================================================================
 console.log('=== Edge Cases ===');

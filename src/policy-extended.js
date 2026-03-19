@@ -180,7 +180,9 @@ class ThreatIntelFeed {
         try {
           const indicators = await source.fetchFn();
           totalNew += this.addIndicators(indicators, name);
-        } catch (e) { /* continue */ }
+        } catch (e) {
+          console.warn(`[Agent Shield] Threat intel refresh failed for source "${name}": ${e.message}`);
+        }
       }
     }
     return { newIndicators: totalNew, totalIndicators: this.indicators.length };

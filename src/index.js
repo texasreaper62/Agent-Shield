@@ -231,6 +231,11 @@ class AgentShield {
       warnings.push(`Tool "${toolName}" is on the dangerous tools list.`);
     }
 
+    // Validate args type before processing
+    if (args !== null && typeof args !== 'object') {
+      args = {};
+    }
+
     // Scan all string arguments for injection
     const argsText = this._flattenArgs(args);
     if (argsText) {
@@ -370,15 +375,28 @@ class AgentShield {
    */
   _extractFilePaths(args, maxDepth = 10) {
     const paths = [];
-    const fileKeys = ['file', 'path', 'file_path', 'filepath', 'filename', 'target', 'destination', 'src', 'dest'];
+    const fileKeys = [
+      'file', 'path', 'file_path', 'filepath', 'filename', 'target',
+      'destination', 'src', 'dest', 'source', 'dir', 'directory',
+      'folder', 'location', 'output', 'input', 'module',
+      'bucket', 'table', 'url', 'uri', 'endpoint'
+    ];
+
+    /** Normalize key to lowercase with separators removed for flexible matching. */
+    const normalizeKey = (key) => key.toLowerCase().replace(/[-_]/g, '');
+    const normalizedFileKeys = fileKeys.map(normalizeKey);
 
     const extract = (obj, depth) => {
       if (!obj || typeof obj !== 'object' || depth > maxDepth) return;
       for (const [key, value] of Object.entries(obj)) {
-        if (typeof value === 'string' && fileKeys.includes(key.toLowerCase())) {
-          paths.push(value);
-        } else if (typeof value === 'string' && (value.startsWith('/') || value.startsWith('./'))) {
-          paths.push(value);
+        if (typeof value === 'string') {
+          // Match by key name (supports camelCase, snake_case, kebab-case)
+          if (normalizedFileKeys.includes(normalizeKey(key))) {
+            paths.push(value);
+          // Match by path-like value patterns
+          } else if (value.startsWith('/') || value.startsWith('./') || value.startsWith('../') || /^[A-Z]:\\/.test(value)) {
+            paths.push(value);
+          }
         } else if (typeof value === 'object') {
           extract(value, depth + 1);
         }
