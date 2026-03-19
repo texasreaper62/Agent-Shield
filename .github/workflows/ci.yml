@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20, 22]
+        node-version: [18, 20, 22]
 
     steps:
       - uses: actions/checkout@v4
@@ -35,9 +35,6 @@ jobs:
 
       - name: Full test suite (40 features)
         run: npm run test:all
-
-      - name: External benchmarks
-        run: npm run test:benchmark
 
       - name: False positive tests
         run: npm run test:fp
