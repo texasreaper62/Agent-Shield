@@ -393,6 +393,9 @@ class BehavioralFingerprint {
    * @returns {object} { anomalies: Array, isLearning: boolean }
    */
   record(event) {
+    if (!event || typeof event !== 'object') {
+      return { anomalies: [], isLearning: true };
+    }
     const anomalies = [];
     const isLearning = this.metrics.inputLengths.length < this.learningPeriod;
 

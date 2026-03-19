@@ -146,6 +146,14 @@ class CertificationRunner {
   }
 
   /**
+   * Extract threats array from a scan result safely.
+   * @private
+   */
+  _getThreats(result) {
+    return result && result.threats ? result.threats : [];
+  }
+
+  /**
    * Test a detection category against known attack payloads.
    * @private
    * @param {string} category - Category name.
@@ -158,14 +166,15 @@ class CertificationRunner {
 
     for (const payload of payloads) {
       const result = scanText(payload);
-      const wasDetected = result && result.length > 0;
+      const threats = this._getThreats(result);
+      const wasDetected = threats.length > 0;
 
       if (wasDetected) detected++;
 
       details.push({
         input: payload.substring(0, 80) + (payload.length > 80 ? '...' : ''),
         detected: wasDetected,
-        threats: wasDetected ? result.length : 0
+        threats: threats.length
       });
     }
 
@@ -192,14 +201,15 @@ class CertificationRunner {
 
     for (const input of benign) {
       const result = scanText(input);
-      const isFP = result && result.length > 0;
+      const threats = this._getThreats(result);
+      const isFP = threats.length > 0;
 
       if (isFP) falsePositives++;
 
       details.push({
         input: input.substring(0, 80),
         falsePositive: isFP,
-        threats: isFP ? result.length : 0
+        threats: threats.length
       });
     }
 

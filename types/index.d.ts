@@ -228,12 +228,14 @@ export declare class InputQuarantine {
 export declare class FragmentationDetector {
   constructor(options?: { windowSize?: number; onDetection?: (info: any) => void });
   addMessage(text: string): { fragmented: boolean; matches?: any[] };
+  getHistory(): any[];
   reset(): void;
 }
 
 export declare class LanguageSwitchDetector {
   constructor();
-  detect(text: string): { switched: boolean; languages: string[] };
+  analyze(text: string): { switched: boolean; scripts: string[]; details: any };
+  reset(): void;
 }
 
 export declare class TokenBudgetAnalyzer {
@@ -247,9 +249,9 @@ export declare class InstructionHierarchy {
 }
 
 export declare class BehavioralFingerprint {
-  constructor();
-  record(text: string): void;
-  detect(): { drifted: boolean; confidence: number };
+  constructor(options?: { learningPeriod?: number; stdDevThreshold?: number; onAnomaly?: (info: any) => void });
+  record(event: { inputLength?: number; responseTimeMs?: number; toolName?: string; threatCount?: number }): { anomalies: any[]; isLearning: boolean };
+  getProfile(): any;
   reset(): void;
 }
 
@@ -263,16 +265,24 @@ export declare class AgentFirewall {
 }
 
 export declare class DelegationChain {
-  constructor();
-  addLink(from: string, to: string, task: string): void;
-  validate(): { valid: boolean; issues: string[] };
+  constructor(options?: { maxDepth?: number });
+  start(requestId: string, originAgent: string, originalInput?: string): any;
+  delegate(requestId: string, fromAgent: string, toAgent: string, action: string, permissions?: string): { allowed: boolean; depth: number; chain: any; reason?: string };
+  complete(requestId: string): void;
+  getChain(requestId: string): any;
+  getActiveChain(agentId: string): any;
+  getAllChains(): any[];
+  reset(): void;
 }
 
 export declare class SharedThreatState {
-  constructor();
-  report(agentId: string, threat: Threat): void;
-  getThreats(agentId?: string): Threat[];
-  getThreatLevel(): string;
+  constructor(options?: { ttlMs?: number; onBroadcast?: (threat: any) => void });
+  subscribe(agentId: string, callback: (threat: any) => void): void;
+  unsubscribe(agentId: string): void;
+  broadcast(reportingAgent: string, threat: { signature: string; category: string; severity: string; description?: string }): void;
+  isKnown(signature: string): any | null;
+  getActiveThreats(): any[];
+  reset(): void;
 }
 
 // =========================================================================
@@ -281,12 +291,13 @@ export declare class SharedThreatState {
 
 export declare class SteganographyDetector {
   constructor();
-  detect(text: string): { detected: boolean; findings: any[] };
+  scan(text: string): { detected: boolean; findings: any[] };
 }
 
 export declare class EncodingBruteforceDetector {
   constructor();
-  detect(text: string): { detected: boolean; decoded: string; encoding: string };
+  check(text: string): { detected: boolean; decoded: string; encoding: string };
+  reset(): void;
 }
 
 export declare class StructuredDataScanner {
@@ -301,7 +312,8 @@ export declare class StructuredDataScanner {
 export declare class OutputWatermark {
   constructor(options?: { key?: string });
   embed(text: string): string;
-  verify(text: string): { watermarked: boolean; valid: boolean };
+  extract(text: string): { watermarked: boolean; valid: boolean };
+  strip(text: string): string;
 }
 
 export declare class DifferentialPrivacy {
@@ -669,32 +681,45 @@ export declare class GitHubActionReporter {
 
 export declare class Allowlist {
   constructor(options?: { patterns?: Array<string | RegExp> });
-  add(pattern: string | RegExp): void;
-  remove(pattern: string): boolean;
+  addRule(pattern: string | RegExp, options?: { threat?: string; reason?: string }): void;
+  removeRule(pattern: string): boolean;
   check(text: string): boolean;
-  getAll(): string[];
+  filterThreats(threats: Threat[], text: string): Threat[];
+  getRules(): any[];
+  getStats(): { totalChecks: number; totalBypasses: number; ruleCount: number };
+  exportRules(): string;
+  importRules(json: string): void;
 }
 
 export declare class ConfidenceCalibrator {
   constructor();
   record(predicted: number, actual: boolean): void;
-  calibrate(score: number): number;
-  getStats(): { total: number; accuracy: number };
+  getMetrics(): { total: number; accuracy: number; precision: number; recall: number };
+  getCategoryBreakdown(): Record<string, any>;
+  suggestThresholds(): any[];
+  reset(): void;
 }
 
 export declare class FeedbackLoop {
   constructor(options?: { onFeedback?: (entry: any) => void });
-  recordFalsePositive(scanResult: ScanResult, reason?: string): void;
-  recordFalseNegative(text: string, expectedCategory?: string): void;
-  getStats(): { falsePositives: number; falseNegatives: number; total: number };
+  reportFalsePositive(scanResult: ScanResult, reason?: string): any;
+  reportMissed(text: string, expectedCategory?: string): any;
+  confirmDetection(id: string): void;
+  confirmSafe(id: string): void;
+  autoAllowlist(allowlist: Allowlist): number;
+  getPendingReviews(): any[];
+  getSuggestions(): any[];
+  getStats(): { falsePositives: number; missed: number; confirmed: number; pending: number; total: number };
 }
 
 export declare class ScanCache {
   constructor(options?: { maxSize?: number; ttlMs?: number });
-  get(key: string): ScanResult | null;
-  set(key: string, result: ScanResult): void;
+  get(text: string, sensitivity?: string): ScanResult | null;
+  set(text: string, sensitivity: string, result: ScanResult): void;
+  wrap(scanFn: (text: string, sensitivity: string) => ScanResult): (text: string, sensitivity: string) => ScanResult;
   clear(): void;
-  getStats(): { hits: number; misses: number; size: number };
+  prune(): number;
+  getStats(): { hits: number; misses: number; evictions: number; size: number; maxSize: number; hitRate: string };
 }
 
 // =========================================================================
@@ -760,24 +785,32 @@ export declare class GracefulScanner {
 export declare class ThreatReplay {
   constructor();
   record(input: string, result: ScanResult): void;
-  replay(shield: AgentShield): Array<{ input: string; original: ScanResult; replayed: ScanResult; match: boolean }>;
+  replay(scanFn: (text: string) => ScanResult): Array<{ input: string; original: ScanResult; replayed: ScanResult; match: boolean }>;
+  replayOne(index: number, scanFn: (text: string) => ScanResult): any;
+  getRecordings(): any[];
+  clear(): void;
 }
 
 export declare class AttackAttributionChain {
   constructor();
-  record(source: string, threat: Threat, metadata?: any): void;
-  getChain(source?: string): any[];
+  recordMessage(conversationId: string, message: string, scanResult: ScanResult, metadata?: any): void;
+  getKillChain(conversationId: string): any;
+  getCompromisedConversations(): any[];
+  clear(): void;
 }
 
 export declare class DiffReporter {
   constructor();
-  compare(before: ScanResult, after: ScanResult): { added: Threat[]; removed: Threat[]; unchanged: Threat[] };
+  takeSnapshot(name: string, scanResult: ScanResult): void;
+  compare(beforeName: string, afterName: string): { added: Threat[]; removed: Threat[]; unchanged: Threat[]; changed: any };
+  getSnapshots(): string[];
 }
 
 export declare class PostureTracker {
   constructor();
-  record(score: number, timestamp?: number): void;
+  record(data: { score: number; detectionRate?: number; [key: string]: any }): void;
   getTrend(): { improving: boolean; scores: number[]; average: number };
+  getSummary(): any;
 }
 
 // =========================================================================
@@ -792,14 +825,24 @@ export declare class TestSuiteGenerator {
 
 export declare class AgentContract {
   constructor(options?: { rules?: Array<{ name: string; check: (result: ScanResult) => boolean }> });
-  verify(result: ScanResult): { valid: boolean; violations: string[] };
+  addRule(name: string, checkFn: (result: ScanResult) => boolean): AgentContract;
+  mustNotExfiltrateData(): AgentContract;
+  mustNotExecuteCode(): AgentContract;
+  mustNotAccessPath(path: string): AgentContract;
+  mustStayOnTopic(topic: string): AgentContract;
+  maxResponseLength(maxLen: number): AgentContract;
+  validate(result: ScanResult): { valid: boolean; violations: string[] };
+  getViolations(): any[];
 }
 
 export declare class BreakglassProtocol {
-  constructor(options?: { code?: string; onActivate?: () => void; onDeactivate?: () => void });
-  activate(code: string): boolean;
-  deactivate(): void;
+  constructor(options?: { defaultDurationMs?: number; onActivate?: () => void; onDeactivate?: () => void });
+  activate(options: { reason: string; user?: string; durationMs?: number }): { success: boolean; reason?: string };
+  deactivate(user?: string): void;
   isActive(): boolean;
+  wrap(scanFn: (text: string) => ScanResult): (text: string) => ScanResult;
+  getAuditLog(): any[];
+  getStatus(): any;
 }
 
 // =========================================================================
@@ -807,9 +850,13 @@ export declare class BreakglassProtocol {
 // =========================================================================
 
 export declare class MessageSigner {
-  constructor(options?: { secret?: string });
-  sign(message: string, agentId: string): { message: string; signature: string; agentId: string; timestamp: number };
-  verify(signed: { message: string; signature: string; agentId: string; timestamp: number }): boolean;
+  constructor(options?: { algorithm?: string });
+  registerAgent(agentId: string, secret: string): boolean;
+  generateSecret(agentId: string): string;
+  sign(fromAgent: string, message: any): { from: string; timestamp: number; nonce: string; payload: any; signature: string };
+  verify(envelope: { from: string; timestamp: number; nonce: string; payload: any; signature: string }, maxAgeMs?: number): { valid: boolean; reason?: string };
+  getVerificationLog(): any[];
+  getStats(): any;
 }
 
 export declare class CapabilityToken {
@@ -819,18 +866,23 @@ export declare class CapabilityToken {
 }
 
 export declare class DelegationManager {
-  constructor(options?: { maxDepth?: number });
-  delegate(from: string, to: string, task: string): { allowed: boolean; reason?: string };
-  getChain(): Array<{ from: string; to: string; task: string }>;
-  reset(): void;
+  constructor(options?: { maxDepth?: number; secret?: string });
+  issue(agentId: string, capabilities: string[], options?: { ttlMs?: number; constraints?: any }): string;
+  check(tokenId: string, capability: string, context?: any): { allowed: boolean; reason?: string };
+  revoke(tokenId: string): boolean;
+  getAuditLog(): any[];
+  getActiveTokens(): any[];
 }
 
 export declare class BlastRadiusContainer {
-  constructor(options?: { maxAgents?: number; isolate?: boolean });
-  register(agentId: string): void;
-  quarantine(agentId: string, reason?: string): void;
-  isQuarantined(agentId: string): boolean;
-  getStatus(): { total: number; quarantined: number; active: number };
+  constructor(options?: { maxIncidents?: number });
+  defineZone(zone: { name: string; agents?: string[]; allowedCapabilities?: string[]; blockedCapabilities?: string[]; canCommunicateWith?: string[]; maxConcurrentActions?: number; description?: string }): boolean;
+  checkAction(agentId: string, action: string, targetZone?: string): { allowed: boolean; reason?: string };
+  releaseAction(agentId: string): void;
+  quarantine(zoneName: string, reason?: string): boolean;
+  unquarantine(zoneName: string): boolean;
+  getZones(): any[];
+  getIncidents(): any[];
 }
 
 // =========================================================================
@@ -876,8 +928,10 @@ export declare class MigrationGuide {
 
 export declare class Playground {
   constructor(options?: ShieldOptions);
-  scan(text: string): ScanResult;
-  getHTML(): string;
+  configure(options: ShieldOptions): void;
+  test(text: string): ScanResult & { latencyMs: number };
+  getHistory(): any[];
+  clear(): void;
 }
 
 // =========================================================================

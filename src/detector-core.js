@@ -1403,7 +1403,7 @@ const scanText = (text, options = {}) => {
   const sensitivity = options.sensitivity || 'medium';
   const startTime = now();
 
-  if (!text || text.trim().length < 10) {
+  if (typeof text !== 'string' || text.length < 10 || text.trim().length < 10) {
     return {
       status: 'safe',
       threats: [],

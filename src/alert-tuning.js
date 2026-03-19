@@ -461,7 +461,7 @@ class AlertCorrelator {
 
     this._internalPatterns = Object.values(patternMap).map(p => ({
       category: p.category,
-      avgGroupSize: p.groupSizes.reduce((a, b) => a + b, 0) / p.groupSizes.length,
+      avgGroupSize: p.groupSizes.length > 0 ? p.groupSizes.reduce((a, b) => a + b, 0) / p.groupSizes.length : 0,
       frequency: p.groupSizes.length,
       firstSeen: p.firstSeen,
       lastSeen: p.lastSeen

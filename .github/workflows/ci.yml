@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -33,6 +36,12 @@ jobs:
       - name: Full test suite (40 features)
         run: npm run test:all
 
+      - name: External benchmarks
+        run: npm run test:benchmark
+
+      - name: False positive tests
+        run: npm run test:fp
+
       - name: Red team simulation
         run: npm run redteam
 
@@ -44,3 +53,21 @@ jobs:
 
       - name: Verify examples
         run: node examples/quick-start.js
+
+  publish-dry-run:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install
+
+      - name: Pack (dry run)
+        run: npm pack --dry-run

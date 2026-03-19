@@ -56,6 +56,10 @@
     "type": "git",
     "url": "https://github.com/texasreaper62/Agent-Shield.git"
   },
+  "bugs": {
+    "url": "https://github.com/texasreaper62/Agent-Shield/issues"
+  },
+  "homepage": "https://github.com/texasreaper62/Agent-Shield#readme",
   "files": [
     "src/",
     "types/",

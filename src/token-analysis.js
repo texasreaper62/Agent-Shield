@@ -262,7 +262,8 @@ class PerplexityEstimator {
 
     for (let t = 0; t < corpusTexts.length; t++) {
       const text = corpusTexts[t].toLowerCase();
-      for (let i = 0; i <= text.length - this.ngramSize; i++) {
+      const maxI = Math.max(-1, text.length - this.ngramSize);
+      for (let i = 0; i <= maxI; i++) {
         const ngram = text.slice(i, i + this.ngramSize);
         this.ngramCounts[ngram] = (this.ngramCounts[ngram] || 0) + 1;
         this.totalNgrams++;

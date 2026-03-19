@@ -183,6 +183,7 @@ const shieldTools = (tools, config = {}) => {
  * @returns {string|null}
  */
 const extractTextFromBody = (body) => {
+  if (!body || (typeof body !== 'object' && typeof body !== 'string')) return null;
   if (typeof body === 'string') return body;
 
   // OpenAI-style messages array

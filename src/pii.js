@@ -98,7 +98,7 @@ class PIIRedactor {
    * @returns {object} { redacted: string, findings: Array, count: number }
    */
   redact(text) {
-    if (!text) return { redacted: text, findings: [], count: 0 };
+    if (typeof text !== 'string' || !text) return { redacted: text || '', findings: [], count: 0 };
 
     let redacted = text;
     const findings = [];

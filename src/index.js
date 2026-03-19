@@ -215,6 +215,9 @@ class AgentShield {
    * @returns {object} Scan result with `blocked` and `warnings` fields.
    */
   scanToolCall(toolName, args = {}, options = {}) {
+    if (!toolName || typeof toolName !== 'string') {
+      return { status: 'safe', toolName: toolName || '', threats: [], warnings: ['Invalid tool name'], blocked: false, isDangerousTool: false, timestamp: Date.now() };
+    }
     const warnings = [];
     const allThreats = [];
 

@@ -64,7 +64,7 @@ class CanaryTokens {
    * @returns {object} { leaked: boolean, leaks: Array }
    */
   check(text, source = 'output') {
-    if (!text || this.tokens.size === 0) {
+    if (typeof text !== 'string' || !text || this.tokens.size === 0) {
       return { leaked: false, leaks: [] };
     }
 

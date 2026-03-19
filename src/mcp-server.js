@@ -388,6 +388,11 @@ class MCPServer {
 
     this._onData = (chunk) => {
       this._buffer += chunk.toString();
+      if (this._buffer.length > 10 * 1024 * 1024) {
+        console.error('[Agent Shield] MCP buffer exceeded 10MB, clearing');
+        this._buffer = '';
+        return;
+      }
       this._processBuffer();
     };
 
