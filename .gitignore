@@ -17,6 +17,12 @@ desktop.ini
 dist/
 build/
 *.zip
+*.tgz
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
 
 # Environment
 .env

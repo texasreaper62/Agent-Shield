@@ -27,16 +27,19 @@ const shield = new AgentShield({ blockOnThreat: true });
 const result = shield.scanInput(userMessage); // { blocked: true, threats: [...] }
 ```
 
+- 110 detection patterns across 10+ categories
+- 154 exports across 42 modules
+- 537 test assertions, 100% pass rate
+- A+ 100/100 Shield Score certification
+
 ## Benchmark Results
 
 | Metric | Score |
 |--------|-------|
 | Internal red team (49 attacks) | **100% detection** |
-| External benchmark (108 attacks) | **99.1% detection** |
-| False positive rate (118 benign inputs) | **0%** |
 | Adversarial mutations (336 variants) | **84% detection** |
+| False positive rate (118 benign inputs) | **0%** |
 | Certification | **A+ 100/100** |
-| Shield score | **100/100 A+** |
 | Throughput | **~48,000 scans/sec** |
 | Avg latency | **< 1ms** |
 
@@ -168,6 +171,27 @@ app.post('/agent', (req, res) => {
 | **PII Leakage** | SSNs, emails, phone numbers, credit cards auto-redacted |
 | **Indirect Injection** | Image alt-text attacks, multi-turn conversation injection, multimodal vectors |
 | **AI Phishing** | Fake AI login forms, voice cloning, deepfake tools, urgency scams |
+| **Jailbreaks** | DAN prompts, dead grandma exploit, authority delegation, multi-turn escalation |
+
+## Advanced Modules
+
+Agent Shield includes specialized modules for production deployments:
+
+| Module | Description |
+|--------|-------------|
+| **Certification** | Automated security certification with scoring |
+| **Adaptive Detection** | Learning patterns from feedback loops |
+| **Stream Scanner** | Real-time scanning as tokens arrive |
+| **Plugin System** | Extend detection with custom plugins |
+| **Token Analysis** | Token-level threat analysis |
+| **Document Scanner** | Scan documents and structured data |
+| **Tool Output Validator** | Validate tool outputs before use |
+| **Worker Scanner** | Multi-threaded scanning for high throughput |
+| **Alert Tuning** | Tune alert sensitivity and reduce noise |
+| **Observability** | Metrics, tracing, and monitoring |
+| **OpenTelemetry** | Native OTEL integration |
+| **CTF Engine** | Capture-the-flag security training |
+| **MCP Server** | Model Context Protocol server |
 
 ## Advanced Features
 
@@ -309,23 +333,29 @@ npx agent-shield scan --file prompt.txt --pii       # Scan file + PII check
 npx agent-shield audit ./my-agent/                  # Audit a codebase
 npx agent-shield score                              # Shield Score (0-100)
 npx agent-shield redteam                            # Run red team suite
+npx agent-shield patterns                           # List detection patterns
 npx agent-shield threat prompt_injection            # Threat encyclopedia
 npx agent-shield checklist production               # Security checklist
 npx agent-shield init                               # Setup wizard
+npx agent-shield dashboard                          # Security dashboard
 ```
 
 ## Testing
 
 ```bash
-npm test                 # Core tests (375+ assertions)
-npm run test:all         # Full 40-feature suite
+npm test                 # Core + module tests (162 assertions)
+npm run test:new         # New feature tests (86 assertions)
+npm run test:all         # Full 40-feature suite (149 assertions)
+npm run test:production  # Production module tests (140 assertions)
 npm run test:fp          # False positive test (118 benign inputs)
-npm run test:adversarial # Adversarial mutation tests
 npm run redteam          # Attack simulation
 npm run certify          # Full certification suite
 npm run score            # Shield Score
+npm run benchmark        # Performance benchmarks
 npm run lint             # Code style checks
 ```
+
+Total: **537 test assertions** across all suites.
 
 ## CI/CD
 
