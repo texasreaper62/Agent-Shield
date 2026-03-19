@@ -1,0 +1,54 @@
+{
+  "name": "agent-shield-vscode",
+  "displayName": "Agent Shield",
+  "description": "AI security scanner for VS Code — detect prompt injection, data exfiltration, and 30+ AI threats in real time",
+  "version": "1.0.0",
+  "publisher": "agent-shield",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "security",
+    "prompt injection",
+    "agent",
+    "llm",
+    "scanner"
+  ],
+  "activationEvents": [
+    "onCommand:agentShield.scanSelection",
+    "onCommand:agentShield.scanFile",
+    "onCommand:agentShield.lintPrompt",
+    "onCommand:agentShield.showScore"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentShield.scanSelection",
+        "title": "Agent Shield: Scan Selection for Threats"
+      },
+      {
+        "command": "agentShield.scanFile",
+        "title": "Agent Shield: Scan File for Threats"
+      },
+      {
+        "command": "agentShield.lintPrompt",
+        "title": "Agent Shield: Lint Prompt Template"
+      },
+      {
+        "command": "agentShield.showScore",
+        "title": "Agent Shield: Show Shield Score"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-shield/agent-shield"
+  }
+}

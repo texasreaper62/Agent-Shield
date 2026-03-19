@@ -78,6 +78,44 @@ const { MessageSigner, CapabilityToken, DelegationManager, BlastRadiusContainer 
 // Extended Policy & Intelligence
 const { ABTestRunner, ThreatIntelFeed, PatternBuilder, Doctor, GitHubActionGenerator, SOCIntegration, MigrationGuide, Playground } = require('./policy-extended');
 
+// --- New Modules ---
+
+// Streaming
+const { StreamScanner, TokenStreamScanner } = require('./stream-scanner');
+
+// Plugin System
+const { PluginManager, PluginTemplate, PluginSandbox } = require('./plugin-system');
+
+// Token Analysis
+const { EntropyAnalyzer, PerplexityEstimator, BurstDetector, TextStatistics } = require('./token-analysis');
+
+// Document Scanner
+const { DocumentScanner, TextExtractor, IndirectInjectionScanner } = require('./document-scanner');
+
+// Tool Output Validator
+const { ToolOutputValidator, OutputSanitizer } = require('./tool-output-validator');
+
+// Response Handler
+const { ResponseHandler, ResponseTemplates, ReviewQueue } = require('./response-handler');
+
+// Worker Scanner
+const { WorkerScanner, ScanQueue } = require('./worker-scanner');
+
+// Alert Tuning
+const { AlertFatigueAnalyzer, AutoTuner, AlertCorrelator } = require('./alert-tuning');
+
+// OpenTelemetry
+const { ShieldMetrics, ShieldTracer, MetricsDashboard } = require('./otel');
+
+// Certification
+const { CertificationRunner, Certificate, CertificationHistory } = require('./certification');
+
+// MCP Server
+const { MCPServer, MCPToolHandler } = require('./mcp-server');
+
+// CTF
+const { CTFEngine, CTFReporter, CHALLENGES } = require('./ctf');
+
 module.exports = {
   // Core
   AgentShield,
@@ -239,5 +277,64 @@ module.exports = {
   GitHubActionGenerator,
   SOCIntegration,
   MigrationGuide,
-  Playground
+  Playground,
+
+  // --- New Modules ---
+
+  // Streaming
+  StreamScanner,
+  TokenStreamScanner,
+
+  // Plugin System
+  PluginManager,
+  PluginTemplate,
+  PluginSandbox,
+
+  // Token Analysis
+  EntropyAnalyzer,
+  PerplexityEstimator,
+  BurstDetector,
+  TextStatistics,
+
+  // Document Scanner
+  DocumentScanner,
+  TextExtractor,
+  IndirectInjectionScanner,
+
+  // Tool Output Validator
+  ToolOutputValidator,
+  OutputSanitizer,
+
+  // Response Handler
+  ResponseHandler,
+  ResponseTemplates,
+  ReviewQueue,
+
+  // Worker Scanner
+  WorkerScanner,
+  ScanQueue,
+
+  // Alert Tuning
+  AlertFatigueAnalyzer,
+  AutoTuner,
+  AlertCorrelator,
+
+  // OpenTelemetry
+  ShieldMetrics,
+  ShieldTracer,
+  MetricsDashboard,
+
+  // Certification
+  CertificationRunner,
+  Certificate,
+  CertificationHistory,
+
+  // MCP Server
+  MCPServer,
+  MCPToolHandler,
+
+  // CTF
+  CTFEngine,
+  CTFReporter,
+  CHALLENGES
 };

@@ -64,7 +64,8 @@ for (const file of JS_FILES) {
       if (/\.push\(/.test(trimmed)) continue;
       if (!/\[Agent Shield\]/.test(trimmed) && !/console\.(warn|error)\s*\(\s*'\[Agent Shield\]/.test(trimmed)) {
         // Allow console calls that reference [Agent Shield] on the same line
-        if (!/Agent Shield/.test(trimmed)) {
+        // Also allow calls using LOG_PREFIX or similar prefix constants
+        if (!/Agent Shield/.test(trimmed) && !/LOG_PREFIX|SHIELD_PREFIX|PREFIX/.test(trimmed)) {
           check(file, i + 1, true, `Console output should be prefixed with [Agent Shield]: ${trimmed.substring(0, 60)}`);
         }
       }

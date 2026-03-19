@@ -15,7 +15,14 @@
     "benchmark": "node -e \"const {BenchmarkSuite}=require('./src/shield-score');console.log(new BenchmarkSuite().formatReport())\"",
     "redteam": "node -e \"const {AttackSimulator}=require('./src/redteam');const s=new AttackSimulator();s.runAll();console.log(s.formatReport())\"",
     "test:benchmark": "node test/benchmark-external.js",
-    "test:fp": "node test/false-positives.js"
+    "test:fp": "node test/false-positives.js",
+    "test:adversarial": "node test/test-adversarial.js",
+    "test:compare": "node test/comparison-benchmarks.js",
+    "mcp": "node src/mcp-server.js",
+    "sidecar": "node sidecar/server.js",
+    "ctf": "node -e \"const {CTFEngine,CTFReporter}=require('./src/ctf');const e=new CTFEngine();console.log(new CTFReporter().formatReport(e.getScoreboard()))\"",
+    "playground": "echo 'Open playground/index.html in a browser'",
+    "certify": "node -e \"const {CertificationRunner}=require('./src/certification');new CertificationRunner().runCertification().then(r=>console.log(r.certificate.toText()))\""
   },
   "keywords": [
     "ai",
