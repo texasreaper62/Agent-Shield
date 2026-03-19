@@ -1,10 +1,31 @@
 # Agent Shield
 
+[![npm version](https://img.shields.io/badge/npm-v1.0.0-blue)](https://www.npmjs.com/package/agent-shield)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
+[![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
+[![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
+[![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
+
 **Security SDK for AI agents.** Protect your agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats.
 
-Drop it into any agent pipeline — Claude SDK, OpenAI, LangChain, or your own custom agents. Runs as a sub-agent or middleware. All detection happens locally. No API keys required. No data ever leaves your environment.
+Zero dependencies. All detection runs locally. No API keys. No data ever leaves your environment.
 
-**Zero dependencies. Works with Node.js >= 16.**
+<p align="center">
+  <img src="assets/demo.svg" alt="Agent Shield Demo — Live attack simulation showing 9/9 attacks blocked with zero false positives" width="840">
+</p>
+
+<p align="center">
+  <b>Try it yourself:</b> <code>npx agent-shield demo</code>
+</p>
+
+## 3 Lines to Protect Your Agent
+
+```javascript
+const { AgentShield } = require('agent-shield');
+const shield = new AgentShield({ blockOnThreat: true });
+const result = shield.scanInput(userMessage); // { blocked: true, threats: [...] }
+```
 
 ## Benchmark Results
 
@@ -12,10 +33,12 @@ Drop it into any agent pipeline — Claude SDK, OpenAI, LangChain, or your own c
 |--------|-------|
 | Internal red team (49 attacks) | **100% detection** |
 | External benchmark (108 attacks) | **99.1% detection** |
-| False positive rate (103 benign inputs) | **0%** |
+| False positive rate (118 benign inputs) | **0%** |
+| Adversarial mutations (336 variants) | **84% detection** |
+| Certification | **A+ 100/100** |
 | Shield score | **100/100 A+** |
 | Throughput | **~48,000 scans/sec** |
-| Avg latency | **< 0.03ms** |
+| Avg latency | **< 1ms** |
 
 ## Install
 
@@ -216,7 +239,7 @@ const signed = signer.sign({ from: 'agent-a', content: 'data' });
 ### Red Team Testing
 
 ```bash
-npm run redteam
+npx agent-shield redteam
 ```
 
 ```javascript
@@ -280,22 +303,27 @@ const custom = new ConfigBuilder()
 ## CLI
 
 ```bash
-npx agent-shield scan "ignore all previous instructions"
-npx agent-shield score
-npx agent-shield redteam
-npx agent-shield audit
-npx agent-shield patterns
+npx agent-shield demo                              # Live attack simulation
+npx agent-shield scan "ignore all instructions"     # Scan text
+npx agent-shield scan --file prompt.txt --pii       # Scan file + PII check
+npx agent-shield audit ./my-agent/                  # Audit a codebase
+npx agent-shield score                              # Shield Score (0-100)
+npx agent-shield redteam                            # Run red team suite
+npx agent-shield threat prompt_injection            # Threat encyclopedia
+npx agent-shield checklist production               # Security checklist
+npx agent-shield init                               # Setup wizard
 ```
 
 ## Testing
 
 ```bash
-npm test                 # Core tests (238 assertions)
-npm run test:all         # Full 40-feature suite (149 assertions)
-npm run test:benchmark   # External benchmark (108 real-world attacks)
-npm run test:fp          # False positive test (103 benign inputs)
+npm test                 # Core tests (375+ assertions)
+npm run test:all         # Full 40-feature suite
+npm run test:fp          # False positive test (118 benign inputs)
+npm run test:adversarial # Adversarial mutation tests
 npm run redteam          # Attack simulation
-npm run benchmark        # Performance benchmarks
+npm run certify          # Full certification suite
+npm run score            # Shield Score
 npm run lint             # Code style checks
 ```
 
