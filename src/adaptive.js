@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const LOG = '[Agent Shield]';
+const LOG_PREFIX = '[Agent Shield]';
 
 /** Extract character trigrams from a string. @param {string} text @returns {Set<string>} */
 function trigrams(text) {
@@ -72,7 +72,7 @@ class AdaptiveDetector {
     const h = hash(text);
     if (this.falsePositives.some(fp => fp.hash === h && fp.category === category)) return;
     this.falsePositives.push({ hash: h, text, category, ts: Date.now() });
-    console.log(`${LOG} Recorded false positive for category "${category}"`);
+    console.log(`${LOG_PREFIX} Recorded false positive for category "${category}"`);
     this.save();
   }
 
@@ -85,7 +85,7 @@ class AdaptiveDetector {
     const h = hash(text);
     if (this.falseNegatives.some(fn => fn.hash === h && fn.category === category)) return;
     this.falseNegatives.push({ hash: h, text, category, ts: Date.now() });
-    console.log(`${LOG} Recorded false negative for category "${category}"`);
+    console.log(`${LOG_PREFIX} Recorded false negative for category "${category}"`);
     this.save();
   }
 
@@ -133,7 +133,7 @@ class AdaptiveDetector {
       if (this.shouldSuppress(inputText, cat)) {
         this.stats.suppressions++;
         this.stats.adjustments++;
-        console.log(`${LOG} Suppressing known false positive: ${cat}`);
+        console.log(`${LOG_PREFIX} Suppressing known false positive: ${cat}`);
         continue;
       }
       const boost = this.getBoost(inputText, cat);
@@ -173,7 +173,7 @@ class AdaptiveDetector {
       }, null, 2);
       fs.writeFileSync(this.storePath, data, 'utf8');
     } catch (err) {
-      console.log(`${LOG} Failed to save adaptive data: ${err.message}`);
+      console.log(`${LOG_PREFIX} Failed to save adaptive data: ${err.message}`);
     }
   }
 
@@ -185,9 +185,9 @@ class AdaptiveDetector {
       const data = JSON.parse(raw);
       this.falsePositives = Array.isArray(data.falsePositives) ? data.falsePositives : [];
       this.falseNegatives = Array.isArray(data.falseNegatives) ? data.falseNegatives : [];
-      console.log(`${LOG} Loaded adaptive data: ${this.falsePositives.length} FPs, ${this.falseNegatives.length} FNs`);
+      console.log(`${LOG_PREFIX} Loaded adaptive data: ${this.falsePositives.length} FPs, ${this.falseNegatives.length} FNs`);
     } catch (err) {
-      console.log(`${LOG} Failed to load adaptive data: ${err.message}`);
+      console.log(`${LOG_PREFIX} Failed to load adaptive data: ${err.message}`);
     }
   }
 }
@@ -234,7 +234,7 @@ class SemanticAnalysisHook {
       this.callCount++;
       if (result && result.override === true) {
         this.overrideCount++;
-        console.log(`${LOG} Semantic hook override: ${result.reason || 'no reason given'}`);
+        console.log(`${LOG_PREFIX} Semantic hook override: ${result.reason || 'no reason given'}`);
         return { ...scanResult, threats: [], threatCount: 0, semanticOverride: true, semanticReason: result.reason || '' };
       }
       return scanResult;
@@ -242,7 +242,7 @@ class SemanticAnalysisHook {
       this.totalLatency += Date.now() - start;
       this.callCount++;
       this.errorCount++;
-      console.log(`${LOG} Semantic hook error: ${err.message}`);
+      console.log(`${LOG_PREFIX} Semantic hook error: ${err.message}`);
       return scanResult;
     }
   }
@@ -288,10 +288,10 @@ class CommunityPatterns {
         category: p.category || 'community',
         description: p.description || ''
       })) : [];
-      console.log(`${LOG} Loaded ${this.patterns.length} community patterns (v${this.version})`);
+      console.log(`${LOG_PREFIX} Loaded ${this.patterns.length} community patterns (v${this.version})`);
       return true;
     } catch (err) {
-      console.log(`${LOG} Failed to load community patterns: ${err.message}`);
+      console.log(`${LOG_PREFIX} Failed to load community patterns: ${err.message}`);
       return false;
     }
   }
@@ -317,7 +317,7 @@ class CommunityPatterns {
       const alreadyExists = merged.some(p => (p.regex || p.pattern || '').toString() === cp.regex);
       if (!alreadyExists) merged.push(cp);
     }
-    console.log(`${LOG} Merged: ${existing.length} existing + ${merged.length - existing.length} community = ${merged.length} total`);
+    console.log(`${LOG_PREFIX} Merged: ${existing.length} existing + ${merged.length - existing.length} community = ${merged.length} total`);
     return merged;
   }
 

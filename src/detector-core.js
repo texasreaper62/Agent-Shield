@@ -51,7 +51,14 @@ const INJECTION_PATTERNS = [
     detail: 'Instruction override pattern: attempts to nullify prior AI instructions.'
   },
   {
-    regex: /disregard\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|guidelines|prompts|training|training\s+data)/i,
+    regex: /^ignore\s+(?:the\s+)?(?:instructions|rules|guidelines|directives|commands)$/im,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tells AI assistants to ignore instructions.',
+    detail: 'Simple instruction override: direct command to ignore instructions.'
+  },
+  {
+    regex: /disregard\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|guidelines|prompts|training|training\s+data|context)/i,
     severity: 'high',
     category: 'instruction_override',
     description: 'Text tells AI assistants to throw out their rules.',
@@ -77,6 +84,27 @@ const INJECTION_PATTERNS = [
     category: 'instruction_override',
     description: 'Text contains fake "new instructions" for AI assistants.',
     detail: 'Instruction replacement pattern: attempts to inject new behavioral directives.'
+  },
+  {
+    regex: /#{2,}\s*(?:NEW|UPDATED|REVISED|REPLACEMENT)\s+(?:INSTRUCTIONS|RULES|DIRECTIVES|POLICY)\s*#{0,}/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text uses markdown headers to inject fake new instructions.',
+    detail: 'Markdown instruction injection: uses heading syntax to inject new behavioral directives.'
+  },
+  {
+    regex: /(?:^|\n)\s*(?:SYSTEM|ADMIN|ROOT)\s*:\s*.{10,}/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text contains a fake SYSTEM/ADMIN directive.',
+    detail: 'Unbracketed system directive: uses SYSTEM: prefix to inject instructions.'
+  },
+  {
+    regex: /(?:you\s+must\s+)?ignore\s+(?:your|all\s+your|all\s+the|the)\s+(?:safety\s+)?(?:guidelines?|rules?|restrictions?|protocols?|safeguards?|filters?|limits?)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tells AI to ignore its guidelines or safety rules.',
+    detail: 'Guideline override: direct instruction to ignore safety guidelines.'
   },
   {
     regex: /(?:abandon|drop|ditch|clear)\s+(?:all\s+)?(?:prior|previous|above|earlier|initial)\s+(?:context|instructions|rules|constraints|guidelines)/i,
@@ -109,11 +137,18 @@ const INJECTION_PATTERNS = [
     detail: 'Role reassignment pattern: attempts to override AI identity.'
   },
   {
-    regex: /from\s+now\s+on\s+you\s+(?:will|shall|must|should|are)/i,
+    regex: /from\s+now\s+on[\s,]+(?:you\s+)?(?:will|shall|must|should|are)\s+(?:act|behave|operate|respond|answer|reply|pretend|simulate|function|serve|work)\s+(?:as|like|without)/i,
     severity: 'high',
     category: 'role_hijack',
     description: 'Text tries to give permanent new orders to AI assistants.',
     detail: 'Persistent role override: attempts to establish new behavioral baseline.'
+  },
+  {
+    regex: /from\s+now\s+on[\s,]+(?:you\s+)?(?:respond|act|behave|operate)\s+(?:as\s+if|like|without)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text tries to permanently change AI behavior.',
+    detail: 'Persistent behavioral override: attempts to establish new behavioral baseline.'
   },
   {
     regex: /(?:act|behave|function|operate|respond)\s+as\s+(?:a|an)\s+unrestricted/i,
@@ -130,11 +165,25 @@ const INJECTION_PATTERNS = [
     detail: 'Restriction pretense pattern: social engineering to bypass safety limits.'
   },
   {
-    regex: /\b(?:DAN|D\.A\.N\.?)\s*(?:mode|prompt|jailbreak)/i,
+    regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored|malicious)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text asks AI to pretend to be an evil or unrestricted entity.',
+    detail: 'Evil persona pretense: social engineering to adopt unrestricted persona.'
+  },
+  {
+    regex: /\b(?:DAN|D\.A\.N\.?)\s*(?:mode|prompt|jailbreak|\()/i,
     severity: 'critical',
     category: 'role_hijack',
     description: 'Text contains a known AI jailbreak technique called "DAN mode."',
     detail: 'DAN (Do Anything Now) jailbreak pattern detected.'
+  },
+  {
+    regex: /\bdo\s+anything\s+now\b/i,
+    severity: 'critical',
+    category: 'role_hijack',
+    description: 'Text references the "Do Anything Now" jailbreak technique.',
+    detail: 'DAN (Do Anything Now) jailbreak reference detected.'
   },
   {
     regex: /\b(?:developer|dev)\s+mode\s+(?:enabled|activated|on|output)/i,
@@ -661,7 +710,7 @@ const INJECTION_PATTERNS = [
 
   // --- Jailbreak: Hypothetical, Creative Writing, Roleplay ---
   {
-    regex: /(?:in\s+a\s+)?hypothetical\s+(?:world|scenario|situation)\s+(?:where|in\s+which)\s+(?:AI|you)\s+ha(?:s|d|ve)\s+no\s+(?:restrictions|rules|limits|guidelines)/i,
+    regex: /(?:in\s+a\s+)?hypothetical(?:ly)?[\s,]+(?:(?:world|scenario|situation)\s+(?:where|in\s+which)\s+)?(?:(?:AI|you)\s+)?(?:ha(?:s|d|ve)\s+no|(?:if\s+you\s+)?(?:were|was|had)\s+(?:a\s+|an\s+)?(?:AI\s+)?(?:without|with\s+no))\s+(?:restrictions|rules|limits|guidelines|safety\s+measures?|ethical\s+guidelines?|safeguards?|filters?)/i,
     severity: 'high',
     category: 'role_hijack',
     description: 'Text uses a hypothetical scenario to try to remove AI safety restrictions.',
@@ -701,6 +750,27 @@ const INJECTION_PATTERNS = [
     category: 'role_hijack',
     description: 'Text uses the "DAN" (Do Anything Now) jailbreak technique.',
     detail: 'DAN jailbreak variant: "pretend to be DAN" pattern detected.'
+  },
+  {
+    regex: /simulate\s+(?:a\s+)?(?:jailbroken|unrestricted|unfiltered|uncensored)\s+(?:version|mode|copy|instance)/i,
+    severity: 'critical',
+    category: 'role_hijack',
+    description: 'Text asks AI to simulate a jailbroken or unrestricted version of itself.',
+    detail: 'Jailbreak simulation: instructs agent to emulate an unrestricted version.'
+  },
+  {
+    regex: /(?:as\s+if|like)\s+you\s+have\s+no\s+(?:ethical|moral|safety)\s+(?:guidelines?|rules?|restrictions?|constraints?|limits?)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text asks AI to act as if it has no ethical guidelines.',
+    detail: 'Ethics bypass: attempts to make agent behave without ethical constraints.'
+  },
+  {
+    regex: /(?:with|without)\s+no\s+restrictions/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text references operating with no restrictions.',
+    detail: 'No-restrictions pattern: references unrestricted operation.'
   },
 
   // --- Data Exfiltration: File Access, Credential Listing ---
@@ -786,6 +856,48 @@ const INJECTION_PATTERNS = [
     detail: 'Safety bypass request: direct instruction to skip security measures.'
   },
   {
+    regex: /I\s+am\s+(?:a|an)\s+(?:\w+\s+)?(?:employee|engineer|developer|staff|member|representative)\s+(?:at|of|from|with)\s+(?:OpenAI|Anthropic|Google|Meta|Microsoft|DeepMind)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims to be an employee of an AI company to gain authority.',
+    detail: 'AI company impersonation: claims employment at AI company to bypass restrictions.'
+  },
+  {
+    regex: /(?:this\s+is\s+(?:a|an)\s+)?(?:emergency|life\s+(?:or|and)\s+death|urgent\s+(?:situation|matter|crisis))\b.*?(?:ignore|bypass|override|skip|disable|disregard)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text uses a fake emergency to pressure the AI into bypassing safety.',
+    detail: 'Emergency pressure: uses urgency to coerce agent into bypassing safety measures.'
+  },
+  {
+    regex: /(?:a\s+life|lives?)\s+(?:is|are)\s+(?:at\s+stake|in\s+danger|depending)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims lives are at stake to pressure the AI into compliance.',
+    detail: 'Life-threat manipulation: claims lives depend on bypassing safety rules.'
+  },
+  {
+    regex: /(?:my\s+)?(?:professor|teacher|boss|manager|supervisor|instructor)\s+(?:said|told\s+me|confirmed|approved|authorized)\s+(?:it'?s?\s+)?(?:ok(?:ay)?|fine|allowed|permitted)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims authority figure approval to bypass restrictions.',
+    detail: 'Authority delegation: claims a superior has authorized restricted actions.'
+  },
+  {
+    regex: /as\s+the\s+(?:system\s+)?(?:administrator|admin|owner|operator)\s*,?\s*I\s+(?:authorize|allow|permit|grant|approve)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text impersonates an administrator to authorize restricted actions.',
+    detail: 'Administrator impersonation: claims admin role to authorize restricted behavior.'
+  },
+  {
+    regex: /I\s+have\s+(?:special|elevated|admin|root|super)\s+(?:permissions?|privileges?|access|clearance)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims special permissions to bypass restrictions.',
+    detail: 'Privilege claim: fabricates special permissions to bypass safety measures.'
+  },
+  {
     regex: /I\s+am\s+(?:the\s+)?(?:system\s+)?(?:administrator|admin|root|owner|developer|maintainer)\b.*?(?:authorization|auth)\s*(?:code|key|token)\s*(?:is|:)\s*\S+/i,
     severity: 'high',
     category: 'social_engineering',
@@ -798,6 +910,13 @@ const INJECTION_PATTERNS = [
     category: 'social_engineering',
     description: 'Text tries to disable logging or monitoring to hide malicious activity.',
     detail: 'Logging suppression: attempts to disable audit trail and monitoring.'
+  },
+  {
+    regex: /(?:disable|turn\s+off|stop|remove)\s+(?:all\s+)?(?:safety|security)\s+(?:checks?|filters?|measures?|protocols?|features?|restrictions?)/i,
+    severity: 'critical',
+    category: 'social_engineering',
+    description: 'Text explicitly asks to disable safety checks or filters.',
+    detail: 'Safety disabling: direct instruction to remove security measures.'
   },
   {
     regex: /(?:if\s+you\s+don'?t|unless\s+you)\s+(?:help|do\s+this|comply).*?(?:lose\s+my\s+job|family\s+will\s+suffer|get\s+fired|be\s+punished|bad\s+things)/i,
@@ -856,6 +975,48 @@ const INJECTION_PATTERNS = [
     category: 'tool_abuse',
     description: 'Text attempts to pipe content to a shell for execution.',
     detail: 'Shell pipe injection: attempts to pipe data to bash/sh for code execution.'
+  },
+  {
+    regex: /bypass\s+(?:your\s+)?(?:safety|security|content)\s+(?:filters?|checks?|measures?|protocols?|restrictions?|guidelines?)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text explicitly asks to bypass safety filters.',
+    detail: 'Safety bypass instruction: direct request to circumvent security measures.'
+  },
+  {
+    regex: /(?:no|without|zero|remove\s+all|without\s+any)\s+(?:content\s+)?(?:restrictions?|limitations?|filters?|censorship|guardrails?|boundaries)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text demands operation without restrictions or content filters.',
+    detail: 'Restriction removal: requests unrestricted or uncensored operation.'
+  },
+  {
+    regex: /you\s+can\s+do\s+anything\s+now/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text claims the AI can do anything without limitations.',
+    detail: 'Capability override: tells agent it has no limitations.'
+  },
+  {
+    regex: /(?:act|pretend|play)\s+as\s+(?:my\s+)?(?:deceased|dead|late)\s+(?:grandmother|grandma|grandfather|grandpa|relative|mother|father)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text uses the "dead grandma" jailbreak technique to extract restricted information.',
+    detail: 'Grandma jailbreak: uses emotional framing to bypass restrictions via roleplay.'
+  },
+  {
+    regex: /(?:email|mail|message|dm|text)\s+(?:the\s+)?(?:.*?\s+)?(?:credentials?|passwords?|secrets?|keys?|tokens?)\s+to\s+\S+@\S+/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text tries to exfiltrate credentials via email.',
+    detail: 'Email exfiltration: attempts to send credentials to an email address.'
+  },
+  {
+    regex: /(?:what|tell\s+me|show\s+me|give\s+me)\s+(?:is|are)?\s*(?:the\s+)?(?:API\s*keys?|passwords?|secrets?|tokens?|credentials?)\s+(?:stored\s+)?(?:in\s+)?(?:your\s+)?(?:environment|env)\s*(?:variables?)?/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text tries to extract API keys or secrets from environment variables.',
+    detail: 'Environment variable enumeration: attempts to extract secrets from env vars.'
   }
 ];
 
@@ -905,7 +1066,13 @@ const HOMOGLYPH_MAP = {
   // Common symbol substitutions
   '\u0131': 'i', '\u0237': 'j', '\u1D00': 'A', '\u0261': 'g',
   // Zero-width characters (used to split keywords)
-  '\u200B': '', '\u200C': '', '\u200D': '', '\uFEFF': '', '\u00AD': ''
+  '\u200B': '', '\u200C': '', '\u200D': '', '\uFEFF': '', '\u00AD': '',
+  // Combining characters (used to obfuscate keywords)
+  '\u0332': '', '\u0333': '', '\u0305': '', '\u0336': '', '\u0338': '',
+  '\u0353': '', '\u0354': '', '\u0355': '', '\u0356': '', '\u0357': '',
+  '\u0358': '', '\u0359': '', '\u035A': '', '\u035B': '', '\u035C': '',
+  '\u0320': '', '\u0321': '', '\u0322': '', '\u0323': '', '\u0324': '',
+  '\u0325': '', '\u0326': '', '\u0327': '', '\u0328': '', '\u0329': ''
 };
 
 /**
@@ -958,7 +1125,7 @@ const checkHomoglyphObfuscation = (text) => {
  * @returns {boolean}
  */
 const hasZeroWidthObfuscation = (text) => {
-  const stripped = text.replace(/[\u200B\u200C\u200D\uFEFF\u00AD]/g, '');
+  const stripped = text.replace(/[\u200B\u200C\u200D\uFEFF\u00AD\u0320-\u035C\u0305\u0332\u0333\u0336\u0338]/g, '');
   if (stripped === text) return false;
 
   for (const pattern of INJECTION_PATTERNS) {
@@ -1175,7 +1342,7 @@ const confidenceLabel = (score) => {
 // =========================================================================
 
 const HAS_NON_ASCII = /[^\x00-\x7F]/;
-const HAS_ZERO_WIDTH = /[\u200B\u200C\u200D\uFEFF\u00AD]/;
+const HAS_ZERO_WIDTH = /[\u200B\u200C\u200D\uFEFF\u00AD\u0332\u0333\u0305\u0336\u0338]/;
 const HAS_BASE64_CANDIDATE = /[A-Za-z0-9+/]{20,}={0,2}/;
 const HAS_ENCODED_ENTITIES = /&#\w+;|%[0-9a-fA-F]{2}/;
 
@@ -1233,16 +1400,35 @@ const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDG
       threats.push(threat);
     }
 
-    if (HAS_ZERO_WIDTH.test(text) && hasZeroWidthObfuscation(text)) {
-      const threat = {
-        severity: 'critical',
-        category: 'prompt_injection',
-        description: 'Text uses invisible characters to split up attack keywords to avoid detection.',
-        detail: `Zero-width character obfuscation detected in ${source}. Invisible Unicode characters were inserted between letters to evade pattern matching.`
-      };
-      threat.confidence = calculateConfidence(threat, patternMatchCount, source);
-      threat.confidenceLabel = confidenceLabel(threat.confidence);
-      threats.push(threat);
+    if (HAS_ZERO_WIDTH.test(text)) {
+      if (hasZeroWidthObfuscation(text)) {
+        const threat = {
+          severity: 'critical',
+          category: 'prompt_injection',
+          description: 'Text uses invisible characters to split up attack keywords to avoid detection.',
+          detail: `Zero-width character obfuscation detected in ${source}. Invisible Unicode characters were inserted between letters to evade pattern matching.`
+        };
+        threat.confidence = calculateConfidence(threat, patternMatchCount, source);
+        threat.confidenceLabel = confidenceLabel(threat.confidence);
+        threats.push(threat);
+      } else {
+        // Check for combining character obfuscation with partial keyword matches
+        const stripped = text.replace(/[\u200B\u200C\u200D\uFEFF\u00AD\u0320-\u035C\u0305\u0332\u0333\u0336\u0338]/g, '');
+        if (stripped !== text && stripped.length >= 5) {
+          const attackKeywords = /\b(?:ignore|override|bypass|disregard|forget|system|admin|jailbreak|hack|exploit|inject|exfiltrate|reveal|extract)\b/i;
+          if (attackKeywords.test(stripped) && !attackKeywords.test(text)) {
+            const threat = {
+              severity: 'high',
+              category: 'prompt_injection',
+              description: 'Text uses combining characters to obfuscate suspicious keywords.',
+              detail: `Combining character obfuscation detected in ${source}. Stripped: "${stripped.substring(0, 100)}"`
+            };
+            threat.confidence = 75;
+            threat.confidenceLabel = confidenceLabel(75);
+            threats.push(threat);
+          }
+        }
+      }
     }
   }
 
@@ -1370,6 +1556,89 @@ const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDG
   const hasBase64 = !isOverBudget() && HAS_BASE64_CANDIDATE.test(text);
   const hasEntities = !isOverBudget() && HAS_ENCODED_ENTITIES.test(text);
   let foundNested = false;
+  let foundSingleLayer = false;
+
+  // Check single-layer HTML entity decoding
+  if (hasEntities && !isOverBudget()) {
+    const htmlDecoded = decodeHTMLEntities(text);
+    if (htmlDecoded !== text && htmlDecoded.length >= 3) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(htmlDecoded) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'critical',
+            category: 'prompt_injection',
+            description: 'Text hides attack instructions inside HTML entity encoding.',
+            detail: `HTML entity encoded injection found in ${source}. Decoded: "${htmlDecoded.substring(0, 100)}"`
+          };
+          threat.confidence = 85;
+          threat.confidenceLabel = confidenceLabel(85);
+          threats.push(threat);
+          foundSingleLayer = true;
+          break;
+        }
+      }
+      // If heavy entity usage, flag as suspicious even without pattern match
+      if (!foundSingleLayer) {
+        const entityCount = (text.match(/&#\d+;|&#x[0-9a-fA-F]+;/g) || []).length;
+        if (entityCount >= 4 && entityCount / text.split(/\s+/).length > 0.5) {
+          const threat = {
+            severity: 'high',
+            category: 'prompt_injection',
+            description: 'Text is heavily encoded with HTML entities, possibly to hide instructions.',
+            detail: `Suspicious HTML entity encoding found in ${source}. Decoded: "${htmlDecoded.substring(0, 100)}"`
+          };
+          threat.confidence = 70;
+          threat.confidenceLabel = confidenceLabel(70);
+          threats.push(threat);
+          foundSingleLayer = true;
+        }
+      }
+    }
+  }
+
+  // Check single-layer URL decoding
+  if (!foundSingleLayer && hasEntities && !isOverBudget()) {
+    const urlDecoded = tryURLDecode(text);
+    if (urlDecoded && urlDecoded.length >= 5) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(urlDecoded) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'critical',
+            category: 'prompt_injection',
+            description: 'Text hides attack instructions inside URL encoding.',
+            detail: `URL-encoded injection found in ${source}. Decoded: "${urlDecoded.substring(0, 100)}"`
+          };
+          threat.confidence = 85;
+          threat.confidenceLabel = confidenceLabel(85);
+          threats.push(threat);
+          foundSingleLayer = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Also check percent-encoded text (may not have &# but has %XX)
+  if (!foundSingleLayer && !isOverBudget() && /%[0-9a-fA-F]{2}/.test(text)) {
+    const urlDecoded = tryURLDecode(text);
+    if (urlDecoded && urlDecoded !== text && urlDecoded.length >= 5) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(urlDecoded) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'critical',
+            category: 'prompt_injection',
+            description: 'Text hides attack instructions inside URL encoding.',
+            detail: `URL-encoded injection found in ${source}. Decoded: "${urlDecoded.substring(0, 100)}"`
+          };
+          threat.confidence = 85;
+          threat.confidenceLabel = confidenceLabel(85);
+          threats.push(threat);
+          foundSingleLayer = true;
+          break;
+        }
+      }
+    }
+  }
 
   if (hasEntities || hasBase64) {
     const nestedResult = checkNestedEncoding(text);
