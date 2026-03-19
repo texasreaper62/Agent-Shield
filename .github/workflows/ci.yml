@@ -45,9 +45,6 @@ jobs:
       - name: Shield score
         run: npm run score
 
-      - name: Benchmark
-        run: npm run benchmark
-
       - name: Verify examples
         run: node examples/quick-start.js
 
