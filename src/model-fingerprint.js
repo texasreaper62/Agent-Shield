@@ -380,10 +380,10 @@ class ResponseAnalyzer {
     const text = words.join(' ');
     let formalCount = 0;
     let informalCount = 0;
-    for (const w of this._formalWords) {
+    for (const w of FORMAL_WORDS) {
       if (text.includes(w)) formalCount++;
     }
-    for (const w of this._informalWords) {
+    for (const w of INFORMAL_WORDS) {
       if (text.includes(w)) informalCount++;
     }
     const total = formalCount + informalCount;
@@ -449,7 +449,7 @@ class ResponseAnalyzer {
     if (wordCount === 0) return 0;
     const lower = text.toLowerCase();
     let count = 0;
-    for (const phrase of this._transitionPhrases) {
+    for (const phrase of TRANSITION_PHRASES) {
       const regex = new RegExp('\\b' + phrase.replace(/\s+/g, '\\s+') + '\\b', 'gi');
       const matches = lower.match(regex);
       if (matches) count += matches.length;
