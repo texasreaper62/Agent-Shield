@@ -77,6 +77,8 @@ const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK
 // Shield Score
 const { ShieldScoreCalculator, SCORE_CATEGORIES } = safeRequire('./shield-score', 'shield-score');
 
+// Benchmark Harness — imported above (line 69)
+
 // Threat Encyclopedia
 const { ThreatEncyclopedia, THREAT_ENCYCLOPEDIA, DAILY_PATTERNS } = safeRequire('./threat-encyclopedia', 'threat-encyclopedia');
 
@@ -322,6 +324,13 @@ const _exports = {
   // Shield Score
   ShieldScoreCalculator,
   SCORE_CATEGORIES,
+
+  // Benchmark Harness
+  BenchmarkHarness,
+  DatasetLoader,
+  BenchmarkMetrics,
+  RegressionTracker,
+  BenchmarkReportGenerator,
 
   // Threat Encyclopedia
   ThreatEncyclopedia,
@@ -626,14 +635,8 @@ const _exports = {
   AuditProof,
   verifyAuditChain,
 
-  // v5.1 — Agent observability (also exported in Observability section above)
-
-  // v5.1 — Benchmark harness
-  BenchmarkHarness,
-  DatasetLoader,
-  BenchmarkMetrics,
-  RegressionTracker,
-  BenchmarkReportGenerator
+  // v5.1 — Agent observability exported in Observability section above
+  // v5.1 — Benchmark harness exported in Benchmark Harness section above
 };
 
 // Filter out undefined exports (from modules that failed to load)
