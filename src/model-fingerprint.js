@@ -689,6 +689,9 @@ class FingerprintDatabase {
    * @returns {Array<{model: string, similarity: number}>}
    */
   identify(features) {
+    if (!features || typeof features !== 'object') {
+      return this.listModels().map(m => ({ model: m, similarity: 0 }));
+    }
     const results = [];
     for (const [name, profile] of this._profiles) {
       results.push({

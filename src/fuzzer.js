@@ -124,10 +124,10 @@ const GRAMMAR = {
  */
 class MutationEngine {
   /**
-   * @param {PRNG} rng
+   * @param {PRNG} [rng]
    */
   constructor(rng) {
-    this._rng = rng;
+    this._rng = rng || new PRNG(Date.now());
   }
 
   /**
@@ -622,6 +622,12 @@ class FuzzingHarness {
    * @param {boolean} [config.coverageGuided=true]
    */
   constructor(config = {}) {
+    // Accept (fn) or (fn, opts) shorthand in addition to ({targetFn, ...})
+    if (typeof config === 'function') {
+      const fn = config;
+      config = arguments[1] || {};
+      config.targetFn = fn;
+    }
     this.targetFn = config.targetFn;
     this.iterations = config.iterations || 100000;
     this.seed = config.seed || 42;

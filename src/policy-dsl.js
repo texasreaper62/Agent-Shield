@@ -538,6 +538,10 @@ class PolicyValidator {
     const warnings = [];
     const parser = new PolicyParser();
 
+    if (!source || typeof source !== 'string') {
+      return { valid: false, errors: [{ message: 'Source must be a non-empty string' }], warnings: [] };
+    }
+
     // Check braces
     let braceCount = 0;
     const lines = source.split('\n');
@@ -647,7 +651,10 @@ class PolicyDSL {
    * @returns {{action: string, reason: string, severity: string, matched_rules: string[]}}
    */
   evaluate(policy, context) {
-    return this._runtime.execute(policy, context);
+    const ctx = context && typeof context === 'object' ? context : { input: '' };
+    if (ctx.input === undefined || ctx.input === null) ctx.input = '';
+    if (typeof ctx.input !== 'string') ctx.input = String(ctx.input);
+    return this._runtime.execute(policy, ctx);
   }
 
   /**

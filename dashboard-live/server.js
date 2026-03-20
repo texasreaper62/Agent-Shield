@@ -148,7 +148,7 @@ class ThreatStreamServer {
         };
 
         this._threatHistory.push(threatEntry);
-        if (this._threatHistory.length > this.historySize * 1.5) {
+        if (this._threatHistory.length > this.historySize) {
           this._threatHistory = this._threatHistory.slice(-this.historySize);
         }
 
