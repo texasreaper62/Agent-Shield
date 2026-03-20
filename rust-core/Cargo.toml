@@ -1,0 +1,32 @@
+[package]
+name = "agent-shield-core"
+version = "1.0.0"
+edition = "2021"
+description = "High-performance core detection engine for Agent Shield"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wasm-bindgen = { version = "0.2", optional = true }
+napi = { version = "2", optional = true, features = ["napi4"] }
+napi-derive = { version = "2", optional = true }
+pyo3 = { version = "0.20", optional = true, features = ["extension-module"] }
+
+[features]
+default = []
+wasm = ["wasm-bindgen"]
+node = ["napi", "napi-derive"]
+python = ["pyo3"]
+
+[[example]]
+name = "scan_benchmark"
+path = "examples/scan_benchmark.rs"
+
+[profile.release]
+opt-level = 3
+lto = true

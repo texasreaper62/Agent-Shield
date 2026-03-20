@@ -41,6 +41,17 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Agent behavior profiling — `BehaviorProfile` with statistical baselining, anomaly detection (z-score), health checks
 - [x] Threat intelligence network — `ThreatIntelNetwork` with `PeerNode` reputation, `PatternAnonymizer` (differential privacy), `ConsensusEngine`, `ThreatFeed` with STIX-like export
 
+## v4.0 — Performance & Polyglot (Complete)
+
+- [x] Rust core engine — `rust-core/` with `RegexSet`-based O(n) multi-pattern matching, compilation targets for WASM (`wasm-bindgen`), Node.js NAPI (`napi-rs`), and Python (`PyO3`)
+- [x] Go SDK — `go-sdk/` with full detection engine, HTTP/gRPC middleware, CLI tool, benchmarks, zero external dependencies
+- [x] Terraform provider — `terraform-provider/` with `agent_shield_policy`, `agent_shield_rule`, `agent_shield_tenant` resources for infrastructure-as-code
+- [x] OpenTelemetry Collector — `otel-collector/` with receiver (HTTP scan endpoint → log records) and processor (scan logs/traces, annotate/drop/log actions)
+- [x] GitHub App — `github-app/` with PR scanning, Check Run annotations, GitHub Action (`action.yml`), webhook signature verification, diff parsing
+- [x] Benchmark registry — `benchmark-registry/` with `BenchmarkSuite` (100+ test cases), `MetricsCalculator` (F1, MCC, throughput, latency percentiles), `Leaderboard`, interactive web dashboard
+- [x] Multi-language patterns — `I18nPatternManager` with 32+ patterns across CJK (Chinese/Japanese/Korean), Arabic, Cyrillic (Russian/Ukrainian), and Indic (Hindi/Devanagari) scripts
+- [x] LLM Red Team Suite — `LLMRedTeamSuite` with `JailbreakLibrary` (35+ templates across 6 categories), `AdversarialGenerator`, `EvasionTester`, `RedTeamReport` with weakness analysis
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs — publish an open threat taxonomy for AI agent attacks

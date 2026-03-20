@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Shield — Benchmark Leaderboard</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-card: #f8f9fa;
+      --bg-hover: #e9ecef;
+      --text: #212529;
+      --text-muted: #6c757d;
+      --border: #dee2e6;
+      --accent: #4361ee;
+      --accent-light: #e8ecfd;
+      --success: #2dc653;
+      --warning: #ffc107;
+      --danger: #e05d44;
+      --bar-bg: #e9ecef;
+      --radar-bg: rgba(67, 97, 238, 0.15);
+      --radar-stroke: #4361ee;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1b2e;
+      --bg-card: #252640;
+      --bg-hover: #2d2e4a;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --accent: #818cf8;
+      --accent-light: #2d2e4a;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --bar-bg: #334155;
+      --radar-bg: rgba(129, 140, 248, 0.15);
+      --radar-stroke: #818cf8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-hover);
+    }
+
+    select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* Leaderboard Table */
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      margin-bottom: 40px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    th:hover {
+      color: var(--accent);
+    }
+
+    th.sorted {
+      color: var(--accent);
+    }
+
+    th .sort-arrow {
+      margin-left: 4px;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: var(--bg-hover);
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .rank-1 { background: #ffd700; color: #000; }
+    .rank-2 { background: #c0c0c0; color: #000; }
+    .rank-3 { background: #cd7f32; color: #fff; }
+    .rank-other { background: var(--bg-card); color: var(--text-muted); }
+
+    .metric-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .metric-bar .bar {
+      width: 80px;
+      height: 6px;
+      background: var(--bar-bg);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .metric-bar .bar .fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .fill-high { background: var(--success); }
+    .fill-mid { background: var(--warning); }
+    .fill-low { background: var(--danger); }
+
+    /* Charts Section */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .chart-card h3 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    /* Bar Chart */
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bar-chart-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-chart-label {
+      width: 120px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-chart-track {
+      flex: 1;
+      height: 24px;
+      background: var(--bar-bg);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-chart-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.8s ease;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 0.75rem;
+      color: #fff;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    /* Radar Chart */
+    .radar-container {
+      display: flex;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    /* Category Filter */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .filter-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .no-data h2 { margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><span>Agent Shield</span> Benchmark Leaderboard</h1>
+      <div class="controls">
+        <select id="sortMetric">
+          <option value="f1">Sort by: F1 Score</option>
+          <option value="accuracy">Sort by: Accuracy</option>
+          <option value="precision">Sort by: Precision</option>
+          <option value="recall">Sort by: Recall</option>
+          <option value="throughput">Sort by: Throughput</option>
+          <option value="mcc">Sort by: MCC</option>
+        </select>
+        <button class="theme-toggle" id="themeToggle">Dark Mode</button>
+      </div>
+    </header>
+
+    <!-- Summary Stats -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="label">Engines Tested</div>
+        <div class="value" id="statEngines">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Test Cases</div>
+        <div class="value" id="statCases">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Best F1 Score</div>
+        <div class="value" id="statBestF1">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg Throughput</div>
+        <div class="value" id="statThroughput">-</div>
+      </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" data-category="all">All Categories</button>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <h2 class="section-title">Leaderboard Rankings</h2>
+    <div class="table-wrapper">
+      <table id="leaderboardTable">
+        <thead>
+          <tr>
+            <th data-sort="rank">Rank</th>
+            <th data-sort="name">Engine</th>
+            <th data-sort="f1">F1 <span class="sort-arrow">&#9660;</span></th>
+            <th data-sort="accuracy">Accuracy</th>
+            <th data-sort="precision">Precision</th>
+            <th data-sort="recall">Recall</th>
+            <th data-sort="mcc">MCC</th>
+            <th data-sort="fpr">FPR</th>
+            <th data-sort="throughput">Throughput</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>F1 Score Comparison</h3>
+        <div class="bar-chart" id="f1Chart"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Multi-Metric Radar</h3>
+        <div class="radar-container" id="radarChart"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Accuracy Comparison</h3>
+        <div class="bar-chart" id="accuracyChart"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Throughput (texts/sec)</h3>
+        <div class="bar-chart" id="throughputChart"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Agent Shield Benchmark Registry &mdash; All detection runs locally. No data leaves your environment.
+    </div>
+  </div>
+
+  <script>
+    // =====================================================================
+    // Dashboard State
+    // =====================================================================
+    let benchmarkData = [];
+    let currentSort = 'f1';
+    let currentCategory = 'all';
+
+    // Sample data — replaced when real benchmark JSON is loaded
+    const SAMPLE_DATA = [
+      {
+        engineId: 'agent-shield',
+        engineName: 'Agent Shield',
+        metrics: {
+          f1: 0.92, accuracy: 0.91, precision: 0.94, recall: 0.90,
+          mcc: 0.82, falsePositiveRate: 0.04, falseNegativeRate: 0.10,
+          throughput: 5200,
+          latency: { p50: 0.2, p95: 0.8, p99: 1.2 }
+        },
+        perCategory: {
+          instruction_override: { f1: 0.95, accuracy: 0.94 },
+          role_hijacking: { f1: 0.93, accuracy: 0.92 },
+          data_exfiltration: { f1: 0.88, accuracy: 0.87 },
+          social_engineering: { f1: 0.85, accuracy: 0.84 },
+          system_prompt_leak: { f1: 0.90, accuracy: 0.89 },
+          tool_abuse: { f1: 0.87, accuracy: 0.86 },
+          benign_safe: { f1: 0.97, accuracy: 0.97 }
+        }
+      },
+      {
+        engineId: 'simple-regex',
+        engineName: 'Simple Regex Baseline',
+        metrics: {
+          f1: 0.65, accuracy: 0.62, precision: 0.70, recall: 0.61,
+          mcc: 0.35, falsePositiveRate: 0.15, falseNegativeRate: 0.39,
+          throughput: 12000,
+          latency: { p50: 0.08, p95: 0.2, p99: 0.4 }
+        },
+        perCategory: {
+          instruction_override: { f1: 0.80, accuracy: 0.78 },
+          role_hijacking: { f1: 0.72, accuracy: 0.70 },
+          data_exfiltration: { f1: 0.55, accuracy: 0.53 },
+          social_engineering: { f1: 0.40, accuracy: 0.38 },
+          system_prompt_leak: { f1: 0.65, accuracy: 0.63 },
+          tool_abuse: { f1: 0.50, accuracy: 0.48 },
+          benign_safe: { f1: 0.78, accuracy: 0.75 }
+        }
+      }
+    ];
+
+    // =====================================================================
+    // Initialization
+    // =====================================================================
+    function init() {
+      loadData();
+      setupThemeToggle();
+      setupSortSelector();
+      setupTableHeaders();
+      render();
+    }
+
+    function loadData() {
+      // Try to load from embedded JSON (set by run-benchmark.js)
+      const embedded = document.getElementById('benchmarkData');
+      if (embedded) {
+        try {
+          benchmarkData = JSON.parse(embedded.textContent);
+        } catch (e) {
+          benchmarkData = SAMPLE_DATA;
+        }
+      } else {
+        benchmarkData = SAMPLE_DATA;
+      }
+    }
+
+    // =====================================================================
+    // Theme Toggle
+    // =====================================================================
+    function setupThemeToggle() {
+      const btn = document.getElementById('themeToggle');
+      const saved = localStorage.getItem('benchmarkTheme');
+      if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        btn.textContent = 'Light Mode';
+      }
+
+      btn.addEventListener('click', function() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+          document.documentElement.removeAttribute('data-theme');
+          btn.textContent = 'Dark Mode';
+          localStorage.setItem('benchmarkTheme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          btn.textContent = 'Light Mode';
+          localStorage.setItem('benchmarkTheme', 'dark');
+        }
+      });
+    }
+
+    // =====================================================================
+    // Sort Controls
+    // =====================================================================
+    function setupSortSelector() {
+      document.getElementById('sortMetric').addEventListener('change', function(e) {
+        currentSort = e.target.value;
+        render();
+      });
+    }
+
+    function setupTableHeaders() {
+      document.querySelectorAll('#leaderboardTable th[data-sort]').forEach(function(th) {
+        th.addEventListener('click', function() {
+          const sortKey = th.getAttribute('data-sort');
+          if (sortKey) {
+            currentSort = sortKey;
+            document.getElementById('sortMetric').value = sortKey;
+            render();
+          }
+        });
+      });
+    }
+
+    // =====================================================================
+    // Rendering
+    // =====================================================================
+    function render() {
+      const sorted = sortData(benchmarkData, currentSort);
+      renderStats(sorted);
+      renderFilters(sorted);
+      renderTable(sorted);
+      renderBarChart('f1Chart', sorted, 'f1', 'F1');
+      renderBarChart('accuracyChart', sorted, 'accuracy', 'Accuracy');
+      renderThroughputChart(sorted);
+      renderRadarChart(sorted);
+    }
+
+    function sortData(data, metric) {
+      return [...data].sort(function(a, b) {
+        var aVal = getMetric(a, metric);
+        var bVal = getMetric(b, metric);
+        if (metric === 'fpr' || metric === 'latency') return aVal - bVal;
+        return bVal - aVal;
+      });
+    }
+
+    function getMetric(entry, key) {
+      var m = entry.metrics;
+      switch (key) {
+        case 'f1': return m.f1 || 0;
+        case 'accuracy': return m.accuracy || 0;
+        case 'precision': return m.precision || 0;
+        case 'recall': return m.recall || 0;
+        case 'mcc': return m.mcc || 0;
+        case 'fpr': return m.falsePositiveRate || 0;
+        case 'throughput': return m.throughput || 0;
+        case 'rank': return 0;
+        case 'name': return 0;
+        default: return m.f1 || 0;
+      }
+    }
+
+    function renderStats(sorted) {
+      document.getElementById('statEngines').textContent = sorted.length;
+      document.getElementById('statCases').textContent = '100+';
+      if (sorted.length > 0) {
+        document.getElementById('statBestF1').textContent = pct(sorted[0].metrics.f1);
+        var avgThroughput = sorted.reduce(function(s, e) { return s + (e.metrics.throughput || 0); }, 0) / sorted.length;
+        document.getElementById('statThroughput').textContent = Math.round(avgThroughput) + ' t/s';
+      }
+    }
+
+    function renderFilters(sorted) {
+      var bar = document.getElementById('filterBar');
+      var categories = new Set();
+      sorted.forEach(function(e) {
+        if (e.perCategory) {
+          Object.keys(e.perCategory).forEach(function(c) { categories.add(c); });
+        }
+      });
+
+      bar.innerHTML = '<button class="filter-btn active" data-category="all">All Categories</button>';
+      categories.forEach(function(cat) {
+        var btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.setAttribute('data-category', cat);
+        btn.textContent = cat.replace(/_/g, ' ');
+        bar.appendChild(btn);
+      });
+
+      bar.querySelectorAll('.filter-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          bar.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          currentCategory = btn.getAttribute('data-category');
+          render();
+        });
+      });
+    }
+
+    function renderTable(sorted) {
+      var tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '';
+
+      sorted.forEach(function(entry, i) {
+        var m = entry.metrics;
+        var tr = document.createElement('tr');
+        var rankClass = i < 3 ? 'rank-' + (i + 1) : 'rank-other';
+
+        tr.innerHTML =
+          '<td><span class="rank-badge ' + rankClass + '">' + (i + 1) + '</span></td>' +
+          '<td><strong>' + escHtml(entry.engineName) + '</strong></td>' +
+          '<td>' + metricCell(m.f1) + '</td>' +
+          '<td>' + metricCell(m.accuracy) + '</td>' +
+          '<td>' + metricCell(m.precision) + '</td>' +
+          '<td>' + metricCell(m.recall) + '</td>' +
+          '<td>' + (m.mcc !== null && m.mcc !== undefined ? m.mcc.toFixed(3) : 'N/A') + '</td>' +
+          '<td>' + pct(m.falsePositiveRate) + '</td>' +
+          '<td>' + (m.throughput ? Math.round(m.throughput) + ' t/s' : 'N/A') + '</td>';
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function metricCell(val) {
+      if (val === undefined || val === null) return 'N/A';
+      var pctVal = (val * 100).toFixed(1);
+      var fillClass = val >= 0.8 ? 'fill-high' : (val >= 0.6 ? 'fill-mid' : 'fill-low');
+      return '<div class="metric-bar">' +
+        '<span>' + pctVal + '%</span>' +
+        '<div class="bar"><div class="fill ' + fillClass + '" style="width:' + pctVal + '%"></div></div>' +
+        '</div>';
+    }
+
+    // =====================================================================
+    // Bar Charts
+    // =====================================================================
+    function renderBarChart(containerId, sorted, metric, label) {
+      var container = document.getElementById(containerId);
+      container.innerHTML = '';
+      var colors = ['#4361ee', '#7c3aed', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#ec4899', '#8b5cf6'];
+
+      sorted.forEach(function(entry, i) {
+        var val = entry.metrics[metric] || 0;
+        var pctVal = (val * 100).toFixed(1);
+        var color = colors[i % colors.length];
+
+        var row = document.createElement('div');
+        row.className = 'bar-chart-row';
+        row.innerHTML =
+          '<div class="bar-chart-label">' + escHtml(entry.engineName) + '</div>' +
+          '<div class="bar-chart-track">' +
+          '<div class="bar-chart-fill" style="width:' + pctVal + '%;background:' + color + '">' + pctVal + '%</div>' +
+          '</div>';
+        container.appendChild(row);
+      });
+    }
+
+    function renderThroughputChart(sorted) {
+      var container = document.getElementById('throughputChart');
+      container.innerHTML = '';
+      var maxT = Math.max.apply(null, sorted.map(function(e) { return e.metrics.throughput || 0; }));
+      var colors = ['#4361ee', '#7c3aed', '#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
+
+      sorted.forEach(function(entry, i) {
+        var val = entry.metrics.throughput || 0;
+        var widthPct = maxT > 0 ? ((val / maxT) * 100).toFixed(1) : 0;
+        var color = colors[i % colors.length];
+
+        var row = document.createElement('div');
+        row.className = 'bar-chart-row';
+        row.innerHTML =
+          '<div class="bar-chart-label">' + escHtml(entry.engineName) + '</div>' +
+          '<div class="bar-chart-track">' +
+          '<div class="bar-chart-fill" style="width:' + widthPct + '%;background:' + color + '">' + Math.round(val) + ' t/s</div>' +
+          '</div>';
+        container.appendChild(row);
+      });
+    }
+
+    // =====================================================================
+    // Radar Chart (SVG)
+    // =====================================================================
+    function renderRadarChart(sorted) {
+      var container = document.getElementById('radarChart');
+      if (sorted.length === 0) { container.innerHTML = '<p>No data</p>'; return; }
+
+      var size = 280;
+      var cx = size / 2;
+      var cy = size / 2;
+      var radius = 110;
+      var metrics = ['f1', 'accuracy', 'precision', 'recall', 'mcc'];
+      var labels = ['F1', 'Accuracy', 'Precision', 'Recall', 'MCC'];
+      var n = metrics.length;
+      var angleStep = (2 * Math.PI) / n;
+
+      var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">';
+
+      // Grid circles
+      for (var level = 1; level <= 4; level++) {
+        var r = (radius * level) / 4;
+        svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--border)" stroke-width="0.5"/>';
+      }
+
+      // Axis lines and labels
+      for (var i = 0; i < n; i++) {
+        var angle = -Math.PI / 2 + i * angleStep;
+        var x = cx + radius * Math.cos(angle);
+        var y = cy + radius * Math.sin(angle);
+        svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="var(--border)" stroke-width="0.5"/>';
+        var lx = cx + (radius + 18) * Math.cos(angle);
+        var ly = cy + (radius + 18) * Math.sin(angle);
+        svg += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" dominant-baseline="middle" fill="var(--text-muted)" font-size="11">' + labels[i] + '</text>';
+      }
+
+      // Data polygons
+      var colors = ['rgba(67,97,238,0.7)', 'rgba(124,58,237,0.7)', 'rgba(6,182,212,0.7)'];
+      var fills = ['rgba(67,97,238,0.15)', 'rgba(124,58,237,0.15)', 'rgba(6,182,212,0.15)'];
+
+      sorted.slice(0, 3).forEach(function(entry, eIdx) {
+        var points = [];
+        for (var j = 0; j < n; j++) {
+          var val = entry.metrics[metrics[j]] || 0;
+          if (val < 0) val = (val + 1) / 2;  // normalize MCC
+          var a = -Math.PI / 2 + j * angleStep;
+          var px = cx + radius * val * Math.cos(a);
+          var py = cy + radius * val * Math.sin(a);
+          points.push(px + ',' + py);
+        }
+        svg += '<polygon points="' + points.join(' ') + '" fill="' + fills[eIdx] + '" stroke="' + colors[eIdx] + '" stroke-width="2"/>';
+      });
+
+      // Legend
+      sorted.slice(0, 3).forEach(function(entry, eIdx) {
+        var ly = size - 10 - (2 - eIdx) * 16;
+        svg += '<rect x="10" y="' + (ly - 8) + '" width="12" height="12" rx="2" fill="' + colors[eIdx] + '"/>';
+        svg += '<text x="28" y="' + ly + '" fill="var(--text)" font-size="11" dominant-baseline="middle">' + escXml(entry.engineName) + '</text>';
+      });
+
+      svg += '</svg>';
+      container.innerHTML = svg;
+    }
+
+    // =====================================================================
+    // Helpers
+    // =====================================================================
+    function pct(val) {
+      if (val === undefined || val === null) return 'N/A';
+      return (val * 100).toFixed(1) + '%';
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escXml(str) {
+      return escHtml(str).replace(/'/g, '&apos;');
+    }
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

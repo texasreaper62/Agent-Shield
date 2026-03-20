@@ -1,0 +1,77 @@
+# OpenTelemetry Collector configuration with Agent Shield components.
+#
+# This example demonstrates a pipeline that:
+# 1. Receives scan requests via the Agent Shield receiver
+# 2. Processes telemetry through the Agent Shield processor
+# 3. Exports to both console logging and an OTLP endpoint
+
+receivers:
+  # Agent Shield receiver: exposes an HTTP endpoint that accepts text
+  # for scanning and emits threat detections as OTel log records.
+  agent_shield_receiver:
+    port: 8888
+    path: "/scan"
+    min_severity: "low"
+    block_on_threat: false
+
+  # Standard OTLP receiver for ingesting telemetry from applications.
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  # Agent Shield processor: scans logs and traces for prompt injection,
+  # data exfiltration, and other AI-specific threats.
+  agent_shield_processor:
+    min_severity: "medium"
+    action: "annotate"
+    scan_attributes:
+      - "user.input"
+      - "llm.prompt"
+      - "llm.completion"
+      - "http.request.body"
+    categories: []  # Empty means scan all categories.
+
+  # Batch processor for efficient export.
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+exporters:
+  # Console logging for development and debugging.
+  logging:
+    loglevel: debug
+
+  # OTLP exporter for sending to a backend (Jaeger, Grafana, etc.).
+  otlp:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    # Logs pipeline: Agent Shield receiver -> processor -> exporters.
+    logs:
+      receivers:
+        - agent_shield_receiver
+        - otlp
+      processors:
+        - agent_shield_processor
+        - batch
+      exporters:
+        - logging
+        - otlp
+
+    # Traces pipeline: OTLP receiver -> Agent Shield processor -> exporters.
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - agent_shield_processor
+        - batch
+      exporters:
+        - logging
+        - otlp

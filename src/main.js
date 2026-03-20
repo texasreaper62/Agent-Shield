@@ -194,6 +194,14 @@ const { ModelTrainer, TrainingPipeline, DatasetManager, ModelEvaluator, FineTune
 // Threat Intelligence Network
 const { ThreatIntelNetwork, PeerNode, PatternAnonymizer, ConsensusEngine, ThreatFeed, NETWORK_DEFAULTS } = safeRequire('./threat-intel-network', 'threat-intel-network');
 
+// --- v4.0 Modules ---
+
+// Multi-Language Patterns
+const { I18nPatternManager, CJK_PATTERNS, ARABIC_PATTERNS, CYRILLIC_PATTERNS, INDIC_PATTERNS, MULTILINGUAL_PATTERNS, getI18nPatterns } = safeRequire('./i18n-patterns', 'i18n-patterns');
+
+// LLM Red Team Suite
+const { LLMRedTeamSuite, AdversarialGenerator, JailbreakLibrary, EvasionTester, RedTeamReport, JAILBREAK_TEMPLATES, MUTATION_TECHNIQUES } = safeRequire('./llm-redteam', 'llm-redteam');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -496,7 +504,25 @@ const _exports = {
   PatternAnonymizer,
   ConsensusEngine,
   ThreatFeed,
-  NETWORK_DEFAULTS
+  NETWORK_DEFAULTS,
+
+  // v4.0 — Multi-Language Patterns
+  I18nPatternManager,
+  CJK_PATTERNS,
+  ARABIC_PATTERNS,
+  CYRILLIC_PATTERNS,
+  INDIC_PATTERNS,
+  MULTILINGUAL_PATTERNS,
+  getI18nPatterns,
+
+  // v4.0 — LLM Red Team Suite
+  LLMRedTeamSuite,
+  AdversarialGenerator,
+  JailbreakLibrary,
+  EvasionTester,
+  RedTeamReport,
+  JAILBREAK_TEMPLATES,
+  MUTATION_TECHNIQUES
 };
 
 // Filter out undefined exports (from modules that failed to load)
