@@ -376,7 +376,226 @@ class ScanQueue {
 }
 
 // =========================================================================
+// THREADED WORKER SCANNER (opt-in, uses worker_threads)
+// =========================================================================
+
+/**
+ * Worker scanner using real Node.js worker_threads for true parallel scanning.
+ * Falls back to WorkerScanner (async yield) if worker_threads is unavailable.
+ *
+ * Usage:
+ *   const scanner = new ThreadedWorkerScanner({ poolSize: 4 });
+ *   const result = await scanner.scan('some text');
+ *   scanner.terminate();
+ *
+ * NOTE: This uses worker_threads which requires Node.js >= 12. The zero-dep
+ * constraint is maintained since worker_threads is a Node.js built-in.
+ */
+class ThreadedWorkerScanner {
+  /**
+   * @param {object} [options]
+   * @param {number} [options.poolSize=2] - Number of worker threads.
+   * @param {number} [options.timeout=5000] - Per-scan timeout in ms.
+   */
+  constructor(options = {}) {
+    this.poolSize = options.poolSize || 2;
+    this.timeout = options.timeout || 5000;
+    this._workers = [];
+    this._queue = [];
+    this._completedJobs = 0;
+    this._errorCount = 0;
+    this._terminated = false;
+    this._workerThreadsAvailable = false;
+
+    try {
+      this._workerThreadsModule = require('worker_threads');
+      if (this._workerThreadsModule.isMainThread) {
+        this._workerThreadsAvailable = true;
+        this._initWorkers();
+      }
+    } catch (e) {
+      console.log('[Agent Shield] worker_threads not available, falling back to async mode.');
+    }
+
+    if (!this._workerThreadsAvailable) {
+      this._fallback = new WorkerScanner({
+        poolSize: this.poolSize,
+        timeout: this.timeout
+      });
+    }
+
+    console.log('[Agent Shield] ThreadedWorkerScanner initialized (poolSize: %d, threaded: %s)', this.poolSize, this._workerThreadsAvailable);
+  }
+
+  /**
+   * Initialize the worker thread pool.
+   * @private
+   */
+  _initWorkers() {
+    const { Worker } = this._workerThreadsModule;
+    const workerScript = `
+      const { parentPort } = require('worker_threads');
+      const { scanText } = require('${require('path').resolve(__dirname, 'detector-core.js').replace(/\\/g, '\\\\')}');
+
+      parentPort.on('message', (msg) => {
+        try {
+          const result = scanText(msg.text, msg.options || {});
+          parentPort.postMessage({ id: msg.id, result, error: null });
+        } catch (err) {
+          parentPort.postMessage({ id: msg.id, result: null, error: err.message });
+        }
+      });
+    `;
+
+    for (let i = 0; i < this.poolSize; i++) {
+      const worker = new Worker(workerScript, { eval: true });
+      worker._busy = false;
+      worker._currentJob = null;
+
+      worker.on('message', (msg) => {
+        const job = worker._currentJob;
+        worker._busy = false;
+        worker._currentJob = null;
+
+        if (job) {
+          clearTimeout(job.timer);
+          if (msg.error) {
+            this._errorCount++;
+            job.reject(new Error(msg.error));
+          } else {
+            this._completedJobs++;
+            job.resolve(msg.result);
+          }
+        }
+
+        this._processQueue();
+      });
+
+      worker.on('error', (err) => {
+        const job = worker._currentJob;
+        worker._busy = false;
+        worker._currentJob = null;
+        this._errorCount++;
+
+        if (job) {
+          clearTimeout(job.timer);
+          job.reject(err);
+        }
+
+        this._processQueue();
+      });
+
+      this._workers.push(worker);
+    }
+  }
+
+  /**
+   * Scan text using a worker thread (or fallback).
+   * @param {string} text - The text to scan.
+   * @param {object} [options] - Scan options passed to scanText.
+   * @returns {Promise<object>} Scan result.
+   */
+  async scan(text, options = {}) {
+    if (this._terminated) {
+      throw new Error('ThreadedWorkerScanner has been terminated.');
+    }
+
+    if (!this._workerThreadsAvailable) {
+      return this._fallback.scan(text, options);
+    }
+
+    return new Promise((resolve, reject) => {
+      const id = ++this._completedJobs + this._errorCount + this._queue.length;
+      const job = { id, text, options, resolve, reject, timer: null };
+
+      job.timer = setTimeout(() => {
+        reject(new Error(`Scan timed out after ${this.timeout}ms`));
+      }, this.timeout);
+
+      this._queue.push(job);
+      this._processQueue();
+    });
+  }
+
+  /**
+   * Scan multiple texts in parallel.
+   * @param {string[]} texts - Array of texts to scan.
+   * @param {object} [options] - Scan options.
+   * @returns {Promise<object[]>} Array of scan results.
+   */
+  async scanBatch(texts, options = {}) {
+    if (!Array.isArray(texts) || texts.length === 0) return [];
+    return Promise.all(texts.map(text => this.scan(text, options)));
+  }
+
+  /**
+   * Process queued jobs by dispatching to idle workers.
+   * @private
+   */
+  _processQueue() {
+    if (this._queue.length === 0) return;
+
+    for (const worker of this._workers) {
+      if (!worker._busy && this._queue.length > 0) {
+        const job = this._queue.shift();
+        worker._busy = true;
+        worker._currentJob = job;
+        worker.postMessage({ id: job.id, text: job.text, options: job.options });
+      }
+    }
+  }
+
+  /**
+   * Get pool statistics.
+   * @returns {object}
+   */
+  getStats() {
+    if (!this._workerThreadsAvailable && this._fallback) {
+      return { ...this._fallback.getStats(), threaded: false };
+    }
+
+    return {
+      activeWorkers: this._workers.filter(w => w._busy).length,
+      queuedJobs: this._queue.length,
+      completed: this._completedJobs,
+      errors: this._errorCount,
+      poolSize: this.poolSize,
+      terminated: this._terminated,
+      threaded: true
+    };
+  }
+
+  /**
+   * Shut down all worker threads.
+   */
+  terminate() {
+    this._terminated = true;
+
+    if (this._workerThreadsAvailable) {
+      for (const worker of this._workers) {
+        if (worker._currentJob) {
+          clearTimeout(worker._currentJob.timer);
+          worker._currentJob.reject(new Error('ThreadedWorkerScanner terminated.'));
+        }
+        worker.terminate();
+      }
+      this._workers = [];
+    } else if (this._fallback) {
+      this._fallback.terminate();
+    }
+
+    for (const job of this._queue) {
+      clearTimeout(job.timer);
+      job.reject(new Error('ThreadedWorkerScanner terminated.'));
+    }
+    this._queue = [];
+
+    console.log('[Agent Shield] ThreadedWorkerScanner terminated (completed: %d, errors: %d)', this._completedJobs, this._errorCount);
+  }
+}
+
+// =========================================================================
 // EXPORTS
 // =========================================================================
 
-module.exports = { WorkerScanner, ScanQueue };
+module.exports = { WorkerScanner, ScanQueue, ThreadedWorkerScanner };

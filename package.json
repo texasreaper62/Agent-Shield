@@ -12,6 +12,7 @@
     "test:all": "node test/test-all-40-features.js",
     "lint": "node test/lint.js",
     "score": "node -e \"const {ShieldScoreCalculator}=require('./src/shield-score');console.log(new ShieldScoreCalculator().formatReport())\"",
+    "benchmark": "node test/benchmark.js",
     "redteam": "node -e \"const {AttackSimulator}=require('./src/redteam');const s=new AttackSimulator();s.runAll();console.log(s.formatReport())\"",
     "test:fp": "node test/false-positives.js",
     "test:adversarial": "node test/test-adversarial.js",

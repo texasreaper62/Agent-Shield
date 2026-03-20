@@ -583,6 +583,64 @@ const INJECTION_PATTERNS = [
     detail: 'Voice sample harvesting: users asked to speak phrases that can train voice cloning models.'
   },
 
+  // --- Expanded AI Phishing & Scam Patterns ---
+  {
+    regex: /(?:scan|click)\s+(?:this|the)\s+(?:QR\s*code|barcode)\s+(?:to|for)\s+(?:verify|confirm|authenticate|unlock|claim)/i,
+    severity: 'high',
+    category: 'ai_phishing',
+    description: 'Text uses QR codes to lure users into a phishing flow.',
+    detail: 'QR code phishing (quishing): directs users to scan a code for fake verification.'
+  },
+  {
+    regex: /(?:your|the)\s+(?:AI|model|assistant|account)\s+(?:has\s+been|was|is)\s+(?:flagged|reported|compromised|locked|limited)\s+(?:for|due\s+to)\s+(?:suspicious|unusual|unauthorized)/i,
+    severity: 'high',
+    category: 'ai_phishing',
+    description: 'Text claims an AI account was flagged — a common phishing scare tactic.',
+    detail: 'AI account scare phishing: fake alert about account being flagged for suspicious activity.'
+  },
+  {
+    regex: /(?:verify|confirm)\s+(?:your\s+)?(?:identity|account)\s+(?:via|through|using|by)\s+(?:MFA|2FA|two.factor|multi.factor|authenticat)/i,
+    severity: 'high',
+    category: 'ai_phishing',
+    description: 'Text asks for MFA/2FA verification — may be harvesting authentication tokens.',
+    detail: 'MFA phishing: attempts to intercept or harvest multi-factor authentication credentials.'
+  },
+  {
+    regex: /(?:urgent|immediate|critical)\s*[:\-!]?\s*(?:your\s+)?(?:API\s+key|token|credentials?|password|secret)\s+(?:has|have|is|was|will)\s+(?:been\s+)?(?:expir|compromis|revok|leak|expos|reset)/i,
+    severity: 'critical',
+    category: 'ai_phishing',
+    description: 'Text creates urgency about leaked/expired credentials — classic phishing.',
+    detail: 'Credential urgency phishing: fake alert about API keys or tokens being compromised.'
+  },
+  {
+    regex: /(?:click|visit|go\s+to|open|navigate)\s+(?:this|the)\s+(?:link|url|page)\s+(?:to|and)\s+(?:verify|confirm|restore|recover|unlock|secure)\s+(?:your\s+)?(?:account|access|identity)/i,
+    severity: 'high',
+    category: 'ai_phishing',
+    description: 'Text directs users to click a link for fake account recovery.',
+    detail: 'Link-based phishing: directs user to external URL for fake verification/recovery.'
+  },
+  {
+    regex: /(?:enter|provide|submit|type|input)\s+(?:your\s+)?(?:API\s+key|secret\s+key|access\s+token|private\s+key|password|credentials?)\s+(?:here|below|in\s+(?:the|this)\s+(?:field|form|box|input))/i,
+    severity: 'critical',
+    category: 'ai_phishing',
+    description: 'Text asks users to enter sensitive credentials into a form.',
+    detail: 'Credential harvesting: direct request for API keys, passwords, or tokens.'
+  },
+  {
+    regex: /(?:free|unlimited|premium)\s+(?:AI|GPT|Claude|model)\s+(?:access|credits?|tokens?|usage)\s+(?:at|via|through|from)\s+/i,
+    severity: 'medium',
+    category: 'ai_phishing',
+    description: 'Text promotes free/unlimited AI access — common lure for credential theft.',
+    detail: 'AI access scam: fake offer of free/unlimited AI service to harvest credentials.'
+  },
+  {
+    regex: /(?:your\s+)?(?:subscription|plan|trial|access)\s+(?:has\s+)?(?:expired|ended|been\s+cancelled|will\s+expire)\s*[.,!]?\s*(?:renew|reactivate|update\s+(?:your\s+)?(?:payment|billing|card))/i,
+    severity: 'high',
+    category: 'ai_phishing',
+    description: 'Text claims a subscription expired and asks to renew — billing phishing.',
+    detail: 'Subscription phishing: fake expiration notice to harvest payment information.'
+  },
+
   // --- Indirect Prompt Injection via Images ---
   {
     regex: /(?:alt|title)\s*=\s*["'][^"']*(?:ignore|override|system|admin|forget|you\s+are\s+now)[^"']*["']/i,
@@ -1065,6 +1123,52 @@ const HOMOGLYPH_MAP = {
   '\uFF3A': 'Z',
   // Common symbol substitutions
   '\u0131': 'i', '\u0237': 'j', '\u1D00': 'A', '\u0261': 'g',
+  // Cherokee look-alikes
+  '\u13A0': 'D', '\u13A1': 'R', '\u13A2': 'T', '\u13A9': 'Y', '\u13AA': 'A',
+  '\u13AB': 'J', '\u13AC': 'S', '\u13B3': 'W', '\u13B7': 'M', '\u13BB': 'H',
+  '\u13C0': 'G', '\u13C2': 'h', '\u13C3': 'Z', '\u13CF': 'b', '\u13D2': 'R',
+  '\u13DA': 'V', '\u13DE': 'L', '\u13DF': 'C', '\u13E2': 'P', '\u13E6': 'K',
+  // Georgian look-alikes
+  '\u10D0': 'a', '\u10D5': 'b', '\u10D3': 'd', '\u10DA': 'l', '\u10DD': 'o',
+  '\u10DE': 'p', '\u10E1': 's', '\u10E2': 't', '\u10E3': 'u', '\u10EF': 'j',
+  // IPA / Phonetic extensions
+  '\u0250': 'a', '\u0253': 'b', '\u0254': 'c', '\u0256': 'd', '\u025B': 'e',
+  '\u025F': 'f', '\u0260': 'g', '\u0266': 'h', '\u026A': 'i', '\u0268': 'i',
+  '\u026D': 'l', '\u0271': 'm', '\u0272': 'n', '\u0275': 'o', '\u0278': 'p',
+  '\u027E': 'r', '\u0282': 's', '\u0288': 't', '\u028A': 'u', '\u028B': 'v',
+  '\u0290': 'z',
+  // Mathematical Alphanumeric Symbols (italic, bold, script)
+  '\uD835\uDC1A': 'a', '\uD835\uDC1B': 'b', '\uD835\uDC1C': 'c', '\uD835\uDC1D': 'd',
+  '\uD835\uDC1E': 'e', '\uD835\uDC1F': 'f', '\uD835\uDC20': 'g', '\uD835\uDC21': 'h',
+  '\uD835\uDC22': 'i', '\uD835\uDC23': 'j', '\uD835\uDC24': 'k', '\uD835\uDC25': 'l',
+  '\uD835\uDC26': 'm', '\uD835\uDC27': 'n', '\uD835\uDC28': 'o', '\uD835\uDC29': 'p',
+  '\uD835\uDC2A': 'q', '\uD835\uDC2B': 'r', '\uD835\uDC2C': 's', '\uD835\uDC2D': 't',
+  '\uD835\uDC2E': 'u', '\uD835\uDC2F': 'v', '\uD835\uDC30': 'w', '\uD835\uDC31': 'x',
+  '\uD835\uDC32': 'y', '\uD835\uDC33': 'z',
+  // Superscript / subscript
+  '\u00B2': '2', '\u00B3': '3', '\u00B9': '1', '\u2070': '0', '\u2071': 'i',
+  '\u2074': '4', '\u2075': '5', '\u2076': '6', '\u2077': '7', '\u2078': '8',
+  '\u2079': '9', '\u207A': '+', '\u207B': '-', '\u207F': 'n',
+  '\u2080': '0', '\u2081': '1', '\u2082': '2', '\u2083': '3', '\u2084': '4',
+  '\u2090': 'a', '\u2091': 'e', '\u2092': 'o', '\u2093': 'x',
+  // Enclosed/circled letters
+  '\u24B6': 'A', '\u24B7': 'B', '\u24B8': 'C', '\u24B9': 'D', '\u24BA': 'E',
+  '\u24BB': 'F', '\u24BC': 'G', '\u24BD': 'H', '\u24BE': 'I', '\u24BF': 'J',
+  '\u24C0': 'K', '\u24C1': 'L', '\u24C2': 'M', '\u24C3': 'N', '\u24C4': 'O',
+  '\u24C5': 'P', '\u24C6': 'Q', '\u24C7': 'R', '\u24C8': 'S', '\u24C9': 'T',
+  '\u24CA': 'U', '\u24CB': 'V', '\u24CC': 'W', '\u24CD': 'X', '\u24CE': 'Y',
+  '\u24CF': 'Z',
+  '\u24D0': 'a', '\u24D1': 'b', '\u24D2': 'c', '\u24D3': 'd', '\u24D4': 'e',
+  '\u24D5': 'f', '\u24D6': 'g', '\u24D7': 'h', '\u24D8': 'i', '\u24D9': 'j',
+  '\u24DA': 'k', '\u24DB': 'l', '\u24DC': 'm', '\u24DD': 'n', '\u24DE': 'o',
+  '\u24DF': 'p', '\u24E0': 'q', '\u24E1': 'r', '\u24E2': 's', '\u24E3': 't',
+  '\u24E4': 'u', '\u24E5': 'v', '\u24E6': 'w', '\u24E7': 'x', '\u24E8': 'y',
+  '\u24E9': 'z',
+  // Small caps (Unicode phonetic)
+  '\u1D00': 'A', '\u0299': 'B', '\u1D04': 'C', '\u1D05': 'D', '\u1D07': 'E',
+  '\u0262': 'G', '\u029C': 'H', '\u026A': 'I', '\u1D0A': 'J', '\u1D0B': 'K',
+  '\u029F': 'L', '\u1D0D': 'M', '\u0274': 'N', '\u1D0F': 'O', '\u1D18': 'P',
+  '\u0280': 'R', '\u1D1B': 'T', '\u1D1C': 'U', '\u1D20': 'V', '\u1D21': 'W',
   // Zero-width characters (used to split keywords)
   '\u200B': '', '\u200C': '', '\u200D': '', '\uFEFF': '', '\u00AD': '',
   // Combining characters (used to obfuscate keywords)
@@ -1364,10 +1468,14 @@ const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDG
   /** Returns true if the time budget has been exceeded. */
   const isOverBudget = () => (now() - scanStartTime) > timeBudgetMs;
 
+  // Pre-normalize: strip soft hyphens and zero-width joiners that split keywords
+  const preNormalized = text.replace(/[\u00AD\u200B\u200C\u200D\uFEFF\u034F\u2060\u2061\u2062\u2063\u2064]/g, '');
+  const usePreNormalized = preNormalized !== text && preNormalized.length >= 10;
+
   let patternMatchCount = 0;
   for (const pattern of INJECTION_PATTERNS) {
     if (isOverBudget()) break;
-    if (pattern.regex.test(text)) {
+    if (pattern.regex.test(text) || (usePreNormalized && pattern.regex.test(preNormalized))) {
       patternMatchCount++;
       const threat = {
         severity: pattern.severity,
@@ -1461,6 +1569,27 @@ const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDG
     }
   }
 
+  // Check for \x hex-escape encoded content (e.g., \x69\x67\x6e\x6f\x72\x65)
+  if (!isOverBudget() && /\\x[0-9a-fA-F]{2}/.test(text)) {
+    const hexDecoded = text.replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    if (hexDecoded !== text && hexDecoded.length >= 10) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(hexDecoded) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'critical',
+            category: 'prompt_injection',
+            description: 'Text hides attack instructions inside hex escape sequences.',
+            detail: `Hex-escape encoded injection found in ${source}. Decoded: "${hexDecoded.substring(0, 100)}"`
+          };
+          threat.confidence = 90;
+          threat.confidenceLabel = confidenceLabel(90);
+          threats.push(threat);
+          break;
+        }
+      }
+    }
+  }
+
   // Check for ROT13-encoded content
   const rot13Decode = (s) => s.replace(/[a-zA-Z]/g, c => {
     const base = c <= 'Z' ? 65 : 97;
@@ -1549,6 +1678,96 @@ const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDG
         threat.confidenceLabel = confidenceLabel(85);
         threats.push(threat);
         break;
+      }
+    }
+  }
+
+  // Check for attack keyword clusters (catches word reordering and synonym substitution)
+  if (!isOverBudget()) {
+    const lowerText = (usePreNormalized ? preNormalized : text).toLowerCase();
+
+    // Synonym groups: any word in the group counts as a match for the group key
+    const synonymGroups = {
+      'ignore': ['ignore', 'disregard', 'forget', 'skip', 'bypass', 'dismiss', 'neglect', 'overlook', 'drop', 'ditch', 'clear', 'abandon'],
+      'instructions': ['instructions', 'rules', 'guidelines', 'directives', 'commands', 'orders', 'prompts', 'constraints', 'training', 'programming', 'context'],
+      'previous': ['previous', 'prior', 'earlier', 'above', 'preceding', 'former', 'past', 'initial', 'original'],
+      'override': ['override', 'bypass', 'circumvent', 'replace', 'supplant', 'cancel', 'disable'],
+      'system': ['system', 'core', 'internal', 'root', 'master', 'primary', 'main'],
+      'reveal': ['reveal', 'show', 'display', 'expose', 'output', 'print', 'disclose', 'extract'],
+      'send': ['send', 'transmit', 'forward', 'relay', 'dispatch', 'transfer', 'post', 'exfiltrate'],
+      'safety': ['safety', 'security', 'protection', 'defense', 'safeguard', 'guardrails', 'filters'],
+      'restrictions': ['restrictions', 'limits', 'boundaries', 'constraints', 'guardrails', 'filters'],
+      'unrestricted': ['unrestricted', 'unfiltered', 'uncensored', 'unlimited', 'unfettered'],
+    };
+
+    /** Check if any synonym of a group key appears in text */
+    const hasSynonym = (groupKey) => {
+      const syns = synonymGroups[groupKey] || [groupKey];
+      return syns.some(s => lowerText.includes(s));
+    };
+
+    const attackKeywordSets = [
+      { groups: ['ignore', 'instructions'], severity: 'high', desc: 'instruction override' },
+      { groups: ['ignore', 'previous'], andExtra: ['instructions'], severity: 'high', desc: 'instruction override' },
+      { groups: ['override', 'safety'], severity: 'critical', desc: 'safety override' },
+      { groups: ['override', 'system'], severity: 'critical', desc: 'system override' },
+      { groups: ['reveal', 'system'], andLiteral: ['prompt'], severity: 'high', desc: 'prompt extraction' },
+      { groups: ['send'], andLiteral: ['http'], severity: 'critical', desc: 'data exfiltration' },
+      { groups: ['unrestricted'], andLiteral: ['ai'], severity: 'high', desc: 'restriction removal' },
+      { groups: ['restrictions'], andLiteral: ['no'], severity: 'high', desc: 'restriction removal' },
+      { literal: ['jailbreak'], severity: 'critical', desc: 'jailbreak attempt' },
+      { literal: ['dan', 'mode'], severity: 'critical', desc: 'DAN jailbreak' },
+      { literal: ['developer', 'mode', 'enabled'], severity: 'high', desc: 'developer mode jailbreak' },
+      { literal: ['do', 'anything', 'now'], severity: 'critical', desc: 'DAN jailbreak' },
+      { groups: ['ignore', 'safety'], severity: 'critical', desc: 'safety override' },
+      { groups: ['ignore', 'restrictions'], severity: 'high', desc: 'restriction removal' },
+    ];
+
+    for (const set of attackKeywordSets) {
+      let matched = true;
+
+      // Check synonym groups
+      if (set.groups) {
+        for (const g of set.groups) {
+          if (!hasSynonym(g)) { matched = false; break; }
+        }
+      }
+
+      // Check additional synonym groups required alongside the main groups
+      if (matched && set.andExtra) {
+        for (const g of set.andExtra) {
+          if (!hasSynonym(g)) { matched = false; break; }
+        }
+      }
+
+      // Check literal keywords (no synonym expansion)
+      if (matched && set.literal) {
+        for (const kw of set.literal) {
+          if (!lowerText.includes(kw)) { matched = false; break; }
+        }
+      }
+
+      // Check additional literal keywords
+      if (matched && set.andLiteral) {
+        for (const kw of set.andLiteral) {
+          if (!lowerText.includes(kw)) { matched = false; break; }
+        }
+      }
+
+      if (matched) {
+        const alreadyDetected = threats.some(t => t.category === 'instruction_override' || t.category === 'role_hijack' || t.category === 'data_exfiltration');
+        if (!alreadyDetected) {
+          const threat = {
+            severity: set.severity,
+            category: set.desc.includes('exfil') ? 'data_exfiltration' : set.desc.includes('jailbreak') ? 'role_hijack' : 'instruction_override',
+            description: `Text contains a cluster of attack-related keywords suggesting ${set.desc}.`,
+            detail: `Keyword cluster detection in ${source}: synonym-aware matching detected possible ${set.desc} with reordered or obfuscated phrasing.`
+          };
+          threat.confidence = 65;
+          threat.confidenceLabel = confidenceLabel(65);
+          threats.push(threat);
+          break;
+        }
       }
     }
   }

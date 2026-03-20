@@ -116,7 +116,7 @@ const { ToolOutputValidator, OutputSanitizer } = safeRequire('./tool-output-vali
 const { ResponseHandler, ResponseTemplates, ReviewQueue } = safeRequire('./response-handler', 'response-handler');
 
 // Worker Scanner
-const { WorkerScanner, ScanQueue } = safeRequire('./worker-scanner', 'worker-scanner');
+const { WorkerScanner, ScanQueue, ThreadedWorkerScanner } = safeRequire('./worker-scanner', 'worker-scanner');
 
 // Alert Tuning
 const { AlertFatigueAnalyzer, AutoTuner, AlertCorrelator } = safeRequire('./alert-tuning', 'alert-tuning');
@@ -337,6 +337,7 @@ const _exports = {
   // Worker Scanner
   WorkerScanner,
   ScanQueue,
+  ThreadedWorkerScanner,
 
   // Alert Tuning
   AlertFatigueAnalyzer,
