@@ -42,6 +42,10 @@
     "demo": "node bin/agent-shield.js demo",
     "playground": "echo 'Open playground/index.html in a browser'",
     "certify": "node -e \"const {CertificationRunner}=require('./src/certification');new CertificationRunner().runCertification().then(r=>console.log(r.certificate.toText()))\"",
+    "benchmark:run": "node scripts/run-benchmark.js",
+    "benchmark:generate": "node scripts/generate-dataset.js",
+    "benchmark:baseline": "node scripts/run-benchmark.js --save-baseline",
+    "benchmark:regression": "node scripts/run-benchmark.js --check-regression",
     "prepublishOnly": "npm test && npm run test:all && npm run test:fp"
   },
   "keywords": [
