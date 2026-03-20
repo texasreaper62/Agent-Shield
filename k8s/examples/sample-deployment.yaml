@@ -1,0 +1,48 @@
+# Example: Deployment with Agent Shield sidecar injection
+#
+# All pods created by this Deployment will get the Agent Shield sidecar
+# injected automatically by the mutating webhook.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-ai-agent
+  labels:
+    app: my-ai-agent
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-ai-agent
+  template:
+    metadata:
+      labels:
+        app: my-ai-agent
+        agent-shield.io/inject: "true"
+      annotations:
+        agent-shield.io/inject: "true"
+    spec:
+      containers:
+        - name: agent
+          image: my-ai-agent:latest
+          ports:
+            - containerPort: 3000
+          env:
+            # The sidecar runs on localhost:8080 inside the same pod
+            - name: SHIELD_URL
+              value: "http://localhost:8080"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Ensure the namespace has the label so the webhook selector matches
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents
+  labels:
+    agent-shield.io/enabled: "true"

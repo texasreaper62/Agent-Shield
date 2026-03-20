@@ -1,0 +1,19 @@
+apiVersion: v2
+name: agent-shield-operator
+description: Agent Shield sidecar injector for Kubernetes
+type: application
+version: 1.0.0
+appVersion: 1.0.0
+keywords:
+  - ai
+  - security
+  - prompt-injection
+  - sidecar
+  - agent
+  - llm
+home: https://github.com/texasreaper62/Agent-Shield
+sources:
+  - https://github.com/texasreaper62/Agent-Shield
+maintainers:
+  - name: Agent Shield
+    url: https://github.com/texasreaper62/Agent-Shield

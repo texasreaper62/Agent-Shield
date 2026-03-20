@@ -1,0 +1,41 @@
+{
+  "name": "@agent-shield/wasm",
+  "version": "1.0.0",
+  "description": "Agent Shield universal builds for browsers, Cloudflare Workers, Deno, and Bun",
+  "main": "dist/agent-shield.umd.js",
+  "module": "dist/agent-shield.esm.js",
+  "browser": "dist/agent-shield.umd.js",
+  "exports": {
+    ".": {
+      "import": "./dist/agent-shield.esm.js",
+      "require": "./dist/agent-shield.umd.js",
+      "default": "./dist/agent-shield.umd.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.js"
+  },
+  "keywords": [
+    "agent-shield",
+    "ai-security",
+    "prompt-injection",
+    "wasm",
+    "browser",
+    "cloudflare-workers",
+    "deno",
+    "bun",
+    "esm",
+    "umd"
+  ],
+  "author": "texasreaper62",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/texasreaper62/Agent-Shield.git",
+    "directory": "wasm"
+  }
+}

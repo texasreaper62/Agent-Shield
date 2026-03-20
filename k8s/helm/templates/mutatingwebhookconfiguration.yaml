@@ -1,0 +1,32 @@
+{{- if .Values.mutatingWebhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "agent-shield.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agent-shield.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+webhooks:
+  - name: sidecar-injector.agent-shield.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
+    failurePolicy: {{ .Values.mutatingWebhook.failurePolicy }}
+    clientConfig:
+      service:
+        name: {{ include "agent-shield.fullname" . }}-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /mutate
+      caBundle: ""  # Populated by cert-manager or manual injection
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    objectSelector:
+      matchLabels:
+        agent-shield.io/inject: "true"
+    {{- with .Values.mutatingWebhook.namespaceSelector }}
+    namespaceSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

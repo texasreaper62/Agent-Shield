@@ -183,6 +183,17 @@ const { MultiModalScanner, ModalityExtractor } = safeRequire('./multimodal', 'mu
 // Behavior Profiling
 const { BehaviorProfile } = safeRequire('./behavior-profiling', 'behavior-profiling');
 
+// --- Remaining Roadmap Modules ---
+
+// SSO/SAML Integration
+const { SSOManager, SAMLParser, OIDCHandler, IdentityMapper, SSOSession, DEFAULT_MAPPINGS: SSO_DEFAULT_MAPPINGS } = safeRequire('./sso-saml', 'sso-saml');
+
+// Custom Model Fine-Tuning
+const { ModelTrainer, TrainingPipeline, DatasetManager, ModelEvaluator, FineTunedModel } = safeRequire('./model-finetuning', 'model-finetuning');
+
+// Threat Intelligence Network
+const { ThreatIntelNetwork, PeerNode, PatternAnonymizer, ConsensusEngine, ThreatFeed, NETWORK_DEFAULTS } = safeRequire('./threat-intel-network', 'threat-intel-network');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -462,7 +473,30 @@ const _exports = {
   ModalityExtractor,
 
   // v3.0 — Behavior Profiling
-  BehaviorProfile
+  BehaviorProfile,
+
+  // SSO/SAML Integration
+  SSOManager,
+  SAMLParser,
+  OIDCHandler,
+  IdentityMapper,
+  SSOSession,
+  SSO_DEFAULT_MAPPINGS,
+
+  // Custom Model Fine-Tuning
+  ModelTrainer,
+  TrainingPipeline,
+  DatasetManager,
+  ModelEvaluator,
+  FineTunedModel,
+
+  // Threat Intelligence Network
+  ThreatIntelNetwork,
+  PeerNode,
+  PatternAnonymizer,
+  ConsensusEngine,
+  ThreatFeed,
+  NETWORK_DEFAULTS
 };
 
 // Filter out undefined exports (from modules that failed to load)

@@ -21,17 +21,17 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 
 - [x] Plugin marketplace — `PluginRegistry`, `PluginValidator`, `MarketplaceClient` with quality scoring, safety validation, version management
 - [x] Dashboard v2 — real-time web dashboard with threat visualization, donut charts, sparklines, dark/light mode, scan metrics
-- [ ] Python SDK — port core detection to Python for the LangChain/LlamaIndex ecosystem
-- [ ] WASM build — run Agent Shield in browsers, Cloudflare Workers, Deno, Bun
-- [ ] VS Code extension — scan prompts and agent code inline during development
+- [x] Python SDK — `agent_shield` Python package with core detection, `AgentShield` class, LangChain/LlamaIndex wrappers, Flask/FastAPI middleware, CLI tool
+- [x] WASM build — ESM/UMD bundles for browsers, Cloudflare Workers, Deno, Bun with build script and platform-specific examples
+- [x] VS Code extension — `agent-shield-vscode` with inline diagnostics, real-time scanning, severity mapping, string literal extraction for JS/TS/Python/Markdown
 
 ## v2.1 — Enterprise & Scale (Complete)
 
 - [x] Distributed scanning — `DistributedShield` with pluggable adapters (`MemoryAdapter`, `RedisAdapter`), pub/sub threat broadcasting
 - [x] Audit log streaming — `AuditStreamManager` with `FileTransport`, `SplunkTransport`, `ElasticsearchTransport` adapters
-- [ ] Kubernetes operator — sidecar container that shields any agent pod
-- [ ] SSO/SAML integration — tie RBAC to enterprise identity providers
-- [ ] Custom model fine-tuning — train org-specific detection models on your threat data
+- [x] Kubernetes operator — sidecar container with Helm chart, `MutatingWebhookConfiguration` for auto-injection, Prometheus metrics, health checks
+- [x] SSO/SAML integration — `SSOManager`, `SAMLParser`, `OIDCHandler`, `IdentityMapper` with enterprise IdP mapping to RBAC roles
+- [x] Custom model fine-tuning — `ModelTrainer` with TF-IDF + logistic regression, `TrainingPipeline`, `DatasetManager`, `ModelEvaluator`, `FineTunedModel` export/import
 
 ## v3.0 — Autonomous Defense (Complete)
 
@@ -39,7 +39,7 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Honeypot mode — `HoneypotEngine` with session tracking, escalation analysis, technique intelligence, fake response generation
 - [x] Multi-modal scanning — `MultiModalScanner` for images (alt text, OCR, metadata), audio transcripts, PDFs, tool outputs
 - [x] Agent behavior profiling — `BehaviorProfile` with statistical baselining, anomaly detection (z-score), health checks
-- [ ] Threat intelligence network — opt-in anonymous pattern sharing across Agent Shield users (privacy-preserving, no raw data)
+- [x] Threat intelligence network — `ThreatIntelNetwork` with `PeerNode` reputation, `PatternAnonymizer` (differential privacy), `ConsensusEngine`, `ThreatFeed` with STIX-like export
 
 ## Ongoing
 

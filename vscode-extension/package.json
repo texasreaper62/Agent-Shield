@@ -1,0 +1,94 @@
+{
+  "name": "agent-shield-vscode",
+  "displayName": "Agent Shield",
+  "description": "Scan AI prompts and agent code for injection vulnerabilities",
+  "version": "1.0.0",
+  "publisher": "agent-shield",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Security",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "onLanguage:markdown"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agent-shield.scanFile",
+        "title": "Agent Shield: Scan Current File"
+      },
+      {
+        "command": "agent-shield.scanSelection",
+        "title": "Agent Shield: Scan Selection"
+      },
+      {
+        "command": "agent-shield.toggleInlineScan",
+        "title": "Agent Shield: Toggle Inline Scanning"
+      }
+    ],
+    "configuration": {
+      "title": "Agent Shield",
+      "properties": {
+        "agent-shield.enableInlineScan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time inline scanning of prompts and agent code."
+        },
+        "agent-shield.minSeverity": {
+          "type": "string",
+          "default": "low",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "description": "Minimum severity level to report (low, medium, high, critical)."
+        },
+        "agent-shield.categories": {
+          "type": "array",
+          "default": [
+            "instruction_override",
+            "role_hijacking",
+            "data_exfiltration",
+            "social_engineering",
+            "system_prompt_leak"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Categories of threats to scan for."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "agent-shield.scanSelection",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "editorHasSelection"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-shield/agent-shield"
+  },
+  "keywords": [
+    "security",
+    "ai",
+    "prompt-injection",
+    "agent",
+    "llm",
+    "vulnerability",
+    "scanner"
+  ]
+}
