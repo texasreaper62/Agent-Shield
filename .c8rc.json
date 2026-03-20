@@ -1,0 +1,11 @@
+{
+  "all": false,
+  "include": ["src/**/*.js"],
+  "exclude": ["src/mcp-server.js", "src/worker-scanner.js"],
+  "reporter": ["text", "lcov", "json-summary"],
+  "check-coverage": false,
+  "lines": 70,
+  "functions": 70,
+  "branches": 60,
+  "statements": 70
+}
