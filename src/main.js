@@ -202,6 +202,23 @@ const { I18nPatternManager, CJK_PATTERNS, ARABIC_PATTERNS, CYRILLIC_PATTERNS, IN
 // LLM Red Team Suite
 const { LLMRedTeamSuite, AdversarialGenerator, JailbreakLibrary, EvasionTester, RedTeamReport, JAILBREAK_TEMPLATES, MUTATION_TECHNIQUES } = safeRequire('./llm-redteam', 'llm-redteam');
 
+// --- v5.0 Modules ---
+
+// Agent-to-Agent Protocol
+const { AgentProtocol, SecureChannel, HandshakeManager, AgentIdentity, ProtocolMessage, MessageRouter, PROTOCOL_VERSION } = safeRequire('./agent-protocol', 'agent-protocol');
+
+// Policy-as-Code DSL
+const { PolicyDSL, PolicyParser, PolicyCompiler, PolicyRuntime, PolicyValidator, BUILTIN_FUNCTIONS: DSL_BUILTINS, EXAMPLE_STRICT_POLICY, EXAMPLE_PERMISSIVE_POLICY, EXAMPLE_CUSTOM_RULES_POLICY } = safeRequire('./policy-dsl', 'policy-dsl');
+
+// Fuzzing Harness
+const { FuzzingHarness, InputGenerator, MutationEngine: FuzzMutationEngine, CoverageTracker, FuzzReport, CrashCollector, SEED_CORPUS } = safeRequire('./fuzzer', 'fuzzer');
+
+// Model Fingerprinting
+const { ModelFingerprinter, ResponseAnalyzer, StyleProfile, FingerprintDatabase, SupplyChainDetector, MODEL_SIGNATURES } = safeRequire('./model-fingerprint', 'model-fingerprint');
+
+// Cost/Latency Optimizer
+const { CostOptimizer, LatencyBudget, AdaptiveScanner, TierManager, PerformanceMonitor, ScanPlan, OPTIMIZATION_PRESETS } = safeRequire('./cost-optimizer', 'cost-optimizer');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -522,7 +539,53 @@ const _exports = {
   EvasionTester,
   RedTeamReport,
   JAILBREAK_TEMPLATES,
-  MUTATION_TECHNIQUES
+  MUTATION_TECHNIQUES,
+
+  // v5.0 — Agent-to-Agent Protocol
+  AgentProtocol,
+  SecureChannel,
+  HandshakeManager,
+  AgentIdentity,
+  ProtocolMessage,
+  MessageRouter,
+  PROTOCOL_VERSION,
+
+  // v5.0 — Policy-as-Code DSL
+  PolicyDSL,
+  PolicyParser,
+  PolicyCompiler,
+  PolicyRuntime,
+  PolicyValidator,
+  DSL_BUILTINS,
+  EXAMPLE_STRICT_POLICY,
+  EXAMPLE_PERMISSIVE_POLICY,
+  EXAMPLE_CUSTOM_RULES_POLICY,
+
+  // v5.0 — Fuzzing Harness
+  FuzzingHarness,
+  InputGenerator,
+  FuzzMutationEngine,
+  CoverageTracker,
+  FuzzReport,
+  CrashCollector,
+  SEED_CORPUS,
+
+  // v5.0 — Model Fingerprinting
+  ModelFingerprinter,
+  ResponseAnalyzer,
+  StyleProfile,
+  FingerprintDatabase,
+  SupplyChainDetector,
+  MODEL_SIGNATURES,
+
+  // v5.0 — Cost/Latency Optimizer
+  CostOptimizer,
+  LatencyBudget,
+  AdaptiveScanner,
+  TierManager,
+  PerformanceMonitor,
+  ScanPlan,
+  OPTIMIZATION_PRESETS
 };
 
 // Filter out undefined exports (from modules that failed to load)

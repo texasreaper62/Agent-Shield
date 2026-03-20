@@ -52,6 +52,15 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Multi-language patterns — `I18nPatternManager` with 32+ patterns across CJK (Chinese/Japanese/Korean), Arabic, Cyrillic (Russian/Ukrainian), and Indic (Hindi/Devanagari) scripts
 - [x] LLM Red Team Suite — `LLMRedTeamSuite` with `JailbreakLibrary` (35+ templates across 6 categories), `AdversarialGenerator`, `EvasionTester`, `RedTeamReport` with weakness analysis
 
+## v5.0 — Advanced Capabilities (Complete)
+
+- [x] Agent-to-Agent protocol — `AgentProtocol` with `SecureChannel` (HMAC-signed, replay-protected), `HandshakeManager` (mutual auth, challenge-response), `MessageRouter` for multi-agent topologies
+- [x] Real-time streaming dashboard — `dashboard-live/` with WebSocket server (RFC 6455), live threat feed, SVG line/donut/heatmap charts, dark/light mode, auto-reconnect
+- [x] Policy-as-Code DSL — `PolicyDSL` with `PolicyParser` (tokenizer + recursive descent), `PolicyCompiler`, `PolicyRuntime` supporting `when/then/and/or` conditions, `allow` blocks, `rate_limit`, `scan_mode`
+- [x] Fuzzing harness — `FuzzingHarness` with `InputGenerator` (8 strategies: grammar-based, mutation, encoding, interpolation), `MutationEngine` (13 mutations), `CoverageTracker`, `CrashCollector`, 50+ seed corpus
+- [x] Model fingerprinting — `ModelFingerprinter` with `ResponseAnalyzer` (16 stylistic features), `StyleProfile` (cosine similarity), `FingerprintDatabase` (5 built-in model profiles), `SupplyChainDetector` for swap detection
+- [x] Cost/latency optimizer — `CostOptimizer` with `AdaptiveScanner` (auto-escalating tiers: fast/standard/deep/paranoid), `LatencyBudget`, `PerformanceMonitor` (p50/p95/p99), `TierManager`, 4 optimization presets
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs — publish an open threat taxonomy for AI agent attacks
