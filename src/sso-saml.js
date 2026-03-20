@@ -187,12 +187,14 @@ class SAMLParser {
 
   /**
    * Validate a parsed SAML assertion against a provider configuration.
+   * Checks issuer, audience, time validity, subject, and XML signature.
    * @param {object} assertion - Parsed assertion from parseAssertion.
-   * @param {object} provider - Provider config with {issuer, audience}.
-   * @returns {{valid: boolean, errors: string[]}}
+   * @param {object} provider - Provider config with {issuer, audience, certificate}.
+   * @returns {{valid: boolean, errors: string[], signatureVerified: boolean}}
    */
   validateAssertion(assertion, provider) {
     const errors = [];
+    let signatureVerified = false;
 
     // Check issuer
     if (assertion.issuer && provider.metadata && provider.metadata.issuer) {
@@ -228,7 +230,78 @@ class SAMLParser {
       errors.push('Missing subject NameID');
     }
 
-    return { valid: errors.length === 0, errors };
+    // Verify XML signature if certificate is provided
+    if (provider.metadata && provider.metadata.certificate) {
+      const sigResult = this.verifySignature(assertion.raw, provider.metadata.certificate);
+      signatureVerified = sigResult.valid;
+      if (!sigResult.valid) {
+        errors.push(`Signature verification failed: ${sigResult.error}`);
+      }
+    } else {
+      errors.push('No IdP certificate provided — cannot verify assertion signature. This is a security risk.');
+    }
+
+    return { valid: errors.length === 0, errors, signatureVerified };
+  }
+
+  /**
+   * Verify the XML digital signature on a SAML assertion.
+   * Uses Node.js crypto to validate RSA-SHA256 or RSA-SHA1 signatures
+   * against the IdP's public certificate.
+   *
+   * @param {string} xml - Raw SAML assertion XML.
+   * @param {string} certificate - PEM-encoded X.509 certificate from IdP metadata.
+   * @returns {{valid: boolean, error: string|null, algorithm: string|null}}
+   */
+  verifySignature(xml, certificate) {
+    if (!xml || !certificate) {
+      return { valid: false, error: 'Missing XML or certificate', algorithm: null };
+    }
+
+    // Extract the SignatureValue from the XML
+    const sigValueMatch = xml.match(/<(?:ds:)?SignatureValue[^>]*>([\s\S]*?)<\/(?:ds:)?SignatureValue>/i);
+    if (!sigValueMatch) {
+      return { valid: false, error: 'No SignatureValue element found in assertion', algorithm: null };
+    }
+    const signatureB64 = sigValueMatch[1].replace(/\s+/g, '');
+
+    // Extract the SignedInfo block (the data that was signed)
+    const signedInfoMatch = xml.match(/<(?:ds:)?SignedInfo[^>]*>([\s\S]*?)<\/(?:ds:)?SignedInfo>/i);
+    if (!signedInfoMatch) {
+      return { valid: false, error: 'No SignedInfo element found in assertion', algorithm: null };
+    }
+    // Reconstruct the canonicalized SignedInfo element
+    const signedInfoXml = xml.match(/<(?:ds:)?SignedInfo[^>]*>[\s\S]*?<\/(?:ds:)?SignedInfo>/i)[0];
+
+    // Detect signing algorithm
+    const algMatch = xml.match(/Algorithm="([^"]*(?:rsa-sha(?:1|256|384|512))[^"]*)"/i);
+    let algorithm = 'RSA-SHA256'; // default
+    if (algMatch) {
+      const algUri = algMatch[1].toLowerCase();
+      if (algUri.includes('sha512')) algorithm = 'RSA-SHA512';
+      else if (algUri.includes('sha384')) algorithm = 'RSA-SHA384';
+      else if (algUri.includes('sha256')) algorithm = 'RSA-SHA256';
+      else if (algUri.includes('sha1')) algorithm = 'RSA-SHA1';
+    }
+
+    // Map algorithm name to Node.js crypto algorithm
+    const cryptoAlg = algorithm.replace('RSA-', '').toLowerCase().replace('-', '');
+
+    // Normalize certificate to PEM format
+    let pem = certificate.trim();
+    if (!pem.startsWith('-----BEGIN')) {
+      pem = '-----BEGIN CERTIFICATE-----\n' + pem.replace(/(.{64})/g, '$1\n').trim() + '\n-----END CERTIFICATE-----';
+    }
+
+    try {
+      const verifier = crypto.createVerify(cryptoAlg);
+      verifier.update(signedInfoXml);
+      const signatureBuffer = Buffer.from(signatureB64, 'base64');
+      const isValid = verifier.verify(pem, signatureBuffer);
+      return { valid: isValid, error: isValid ? null : 'Signature does not match', algorithm };
+    } catch (e) {
+      return { valid: false, error: `Crypto error: ${e.message}`, algorithm };
+    }
   }
 
   /**
@@ -415,27 +488,79 @@ class OIDCHandler {
   }
 
   /**
-   * Validate a JWT id_token structure. Decodes and checks claims.
+   * Validate a JWT id_token. Decodes, checks claims, and verifies signature
+   * if a signing key or JWKS is configured.
+   *
    * @param {string} token - JWT id_token string.
-   * @returns {{valid: boolean, claims: object, errors: string[]}}
+   * @param {object} [options] - Validation options.
+   * @param {string} [options.signingKey] - PEM public key or certificate for RS256 verification.
+   * @param {string} [options.secret] - Shared secret for HS256 verification.
+   * @param {string} [options.nonce] - Expected nonce value for replay protection.
+   * @returns {{valid: boolean, claims: object, errors: string[], signatureVerified: boolean}}
    */
-  validateIdToken(token) {
+  validateIdToken(token, options = {}) {
     const errors = [];
+    let signatureVerified = false;
 
     if (!token || typeof token !== 'string') {
-      return { valid: false, claims: null, errors: ['Token must be a non-empty string'] };
+      return { valid: false, claims: null, errors: ['Token must be a non-empty string'], signatureVerified: false };
     }
 
     const parts = token.split('.');
     if (parts.length !== 3) {
-      return { valid: false, claims: null, errors: ['Invalid JWT structure: expected 3 parts'] };
+      return { valid: false, claims: null, errors: ['Invalid JWT structure: expected 3 parts'], signatureVerified: false };
     }
 
+    // Decode header
+    let header;
+    try {
+      header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf-8'));
+    } catch (e) {
+      return { valid: false, claims: null, errors: ['Failed to decode JWT header'], signatureVerified: false };
+    }
+
+    // Decode claims
     let claims;
     try {
       claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
     } catch (e) {
-      return { valid: false, claims: null, errors: ['Failed to decode JWT payload'] };
+      return { valid: false, claims: null, errors: ['Failed to decode JWT payload'], signatureVerified: false };
+    }
+
+    // Verify signature
+    const signingInput = parts[0] + '.' + parts[1];
+    const signature = parts[2];
+    const alg = (header.alg || '').toUpperCase();
+
+    if (options.signingKey && (alg === 'RS256' || alg === 'RS384' || alg === 'RS512')) {
+      // RSA signature verification
+      const hashAlg = alg.replace('RS', 'sha');
+      try {
+        const verifier = crypto.createVerify(hashAlg);
+        verifier.update(signingInput);
+        const sigBuf = Buffer.from(signature, 'base64url');
+        signatureVerified = verifier.verify(options.signingKey, sigBuf);
+        if (!signatureVerified) {
+          errors.push('JWT signature verification failed — token may be forged');
+        }
+      } catch (e) {
+        errors.push(`JWT signature verification error: ${e.message}`);
+      }
+    } else if (options.secret && (alg === 'HS256' || alg === 'HS384' || alg === 'HS512')) {
+      // HMAC signature verification
+      const hashAlg = alg.replace('HS', 'sha');
+      const expectedSig = crypto.createHmac(hashAlg, options.secret).update(signingInput).digest('base64url');
+      signatureVerified = crypto.timingSafeEqual(
+        Buffer.from(signature, 'utf-8'),
+        Buffer.from(expectedSig, 'utf-8')
+      );
+      if (!signatureVerified) {
+        errors.push('JWT HMAC signature verification failed — token may be forged');
+      }
+    } else if (alg === 'NONE' || alg === '') {
+      errors.push('JWT uses "none" algorithm — this is insecure and rejected');
+    } else if (!options.signingKey && !options.secret) {
+      errors.push('No signing key provided — JWT signature not verified. This is a security risk.');
     }
 
     // Validate issuer
@@ -444,8 +569,11 @@ class OIDCHandler {
     }
 
     // Validate audience
-    if (this.clientId && claims.aud !== this.clientId) {
-      errors.push(`Audience mismatch: expected "${this.clientId}", got "${claims.aud}"`);
+    if (this.clientId) {
+      const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+      if (!aud.includes(this.clientId)) {
+        errors.push(`Audience mismatch: expected "${this.clientId}", got "${claims.aud}"`);
+      }
     }
 
     // Validate expiration
@@ -454,12 +582,17 @@ class OIDCHandler {
       errors.push('Token has expired');
     }
 
-    // Validate issued-at is not in the future
+    // Validate issued-at is not in the future (with 60s clock skew tolerance)
     if (claims.iat && claims.iat > now + 60) {
       errors.push('Token issued-at is in the future');
     }
 
-    return { valid: errors.length === 0, claims, errors };
+    // Validate nonce (replay protection)
+    if (options.nonce && claims.nonce !== options.nonce) {
+      errors.push(`Nonce mismatch: possible replay attack`);
+    }
+
+    return { valid: errors.length === 0, claims, errors, signatureVerified };
   }
 
   /**

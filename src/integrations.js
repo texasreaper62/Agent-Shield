@@ -73,8 +73,50 @@ class ShieldCallbackHandler {
 
   async handleToolStart(_tool, input) {
     const result = this.shield.scanInput(input);
+    if (result.threats.length > 0 && this.onThreat) {
+      try { this.onThreat({ phase: 'tool_input', threats: result.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+    }
     if (result.blocked) {
       throw new ShieldBlockError('Tool input blocked by Agent Shield', result.threats);
+    }
+  }
+
+  async handleToolEnd(output) {
+    const text = typeof output === 'string' ? output : JSON.stringify(output);
+    if (!text) return;
+
+    const result = this.shield.scanInput(text);
+    if (result.threats.length > 0 && this.onThreat) {
+      try { this.onThreat({ phase: 'tool_output', threats: result.threats, text }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+    }
+    if (result.blocked) {
+      throw new ShieldBlockError('Tool output blocked by Agent Shield — possible injection via tool response', result.threats);
+    }
+  }
+
+  async handleChainEnd(outputs) {
+    const text = typeof outputs === 'string' ? outputs : JSON.stringify(outputs);
+    if (!text) return;
+
+    const result = this.shield.scanOutput(text);
+    if (result.threats.length > 0 && this.onThreat) {
+      try { this.onThreat({ phase: 'chain_output', threats: result.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+    }
+    if (result.blocked) {
+      throw new ShieldBlockError('Chain output blocked by Agent Shield', result.threats);
+    }
+  }
+
+  async handleAgentAction(action) {
+    if (action && action.toolInput) {
+      const text = typeof action.toolInput === 'string' ? action.toolInput : JSON.stringify(action.toolInput);
+      const result = this.shield.scanInput(text);
+      if (result.threats.length > 0 && this.onThreat) {
+        try { this.onThreat({ phase: 'agent_action', tool: action.tool, threats: result.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+      }
+      if (result.blocked) {
+        throw new ShieldBlockError(`Agent action "${action.tool}" blocked by Agent Shield`, result.threats);
+      }
     }
   }
 
@@ -151,7 +193,7 @@ function shieldAnthropicClient(client, options = {}) {
     // Make the actual API call
     const response = await originalCreate(params);
 
-    // Scan output
+    // Scan output text
     const outputText = response.content?.map(b => b.text || '').join(' ') || '';
     if (outputText) {
       const outputResult = shield.scanOutput(outputText);
@@ -163,9 +205,42 @@ function shieldAnthropicClient(client, options = {}) {
       }
     }
 
+    // Scan tool_use blocks in response — tool calls can contain injection payloads
+    if (response.content && Array.isArray(response.content)) {
+      for (const block of response.content) {
+        if (block.type === 'tool_use' && block.input) {
+          const toolText = typeof block.input === 'string' ? block.input : JSON.stringify(block.input);
+          const toolResult = shield.scanInput(toolText);
+          if (toolResult.threats.length > 0) {
+            if (onThreat) { try { onThreat({ phase: 'tool_call', tool: block.name, threats: toolResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); } }
+            if (breaker) breaker.recordThreat(toolResult.threats.length);
+            if (toolResult.blocked) {
+              throw new ShieldBlockError(`Tool call "${block.name}" blocked by Agent Shield`, toolResult.threats);
+            }
+          }
+        }
+      }
+    }
+
+    // Scan tool_result messages in input — tool responses can inject threats
+    for (const msg of params.messages || []) {
+      if (msg.role === 'tool' || (Array.isArray(msg.content) && msg.content.some(b => b.type === 'tool_result'))) {
+        const toolRespText = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        const toolRespResult = shield.scanInput(toolRespText);
+        if (toolRespResult.threats.length > 0) {
+          if (onThreat) { try { onThreat({ phase: 'tool_response', threats: toolRespResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); } }
+          if (breaker) breaker.recordThreat(toolRespResult.threats.length);
+          if (toolRespResult.blocked) {
+            throw new ShieldBlockError('Tool response blocked by Agent Shield', toolRespResult.threats);
+          }
+        }
+      }
+    }
+
     // Attach scan metadata
     response._shield = {
       scanned: true,
+      toolCallsScanned: (response.content || []).filter(b => b.type === 'tool_use').length,
       stats: shield.getStats()
     };
 
@@ -278,21 +353,56 @@ function shieldOpenAIClient(client, options = {}) {
       }
     }
 
-    const response = await originalCreate(params);
-
-    // Scan output
-    const outputText = response.choices?.[0]?.message?.content || '';
-    if (outputText) {
-      const outputResult = shield.scanOutput(outputText);
-      if (outputResult.threats.length > 0 && onThreat) {
-        try { onThreat({ phase: 'output', threats: outputResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
-      }
-      if (outputResult.blocked) {
-        throw new ShieldBlockError('Response blocked by Agent Shield', outputResult.threats);
+    // Scan tool/function response messages in input
+    for (const msg of params.messages || []) {
+      if (msg.role === 'tool' || msg.role === 'function') {
+        const toolRespText = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        const toolRespResult = shield.scanInput(toolRespText);
+        if (toolRespResult.threats.length > 0) {
+          if (onThreat) { try { onThreat({ phase: 'tool_response', tool_call_id: msg.tool_call_id, threats: toolRespResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); } }
+          if (breaker) breaker.recordThreat(toolRespResult.threats.length);
+          if (toolRespResult.blocked) {
+            throw new ShieldBlockError('Tool response blocked by Agent Shield', toolRespResult.threats);
+          }
+        }
       }
     }
 
-    response._shield = { scanned: true, stats: shield.getStats() };
+    const response = await originalCreate(params);
+
+    // Scan all output choices, not just the first
+    for (const choice of response.choices || []) {
+      const outputText = choice?.message?.content || '';
+      if (outputText) {
+        const outputResult = shield.scanOutput(outputText);
+        if (outputResult.threats.length > 0 && onThreat) {
+          try { onThreat({ phase: 'output', choiceIndex: choice.index, threats: outputResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+        }
+        if (outputResult.blocked) {
+          throw new ShieldBlockError('Response blocked by Agent Shield', outputResult.threats);
+        }
+      }
+
+      // Scan tool calls in response
+      const toolCalls = choice?.message?.tool_calls || choice?.message?.function_call ? [choice.message.function_call] : [];
+      for (const tc of (choice?.message?.tool_calls || [])) {
+        if (tc.function && tc.function.arguments) {
+          const argsResult = shield.scanInput(tc.function.arguments);
+          if (argsResult.threats.length > 0) {
+            if (onThreat) { try { onThreat({ phase: 'tool_call', tool: tc.function.name, threats: argsResult.threats }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); } }
+            if (argsResult.blocked) {
+              throw new ShieldBlockError(`Tool call "${tc.function.name}" blocked by Agent Shield`, argsResult.threats);
+            }
+          }
+        }
+      }
+    }
+
+    response._shield = {
+      scanned: true,
+      choicesScanned: (response.choices || []).length,
+      stats: shield.getStats()
+    };
     return response;
   };
 

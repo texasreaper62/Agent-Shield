@@ -56,6 +56,18 @@ const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } =
 // Error codes & deprecation
 const { ERROR_CODES, createShieldError, deprecationWarning } = safeRequire('./errors', 'errors');
 
+// v5.1 — Stream scanning
+const { StreamScanner, createStreamWrapper, scanAsyncIterator, StreamBuffer } = safeRequire('./stream-scanner', 'stream-scanner');
+
+// v5.1 — Immutable audit log
+const { ImmutableAuditLog, AuditEntry, MemoryAuditStore, FileAuditStore, AuditProof, verifyAuditChain } = safeRequire('./audit-immutable', 'audit-immutable');
+
+// v5.1 — Agent observability
+const { PrometheusExporter, DatadogLogger, MetricsCollector: ObservabilityMetrics } = safeRequire('./observability', 'observability');
+
+// v5.1 — Benchmark harness
+const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, BenchmarkReportGenerator } = safeRequire('./benchmark-harness', 'benchmark-harness');
+
 // Integrations
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
@@ -100,8 +112,8 @@ const { ABTestRunner, ThreatIntelFeed, PatternBuilder, Doctor, GitHubActionGener
 
 // --- New Modules ---
 
-// Streaming
-const { StreamScanner, TokenStreamScanner } = safeRequire('./stream-scanner', 'stream-scanner');
+// Streaming (legacy import — full import on line 60)
+// StreamScanner, StreamBuffer, createStreamWrapper, scanAsyncIterator loaded above
 
 // Plugin System
 const { PluginManager, PluginTemplate, PluginSandbox } = safeRequire('./plugin-system', 'plugin-system');
@@ -136,8 +148,7 @@ const { MCPServer, MCPToolHandler } = safeRequire('./mcp-server', 'mcp-server');
 // CTF
 const { CTFEngine, CTFReporter, CHALLENGES } = safeRequire('./ctf', 'ctf');
 
-// Observability
-const { PrometheusExporter, DatadogLogger, MetricsCollector } = safeRequire('./observability', 'observability');
+// Observability — imported above (line 66)
 
 // Adaptive Detection
 const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequire('./adaptive', 'adaptive');
@@ -171,6 +182,8 @@ const { DistributedShield, DistributedAdapter, MemoryAdapter, RedisAdapter } = s
 
 // Audit Log Streaming
 const { AuditStreamManager, AuditTransport, FileTransport, SplunkTransport, ElasticsearchTransport } = safeRequire('./audit-streaming', 'audit-streaming');
+
+// Immutable Audit Log — imported above (line 63)
 
 // --- v3.0 Modules ---
 
@@ -387,7 +400,9 @@ const _exports = {
 
   // Streaming
   StreamScanner,
-  TokenStreamScanner,
+  StreamBuffer,
+  createStreamWrapper,
+  scanAsyncIterator,
 
   // Plugin System
   PluginManager,
@@ -446,7 +461,7 @@ const _exports = {
   // Observability
   PrometheusExporter,
   DatadogLogger,
-  MetricsCollector,
+  MetricsCollector: ObservabilityMetrics,
 
   // Adaptive Detection
   AdaptiveDetector,
@@ -487,6 +502,8 @@ const _exports = {
   FileTransport,
   SplunkTransport,
   ElasticsearchTransport,
+
+  // Immutable Audit Log — exported below in v5.1 section
 
   // v3.0 — Self-Healing Patterns
   SelfHealingEngine,
@@ -593,7 +610,30 @@ const _exports = {
   // Error codes & deprecation
   ERROR_CODES,
   createShieldError,
-  deprecationWarning
+  deprecationWarning,
+
+  // v5.1 — Stream scanning
+  StreamScanner,
+  createStreamWrapper,
+  scanAsyncIterator,
+  StreamBuffer,
+
+  // v5.1 — Immutable audit log
+  ImmutableAuditLog,
+  AuditEntry,
+  MemoryAuditStore,
+  FileAuditStore,
+  AuditProof,
+  verifyAuditChain,
+
+  // v5.1 — Agent observability (also exported in Observability section above)
+
+  // v5.1 — Benchmark harness
+  BenchmarkHarness,
+  DatasetLoader,
+  BenchmarkMetrics,
+  RegressionTracker,
+  BenchmarkReportGenerator
 };
 
 // Filter out undefined exports (from modules that failed to load)
