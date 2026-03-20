@@ -53,6 +53,9 @@ const { OutputWatermark, DifferentialPrivacy } = safeRequire('./watermark', 'wat
 // Utilities
 const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } = safeRequire('./utils', 'utils');
 
+// Error codes & deprecation
+const { ERROR_CODES, createShieldError, deprecationWarning } = safeRequire('./errors', 'errors');
+
 // Integrations
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
@@ -585,7 +588,12 @@ const _exports = {
   TierManager,
   PerformanceMonitor,
   ScanPlan,
-  OPTIMIZATION_PRESETS
+  OPTIMIZATION_PRESETS,
+
+  // Error codes & deprecation
+  ERROR_CODES,
+  createShieldError,
+  deprecationWarning
 };
 
 // Filter out undefined exports (from modules that failed to load)

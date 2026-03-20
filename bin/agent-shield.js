@@ -586,6 +586,13 @@ const commandDashboard = () => {
 const main = () => {
   const args = parseArgs(process.argv);
 
+  // Version flag
+  if (args.command === '--version' || args.command === '-V' || args.command === 'version') {
+    const pkg = require('../package.json');
+    console.log(`agent-shield v${pkg.version}`);
+    return;
+  }
+
   // Show banner for top-level help
   if (!args.command || args.command === 'help' || args.command === '--help' || args.command === '-h') {
     console.log(ASCII_BANNER);
@@ -652,6 +659,7 @@ ${COLORS.bold}Options:${COLORS.reset}
   -f, --file              Input file path
   -j, --json              JSON string to scan
   --pii                   Include PII detection
+  -V, --version           Show version
   -h, --help              Show this help
 
 ${COLORS.bold}Examples:${COLORS.reset}

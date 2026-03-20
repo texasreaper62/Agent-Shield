@@ -1,0 +1,5 @@
+{
+  "src/**/*.js": ["prettier --check"],
+  "test/**/*.js": ["prettier --check"],
+  "bin/**/*.js": ["prettier --check"]
+}

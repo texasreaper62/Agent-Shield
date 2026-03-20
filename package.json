@@ -1,11 +1,12 @@
 {
   "name": "agent-shield",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "description": "Protect AI agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI threats. All detection runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
   "exports": {
     ".": {
+      "import": "./src/main.mjs",
       "require": "./src/main.js",
       "types": "./types/index.d.ts"
     },
@@ -86,6 +87,7 @@
   "homepage": "https://github.com/texasreaper62/Agent-Shield#readme",
   "files": [
     "src/**/*.js",
+    "src/**/*.mjs",
     "types/index.d.ts",
     "bin/agent-shield.js",
     "LICENSE",
