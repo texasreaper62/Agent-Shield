@@ -22,7 +22,14 @@
 
 /** @type {Object<string, function>} */
 const BUILTIN_FUNCTIONS = {
-  matches: (text, pattern) => new RegExp(pattern, 'i').test(text),
+  matches: (() => {
+    const cache = new Map();
+    return (text, pattern) => {
+      let re = cache.get(pattern);
+      if (!re) { re = new RegExp(pattern, 'i'); cache.set(pattern, re); if (cache.size > 200) cache.clear(); }
+      return re.test(text);
+    };
+  })(),
   contains: (text, substr) => typeof text === 'string' && text.toLowerCase().includes(substr.toLowerCase()),
   starts_with: (text, prefix) => typeof text === 'string' && text.toLowerCase().startsWith(prefix.toLowerCase()),
   ends_with: (text, suffix) => typeof text === 'string' && text.toLowerCase().endsWith(suffix.toLowerCase()),

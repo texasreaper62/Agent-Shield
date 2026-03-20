@@ -148,8 +148,8 @@ class ThreatStreamServer {
         };
 
         this._threatHistory.push(threatEntry);
-        if (this._threatHistory.length > this.historySize) {
-          this._threatHistory.shift();
+        if (this._threatHistory.length > this.historySize * 1.5) {
+          this._threatHistory = this._threatHistory.slice(-this.historySize);
         }
 
         this.broadcastThreat(threatEntry);
@@ -491,24 +491,27 @@ class ThreatStreamServer {
    */
   _broadcast(message) {
     const frame = this._encodeFrame(message);
-    for (const client of this._clients) {
-      try {
-        client.socket.write(frame);
-      } catch (_) {
-        this._clients.delete(client);
-      }
-    }
+    this._sendFrame(frame, this._clients);
   }
 
   /**
    * Send a message to a specific client.
    */
   _sendToClient(client, message) {
-    try {
-      const frame = this._encodeFrame(message);
-      client.socket.write(frame);
-    } catch (_) {
-      this._clients.delete(client);
+    const frame = this._encodeFrame(message);
+    this._sendFrame(frame, [client]);
+  }
+
+  /**
+   * Send a pre-encoded frame to a set of clients.
+   */
+  _sendFrame(frame, clients) {
+    for (const client of clients) {
+      try {
+        client.socket.write(frame);
+      } catch (_) {
+        this._clients.delete(client);
+      }
     }
   }
 

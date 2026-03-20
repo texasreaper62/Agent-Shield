@@ -693,9 +693,12 @@ class FuzzingHarness {
     this._coverage.recordExecution(truncated, result);
     this._report.addIteration(truncated, result, isNewCoverage, isCrash);
 
-    // Add interesting inputs back to seed corpus
+    // Add interesting inputs back to seed corpus (bounded to prevent memory leak)
     if (isNewCoverage && truncated.length > 0 && truncated.length < 1000) {
       this._seeds.push(truncated);
+      if (this._seeds.length > 10000) {
+        this._seeds = this._seeds.slice(-5000);
+      }
     }
 
     return { input: truncated, result, isNewCoverage, isCrash };

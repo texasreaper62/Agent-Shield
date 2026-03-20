@@ -233,6 +233,7 @@ class SecureChannel {
     this.sendSeq = 0;
     this.recvSeq = 0;
     this.messageHistory = [];
+    this._maxHistory = 1000;
     this.latencies = [];
     this.createdAt = Date.now();
     this._pendingTimestamps = new Map();
@@ -270,6 +271,9 @@ class SecureChannel {
       sequenceNum: msg.sequenceNum,
       timestamp: msg.timestamp
     });
+    if (this.messageHistory.length > this._maxHistory) {
+      this.messageHistory = this.messageHistory.slice(-Math.floor(this._maxHistory * 0.75));
+    }
 
     return envelope;
   }

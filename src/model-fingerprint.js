@@ -257,10 +257,10 @@ const MODEL_SIGNATURES = {
  */
 class ResponseAnalyzer {
   constructor() {
-    this._hedgingWords = HEDGING_WORDS;
-    this._formalWords = FORMAL_WORDS;
-    this._informalWords = INFORMAL_WORDS;
-    this._transitionPhrases = TRANSITION_PHRASES;
+    // Pre-compile hedging word regexes for hot-path performance
+    this._hedgingRegexes = HEDGING_WORDS.map(h =>
+      new RegExp('\\b' + h.replace(/\s+/g, '\\s+') + '\\b', 'gi')
+    );
   }
 
   /**
@@ -396,8 +396,8 @@ class ResponseAnalyzer {
     if (wordCount === 0) return 0;
     const lower = text.toLowerCase();
     let count = 0;
-    for (const h of this._hedgingWords) {
-      const regex = new RegExp('\\b' + h.replace(/\s+/g, '\\s+') + '\\b', 'gi');
+    for (const regex of this._hedgingRegexes) {
+      regex.lastIndex = 0;
       const matches = lower.match(regex);
       if (matches) count += matches.length;
     }
