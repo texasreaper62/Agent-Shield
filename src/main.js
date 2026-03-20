@@ -142,6 +142,47 @@ const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequir
 // OpenClaw
 const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = safeRequire('./openclaw', 'openclaw');
 
+// --- v1.2 Modules ---
+
+// Semantic Detection
+const { SemanticClassifier, httpPost } = safeRequire('./semantic', 'semantic');
+
+// Embedding Similarity
+const { EmbeddingSimilarityDetector, ATTACK_CORPUS, tokenize: tokenizeText, cosineSimilarity } = safeRequire('./embedding', 'embedding');
+
+// Context-Aware Scoring
+const { ConversationContextAnalyzer, ESCALATION_SIGNALS, TOPIC_PIVOT_SIGNALS } = safeRequire('./context-scoring', 'context-scoring');
+
+// Confidence Tuning
+const { ConfidenceTuner } = safeRequire('./confidence-tuning', 'confidence-tuning');
+
+// --- v2.0 Modules ---
+
+// Plugin Marketplace
+const { PluginRegistry, PluginValidator, MarketplaceClient } = safeRequire('./plugin-marketplace', 'plugin-marketplace');
+
+// --- v2.1 Modules ---
+
+// Distributed Scanning
+const { DistributedShield, DistributedAdapter, MemoryAdapter, RedisAdapter } = safeRequire('./distributed', 'distributed');
+
+// Audit Log Streaming
+const { AuditStreamManager, AuditTransport, FileTransport, SplunkTransport, ElasticsearchTransport } = safeRequire('./audit-streaming', 'audit-streaming');
+
+// --- v3.0 Modules ---
+
+// Self-Healing Patterns
+const { SelfHealingEngine, PatternGenerator: SelfHealingPatternGenerator } = safeRequire('./self-healing', 'self-healing');
+
+// Honeypot Mode
+const { HoneypotEngine, HoneypotSession } = safeRequire('./honeypot', 'honeypot');
+
+// Multi-Modal Scanning
+const { MultiModalScanner, ModalityExtractor } = safeRequire('./multimodal', 'multimodal');
+
+// Behavior Profiling
+const { BehaviorProfile } = safeRequire('./behavior-profiling', 'behavior-profiling');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -376,7 +417,52 @@ const _exports = {
   // OpenClaw
   OpenClawShieldSkill,
   shieldOpenClawMessages,
-  generateOpenClawSkill
+  generateOpenClawSkill,
+
+  // v1.2 — Semantic Detection
+  SemanticClassifier,
+  httpPost,
+  EmbeddingSimilarityDetector,
+  ATTACK_CORPUS,
+  tokenizeText,
+  cosineSimilarity,
+  ConversationContextAnalyzer,
+  ESCALATION_SIGNALS,
+  TOPIC_PIVOT_SIGNALS,
+  ConfidenceTuner,
+
+  // v2.0 — Plugin Marketplace
+  PluginRegistry,
+  PluginValidator,
+  MarketplaceClient,
+
+  // v2.1 — Distributed Scanning
+  DistributedShield,
+  DistributedAdapter,
+  MemoryAdapter,
+  RedisAdapter,
+
+  // v2.1 — Audit Log Streaming
+  AuditStreamManager,
+  AuditTransport,
+  FileTransport,
+  SplunkTransport,
+  ElasticsearchTransport,
+
+  // v3.0 — Self-Healing Patterns
+  SelfHealingEngine,
+  SelfHealingPatternGenerator,
+
+  // v3.0 — Honeypot Mode
+  HoneypotEngine,
+  HoneypotSession,
+
+  // v3.0 — Multi-Modal Scanning
+  MultiModalScanner,
+  ModalityExtractor,
+
+  // v3.0 — Behavior Profiling
+  BehaviorProfile
 };
 
 // Filter out undefined exports (from modules that failed to load)
