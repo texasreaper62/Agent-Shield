@@ -237,6 +237,26 @@ const { ModelFingerprinter, ResponseAnalyzer, StyleProfile, FingerprintDatabase,
 // Cost/Latency Optimizer
 const { CostOptimizer, LatencyBudget, AdaptiveScanner, TierManager, PerformanceMonitor, ScanPlan, OPTIMIZATION_PRESETS } = safeRequire('./cost-optimizer', 'cost-optimizer');
 
+// --- v6.0 — Compliance & Market Readiness ---
+
+// OWASP LLM Top 10 v2025 Coverage Matrix
+const { OWASP_LLM_2025, OWASPCoverageMatrix, SEVERITY_WEIGHTS: OWASP_SEVERITY_WEIGHTS, COVERAGE_MULTIPLIERS } = safeRequire('./owasp-2025', 'owasp-2025');
+
+// MCP Bridge (Model Context Protocol integration)
+const { MCPBridge, MCPToolPolicy, MCPSessionGuard, MCPResourceScanner, MCP_DANGEROUS_TOOLS, ARG_INJECTION_PATTERNS, createMCPMiddleware } = safeRequire('./mcp-bridge', 'mcp-bridge');
+
+// NIST AI RMF Mapping & AI-BOM Generator
+const { NIST_AI_RMF_2025, SP800_53_AI_CONTROLS, NISTMapper, AIBOMGenerator, ComplianceChecker: NISTComplianceChecker } = safeRequire('./nist-mapping', 'nist-mapping');
+
+// EU AI Act Compliance
+const { EU_AI_ACT_REQUIREMENTS, RiskClassifier, ConformityAssessment, TransparencyReporter, IncidentReporter: EUIncidentReporter, EUAIActDashboard } = safeRequire('./eu-ai-act', 'eu-ai-act');
+
+// System Prompt Leakage Detector (OWASP LLM07-2025)
+const { PROMPT_EXTRACTION_PATTERNS, SystemPromptGuard, PromptFingerprinter, PromptLeakageMitigation } = safeRequire('./prompt-leakage', 'prompt-leakage');
+
+// RAG/Vector Vulnerability Scanner (OWASP LLM08-2025)
+const { RAG_VULNERABILITY_PATTERNS, VECTOR_DB_SECURITY_CHECKLIST, RAGVulnerabilityScanner, EmbeddingIntegrityChecker, RAGPipelineAuditor } = safeRequire('./rag-vulnerability', 'rag-vulnerability');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -637,6 +657,49 @@ const _exports = {
 
   // v5.1 — Agent observability exported in Observability section above
   // v5.1 — Benchmark harness exported in Benchmark Harness section above
+
+  // v6.0 — OWASP LLM Top 10 v2025
+  OWASP_LLM_2025,
+  OWASPCoverageMatrix,
+  OWASP_SEVERITY_WEIGHTS,
+  COVERAGE_MULTIPLIERS,
+
+  // v6.0 — MCP Bridge
+  MCPBridge,
+  MCPToolPolicy,
+  MCPSessionGuard,
+  MCPResourceScanner,
+  MCP_DANGEROUS_TOOLS,
+  ARG_INJECTION_PATTERNS,
+  createMCPMiddleware,
+
+  // v6.0 — NIST AI RMF
+  NIST_AI_RMF_2025,
+  SP800_53_AI_CONTROLS,
+  NISTMapper,
+  AIBOMGenerator,
+  NISTComplianceChecker,
+
+  // v6.0 — EU AI Act
+  EU_AI_ACT_REQUIREMENTS,
+  RiskClassifier,
+  ConformityAssessment,
+  TransparencyReporter,
+  EUIncidentReporter,
+  EUAIActDashboard,
+
+  // v6.0 — System Prompt Leakage (LLM07)
+  PROMPT_EXTRACTION_PATTERNS,
+  SystemPromptGuard,
+  PromptFingerprinter,
+  PromptLeakageMitigation,
+
+  // v6.0 — RAG/Vector Vulnerability (LLM08)
+  RAG_VULNERABILITY_PATTERNS,
+  VECTOR_DB_SECURITY_CHECKLIST,
+  RAGVulnerabilityScanner,
+  EmbeddingIntegrityChecker,
+  RAGPipelineAuditor,
 };
 
 // Filter out undefined exports (from modules that failed to load)
