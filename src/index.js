@@ -107,8 +107,15 @@ class AgentShield {
    * @param {string} [options.source] - Label for where the text came from.
    * @param {string} [options.sensitivity] - Override default sensitivity.
    * @returns {object} Scan result.
+   * @throws {TypeError} If text is not a string.
    */
   scan(text, options = {}) {
+    if (typeof text !== 'string') {
+      throw new TypeError(`[Agent Shield] scan() expects a string, got ${typeof text}`);
+    }
+    if (text.length > 1_000_000) {
+      console.warn('[Agent Shield] Input exceeds 1MB — consider scanning in chunks');
+    }
     const result = scanText(text, {
       source: options.source || 'unknown',
       sensitivity: options.sensitivity || this.config.sensitivity
@@ -192,6 +199,9 @@ class AgentShield {
    * @returns {object} Scan result with additional `blocked` field.
    */
   scanInput(text, options = {}) {
+    if (typeof text !== 'string') {
+      throw new TypeError(`[Agent Shield] scanInput() expects a string, got ${typeof text}`);
+    }
     return this._scanWithBlocking(text, 'user_input', 'INPUT', options);
   }
 
@@ -206,6 +216,9 @@ class AgentShield {
    * @returns {object} Scan result with additional `blocked` field.
    */
   scanOutput(text, options = {}) {
+    if (typeof text !== 'string') {
+      throw new TypeError(`[Agent Shield] scanOutput() expects a string, got ${typeof text}`);
+    }
     return this._scanWithBlocking(text, 'agent_output', 'OUTPUT', options);
   }
 
@@ -301,6 +314,9 @@ class AgentShield {
    * @returns {object} Combined result with per-item results.
    */
   scanBatch(items) {
+    if (!Array.isArray(items)) {
+      throw new TypeError(`[Agent Shield] scanBatch() expects an array, got ${typeof items}`);
+    }
     const results = items.map(item =>
       this.scan(item.text, { source: item.source || 'batch' })
     );

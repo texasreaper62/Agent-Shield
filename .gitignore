@@ -30,6 +30,10 @@ __pycache__/
 
 # Test coverage
 coverage/
+.c8_output/
+
+# SBOM (generated, not committed)
+sbom.json
 
 # Logs
 *.log

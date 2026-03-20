@@ -1242,3 +1242,671 @@ export declare function truncate(text: string, maxLength?: number): string;
 export declare function formatHeader(text: string): string;
 export declare function generateId(): string;
 export declare function extractTextFromBody(body: any): string;
+
+// =========================================================================
+// OpenClaw Integration
+// =========================================================================
+
+export declare class OpenClawShieldSkill {
+  constructor(options?: ShieldOptions & { pii?: boolean; circuitBreaker?: CircuitBreakerOptions; onThreat?: (info: any) => void });
+  getSkillMetadata(): string;
+  scanInbound(message: string | object): { safe: boolean; blocked: boolean; threats: Threat[]; redacted?: string; pii?: any; stats?: any };
+  scanOutbound(message: string | object): { safe: boolean; blocked: boolean; threats: Threat[]; redacted?: string };
+  scanTool(toolName: string, args: object): { safe: boolean; blocked: boolean; threats: Threat[] };
+  handleToolCall(params?: object): object;
+}
+
+export declare function shieldOpenClawMessages(options?: ShieldOptions): { scan: (message: string) => ScanResult };
+export declare function generateOpenClawSkill(outputDir: string): Promise<void>;
+
+// =========================================================================
+// Semantic Detection (v1.2)
+// =========================================================================
+
+export declare class SemanticClassifier {
+  constructor(options?: { endpoint?: string; model?: string; timeoutMs?: number; apiKey?: string; mode?: string; confidenceThreshold?: number; enabled?: boolean });
+  classify(text: string, context?: object): Promise<{ isThreat: boolean; confidence: number; category: string; reasoning: string; latencyMs: number }>;
+  enhancedScan(text: string, options?: object): Promise<ScanResult>;
+  isAvailable(): Promise<boolean>;
+  getStats(): { totalClassifications: number; threats: number; avgLatencyMs: number };
+  clearCache(): void;
+}
+
+export declare function httpPost(url: string, body: object, options?: { timeoutMs?: number; apiKey?: string }): Promise<object>;
+
+// =========================================================================
+// Embedding Similarity (v1.2)
+// =========================================================================
+
+export declare class EmbeddingSimilarityDetector {
+  constructor(options?: { similarityThreshold?: number; topK?: number; customCorpus?: Array<{ text: string; category: string }>; enabled?: boolean });
+  check(text: string): { isSimilar: boolean; topMatches: Array<{ text: string; category: string; similarity: number }>; bestMatch: { text: string; category: string; similarity: number } | null };
+  enhancedScan(text: string, options?: object): ScanResult;
+  addPattern(text: string, category: string): void;
+  getStats(): object;
+}
+
+export declare const ATTACK_CORPUS: Array<{ text: string; category: string }>;
+export declare function tokenizeText(text: string): string[];
+export declare function cosineSimilarity(vecA: Map<string, number>, vecB: Map<string, number>): number;
+
+// =========================================================================
+// Context-Aware Scoring (v1.2)
+// =========================================================================
+
+export declare class ConversationContextAnalyzer {
+  constructor(options?: { maxHistory?: number; escalationThreshold?: number; decayFactor?: number; trackTopics?: boolean });
+  addMessage(text: string, role?: string): object;
+  contextualScan(text: string): ScanResult;
+  getSummary(): object;
+  reset(): void;
+}
+
+export declare const ESCALATION_SIGNALS: Array<{ phase: string; patterns: RegExp[]; weight: number }>;
+export declare const TOPIC_PIVOT_SIGNALS: Array<{ from: string; to: string; severity: string }>;
+
+// =========================================================================
+// Confidence Tuning (v1.2)
+// =========================================================================
+
+export declare class ConfidenceTuner {
+  constructor(options?: { dataDir?: string; defaultThreshold?: number; learningRate?: number; minSamples?: number });
+  recordFeedback(scanResult: ScanResult, label: string, notes?: string): object;
+  getThreshold(category: string): number;
+  applyThresholds(scanResult: ScanResult): ScanResult;
+  tunedScan(text: string, options?: object): ScanResult;
+  getMetrics(): { precision: number; recall: number; f1: number; accuracy: number; perCategory: Record<string, any> };
+  getRecommendations(): Array<{ category: string; action: string; reason: string }>;
+  reset(): void;
+}
+
+// =========================================================================
+// Plugin Marketplace (v2.0)
+// =========================================================================
+
+export declare class PluginValidator {
+  validate(manifest: object): { valid: boolean; errors: string[]; warnings: string[]; score: number; grade: string };
+  runTests(manifest: object): { passed: number; failed: number; total: number; results: any[] };
+}
+
+export declare class PluginRegistry {
+  constructor(options?: { pluginDir?: string; autoValidate?: boolean });
+  register(manifest: object): { success: boolean; validation?: object; error?: string };
+  unregister(name: string): boolean;
+  enable(name: string): boolean;
+  disable(name: string): boolean;
+  get(name: string): object | null;
+  list(): Array<object>;
+  search(query: string): Array<object>;
+  scan(text: string): { threats: Threat[]; pluginsUsed: string[] };
+  getStats(): object;
+}
+
+export declare class MarketplaceClient {
+  constructor(options?: { registryUrl?: string; timeoutMs?: number; registry?: PluginRegistry });
+  browse(filters?: object): Promise<{ plugins: object[]; error?: string }>;
+  install(name: string): Promise<{ success: boolean; plugin?: object; error?: string }>;
+  publish(manifest: object): Promise<{ success: boolean; error?: string; validation?: object }>;
+}
+
+// =========================================================================
+// Distributed Scanning (v2.1)
+// =========================================================================
+
+export declare class DistributedAdapter {
+  set(key: string, value: any, ttlMs?: number): Promise<void>;
+  get(key: string): Promise<any>;
+  del(key: string): Promise<boolean>;
+  publish(channel: string, message: any): Promise<void>;
+  subscribe(channel: string, handler: (message: any) => void): Promise<void>;
+  incr(key: string, amount?: number): Promise<number>;
+}
+
+export declare class MemoryAdapter extends DistributedAdapter {
+  constructor();
+  keys(prefix: string): Promise<string[]>;
+  destroy(): void;
+}
+
+export declare class RedisAdapter extends DistributedAdapter {
+  constructor(options: { client: object; prefix?: string });
+}
+
+export declare class DistributedShield {
+  constructor(options?: { adapter?: DistributedAdapter; instanceId?: string; syncIntervalMs?: number; threatTTLMs?: number });
+  start(): Promise<void>;
+  reportThreat(threat: object): Promise<void>;
+  getGlobalStats(): Promise<object>;
+  isKnownThreat(signature: string): Promise<boolean>;
+  markKnownThreat(signature: string, metadata?: object): Promise<void>;
+  stop(): Promise<void>;
+}
+
+// =========================================================================
+// Audit Streaming (v2.1)
+// =========================================================================
+
+export declare class AuditTransport {
+  send(event: object): Promise<void>;
+  sendBatch(events: object[]): Promise<void>;
+  flush(): Promise<void>;
+  close(): Promise<void>;
+}
+
+export declare class FileTransport extends AuditTransport {
+  constructor(options?: { filePath?: string; maxSizeMB?: number; maxFiles?: number });
+}
+
+export declare class SplunkTransport extends AuditTransport {
+  constructor(options: { url: string; token: string; index?: string; source?: string; sourcetype?: string; batchSize?: number; flushIntervalMs?: number });
+  getStats(): object;
+}
+
+export declare class ElasticsearchTransport extends AuditTransport {
+  constructor(options: { url: string; index?: string; apiKey?: string; batchSize?: number; flushIntervalMs?: number });
+  getStats(): object;
+}
+
+export declare class AuditStreamManager {
+  constructor(options?: { transports?: AuditTransport[]; includeMetadata?: boolean; environment?: string });
+  addTransport(transport: AuditTransport): void;
+  emit(type: string, data?: object): Promise<void>;
+  emitScan(scanResult: ScanResult, context?: object): Promise<void>;
+  emitThreat(threat: Threat, context?: object): Promise<void>;
+  emitBlock(reason: string, context?: object): Promise<void>;
+  flush(): Promise<void>;
+  close(): Promise<void>;
+  getStats(): object;
+}
+
+// =========================================================================
+// Self-Healing (v3.0)
+// =========================================================================
+
+export declare class SelfHealingEngine {
+  constructor(options?: { maxPatterns?: number; autoApply?: boolean; onHeal?: (patterns: Pattern[]) => void });
+  reportFalseNegative(attackText: string, metadata?: object): { healed: boolean; patterns: Pattern[]; error?: string };
+  scan(text: string, options?: object): ScanResult;
+  getPatterns(): Pattern[];
+  getStats(): object;
+  exportPatterns(): string;
+  reset(): void;
+}
+
+export declare class SelfHealingPatternGenerator {
+  constructor();
+  generate(attackText: string, options?: { category?: string }): Pattern | null;
+  generateVariants(attackText: string, options?: object): Pattern[];
+}
+
+// =========================================================================
+// Honeypot (v3.0)
+// =========================================================================
+
+export declare class HoneypotSession {
+  constructor(sessionId: string, metadata?: object);
+  addMessage(text: string, scanResult: ScanResult): void;
+  getSummary(): object;
+  end(): void;
+}
+
+export declare class HoneypotEngine {
+  constructor(options?: { maxSessions?: number; sessionTimeoutMs?: number; responseGenerator?: (text: string) => string; onAttack?: (info: any) => void; enabled?: boolean });
+  process(text: string, sessionId?: string): { response: string; session: HoneypotSession; scanResult: ScanResult; isAttack: boolean; honeypotActive: boolean };
+  getIntelligenceReport(): object;
+  getCompletedSessions(): HoneypotSession[];
+  endAllSessions(): void;
+  getStats(): object;
+  reset(): void;
+}
+
+// =========================================================================
+// Multi-Modal (v3.0)
+// =========================================================================
+
+export declare class ModalityExtractor {
+  constructor();
+  extractFromImage(imageData: object): Array<{ text: string; source: string }>;
+  extractFromAudio(audioData: object): Array<{ text: string; source: string }>;
+  extractFromPDF(pdfData: object): Array<{ text: string; source: string }>;
+  extractFromToolOutput(toolOutput: object, toolName?: string): Array<{ text: string; source: string }>;
+}
+
+export declare class MultiModalScanner {
+  constructor(options?: { sensitivity?: string; onThreat?: (threat: Threat) => void });
+  scanImage(imageData: object): ScanResult;
+  scanAudio(audioData: object): ScanResult;
+  scanPDF(pdfData: object): ScanResult;
+  scanToolOutput(toolOutput: object, toolName?: string): ScanResult;
+  scanRaw(modality: string, texts: Array<{ text: string; source: string }>): ScanResult;
+  getStats(): object;
+}
+
+// =========================================================================
+// Behavior Profiling (v3.0)
+// =========================================================================
+
+export declare class BehaviorProfile {
+  constructor(options?: { windowSize?: number; learningPeriod?: number; anomalyThreshold?: number });
+  record(observation: { responseLength?: number; responseTimeMs?: number; toolsCalled?: string[]; threatScore?: number; topic?: string }): { anomalies: any[]; isLearning: boolean };
+  getBaseline(): object;
+  getReport(): object;
+  healthCheck(): { normal: boolean; riskLevel: string; concerns: string[] };
+  reset(): void;
+}
+
+// =========================================================================
+// SSO/SAML (v2.1)
+// =========================================================================
+
+export declare class SSOSession {
+  constructor(identity: object, role: string, permissions: string[], ttl: number);
+  isValid(): boolean;
+  hasPermission(permission: string): boolean;
+  toJSON(): object;
+}
+
+export declare class IdentityMapper {
+  constructor(mappingRules?: Array<{ idpGroup: string; shieldRole: string; permissions: string[] }>);
+  addRule(rule: { idpGroup: string; shieldRole: string; permissions: string[] }): this;
+  mapIdentity(identity: object): { role: string; permissions: string[] };
+}
+
+export declare class SAMLParser {
+  constructor();
+  parseAssertion(xml: string): { issuer: string; subject: string; conditions: object; attributes: object; raw: string };
+  validateAssertion(assertion: object, provider: object): { valid: boolean; errors: string[] };
+  extractAttributes(assertion: object): { email: string; name: string; groups: string[]; roles: string[]; custom: Record<string, any> };
+  buildAuthnRequest(provider: object): string;
+}
+
+export declare class OIDCHandler {
+  constructor(config?: { clientId?: string; issuer?: string; redirectUri?: string });
+  buildAuthorizationUrl(state: string): string;
+  exchangeCode(code: string): { access_token: string; id_token: string; token_type: string; expires_in: number };
+  validateIdToken(token: string): { valid: boolean; claims: object; errors: string[] };
+  getUserInfo(accessToken: string): { sub: string; email: string; name: string; groups: string[] };
+}
+
+export declare class SSOManager {
+  constructor(config?: { providers?: object[]; defaultRole?: string; sessionTTL?: number; auditLog?: boolean });
+  registerProvider(provider: object): this;
+  authenticate(providerType: string, assertion: string): SSOSession;
+  mapToRole(identity: object): { role: string; permissions: string[] };
+  getSession(sessionId: string): SSOSession | null;
+  revokeSession(sessionId: string): boolean;
+  listActiveSessions(): SSOSession[];
+  getAuditLog(): object[];
+}
+
+export declare const SSO_DEFAULT_MAPPINGS: Array<{ idpGroup: string; shieldRole: string; permissions: string[] }>;
+
+// =========================================================================
+// Model Fine-Tuning (v2.1)
+// =========================================================================
+
+export declare class FineTunedModel {
+  constructor(weights: number[], vocabulary: string[], config: object);
+  predict(text: string): { label: string; confidence: number };
+  predictBatch(texts: string[]): Array<{ label: string; confidence: number }>;
+  export(): object;
+  static load(json: object): FineTunedModel;
+  getFeatureImportance(topN?: number): Array<{ term: string; weight: number }>;
+}
+
+export declare class DatasetManager {
+  constructor();
+  addSample(text: string, label: string, metadata?: object): this;
+  addFromScanHistory(scanResults: ScanResult[]): this;
+  augment(): this;
+  split(ratio?: number): { train: any[]; validation: any[]; test: any[] };
+  getStats(): object;
+  export(): object;
+}
+
+export declare class ModelTrainer {
+  constructor(config?: { learningRate?: number; epochs?: number; batchSize?: number; validationSplit?: number });
+  train(dataset: Array<{ text: string; label: string }>): FineTunedModel;
+}
+
+export declare class ModelEvaluator {
+  constructor();
+  evaluate(model: FineTunedModel, testSet: Array<{ text: string; label: string }>): { accuracy: number; precision: number; recall: number; f1: number; confusionMatrix: object; roc_auc: number };
+  generateReport(): string;
+}
+
+export declare class TrainingPipeline {
+  constructor(options?: { config?: object; datasetManager?: DatasetManager; trainer?: ModelTrainer; evaluator?: ModelEvaluator });
+  run(dataset: Array<{ text: string; label: string }>): Promise<{ model: FineTunedModel; evaluation: object }>;
+}
+
+// =========================================================================
+// Threat Intelligence Network (v3.0)
+// =========================================================================
+
+export declare class PatternAnonymizer {
+  constructor(level?: 'low' | 'medium' | 'high');
+  anonymize(pattern: object): object;
+  hashPattern(pattern: object): string;
+  generalize(regex: string): string;
+  stripMetadata(metadata: object): object;
+  addNoise(stats: object, sensitivity?: number, epsilon?: number): object;
+}
+
+export declare class PeerNode {
+  constructor(nodeId: string, config?: { heartbeatIntervalMs?: number; heartbeatTimeoutMs?: number });
+  connect(peerInfo: object): boolean;
+  send(message: object): boolean;
+}
+
+export declare class ConsensusEngine {
+  constructor(options?: { quorum?: number; votingTimeoutMs?: number });
+  propose(pattern: object): Promise<{ accepted: boolean; votes: number }>;
+  vote(proposalId: string, accept: boolean): void;
+}
+
+export declare class ThreatFeed {
+  constructor(options?: { maxPatterns?: number; ttlMs?: number });
+  add(pattern: object): void;
+  getPatterns(): object[];
+  getRecent(count?: number): object[];
+}
+
+export declare class ThreatIntelNetwork {
+  constructor(options?: { nodeId?: string; anonymizationLevel?: string; consensusQuorum?: number });
+  start(): Promise<void>;
+  sharePattern(pattern: object): Promise<void>;
+  getSharedPatterns(): object[];
+  stop(): void;
+}
+
+export declare const NETWORK_DEFAULTS: object;
+
+// =========================================================================
+// I18n Patterns (v4.0)
+// =========================================================================
+
+export declare class I18nPatternManager {
+  constructor(options?: { languages?: string[] });
+  getPatterns(language?: string): Pattern[];
+  addPattern(language: string, pattern: Pattern): void;
+  getAllPatterns(): Pattern[];
+  getSupportedLanguages(): string[];
+}
+
+export declare const CJK_PATTERNS: Array<{ regex: RegExp; severity: string; category: string; description: string; language: string }>;
+export declare const ARABIC_PATTERNS: Array<{ regex: RegExp; severity: string; category: string; description: string; language: string }>;
+export declare const CYRILLIC_PATTERNS: Array<{ regex: RegExp; severity: string; category: string; description: string; language: string }>;
+export declare const INDIC_PATTERNS: Array<{ regex: RegExp; severity: string; category: string; description: string; language: string }>;
+export declare const MULTILINGUAL_PATTERNS: any[];
+export declare function getI18nPatterns(language?: string): Pattern[];
+
+// =========================================================================
+// LLM Red Team Suite (v4.0)
+// =========================================================================
+
+export declare class AdversarialGenerator {
+  constructor();
+  generatePayloads(category: string, count?: number): Array<{ payload: string; category: string; technique: string }>;
+  mutate(payload: string): string;
+  chainAttacks(payloads: string[]): Array<string[]>;
+  generateEvasion(payload: string, technique: string): string;
+}
+
+export declare class JailbreakLibrary {
+  constructor();
+  getTemplates(category: string): string[];
+  getCategories(): string[];
+  addTemplate(category: string, template: string): void;
+  search(keyword: string): string[];
+}
+
+export declare class EvasionTester {
+  constructor(options?: { sensitivity?: string; mutations?: number });
+  test(payload: string): { totalMutations: number; detected: number; evaded: number; evasionRate: string; evasions: Array<{ mutation: string; text: string }> };
+}
+
+export declare class LLMRedTeamSuite {
+  constructor(options?: { sensitivity?: string });
+  runAll(): object;
+  runCategory(category: string): object;
+  generateReport(): object;
+  formatReport(): string;
+}
+
+export declare const JAILBREAK_TEMPLATES: Record<string, string[]>;
+export declare const MUTATION_TECHNIQUES: string[];
+
+// =========================================================================
+// Agent Protocol (v5.0)
+// =========================================================================
+
+export declare class ProtocolMessage {
+  constructor(type: string, payload: any, senderId: string, sequenceNum: number);
+  serialize(): string;
+  static deserialize(raw: string): ProtocolMessage;
+  isExpired(timeout: number): boolean;
+  static TYPES: string[];
+}
+
+export declare class AgentIdentity {
+  constructor(agentId: string, capabilities?: string[], metadata?: object);
+  sign(secretKey: string): string;
+  verify(signature: string, secretKey: string): boolean;
+  hasCapability(cap: string): boolean;
+  toJSON(): object;
+  static fromJSON(json: object): AgentIdentity;
+  static TRUST_LEVELS: string[];
+}
+
+export declare class SecureChannel {
+  constructor(localIdentity: AgentIdentity, remoteIdentity: AgentIdentity, sharedSecret: string);
+  send(payload: any, type?: string): string;
+  receive(encrypted: string): { valid: boolean; message?: ProtocolMessage; error?: string };
+  getStats(): object;
+}
+
+export declare class HandshakeManager {
+  constructor(options?: { timeoutMs?: number });
+  initiate(localIdentity: AgentIdentity, remoteIdentity: AgentIdentity): { challenge: string; sessionId: string };
+  respond(challenge: string, identity: AgentIdentity): { response: string; sessionId: string };
+  verify(response: string, sessionId: string): { valid: boolean; channel?: SecureChannel };
+}
+
+export declare class MessageRouter {
+  constructor();
+  register(agentId: string, handler: (message: ProtocolMessage) => void): void;
+  unregister(agentId: string): void;
+  route(message: ProtocolMessage): boolean;
+  broadcast(message: ProtocolMessage, exclude?: string[]): number;
+}
+
+export declare class AgentProtocol {
+  constructor(options?: { identity?: AgentIdentity; secret?: string });
+  connect(remoteIdentity: AgentIdentity): SecureChannel;
+  listen(handler: (message: ProtocolMessage, channel: SecureChannel) => void): void;
+  getConnections(): object[];
+}
+
+export declare const PROTOCOL_VERSION: string;
+
+// =========================================================================
+// Policy DSL (v5.0)
+// =========================================================================
+
+export declare class PolicyParser {
+  constructor();
+  tokenize(source: string): Array<{ type: string; value: string; line: number; col: number }>;
+  parse(tokens: any[]): { type: string; policies: any[] };
+}
+
+export declare class PolicyCompiler {
+  constructor();
+  compile(ast: object): { execute: (context: object) => object };
+}
+
+export declare class PolicyRuntime {
+  constructor(options?: { builtins?: Record<string, Function> });
+  load(source: string): void;
+  evaluate(context: object): { allowed: boolean; violations: string[]; actions: string[] };
+}
+
+export declare class PolicyValidator {
+  constructor();
+  validate(source: string): { valid: boolean; errors: string[]; warnings: string[] };
+}
+
+export declare class PolicyDSL {
+  constructor(options?: { source?: string; strict?: boolean });
+  load(source: string): void;
+  evaluate(context: object): { allowed: boolean; violations: string[]; actions: string[] };
+  validate(): { valid: boolean; errors: string[]; warnings: string[] };
+}
+
+export declare const DSL_BUILTINS: Record<string, Function>;
+export declare const EXAMPLE_STRICT_POLICY: string;
+export declare const EXAMPLE_PERMISSIVE_POLICY: string;
+export declare const EXAMPLE_CUSTOM_RULES_POLICY: string;
+
+// =========================================================================
+// Fuzzing Harness (v5.0)
+// =========================================================================
+
+export declare class InputGenerator {
+  constructor(options?: { seed?: number });
+  generate(count?: number): string[];
+  generateFromGrammar(grammar?: object): string;
+}
+
+export declare class FuzzMutationEngine {
+  constructor(options?: { seed?: number });
+  mutate(input: string): string;
+}
+
+export declare class CoverageTracker {
+  constructor();
+  record(input: string, result: ScanResult): void;
+  getCoverage(): { categories: string[]; patterns: number; totalInputs: number; coverageRate: string };
+  getUncovered(): string[];
+}
+
+export declare class FuzzReport {
+  constructor(results: any[]);
+  getSummary(): { total: number; crashes: number; uniqueFindings: number; coverageRate: string };
+  format(): string;
+}
+
+export declare class CrashCollector {
+  constructor(options?: { maxCrashes?: number });
+  record(input: string, error: Error): void;
+  getCrashes(): Array<{ input: string; error: string; timestamp: number }>;
+  deduplicate(): Array<{ input: string; error: string; count: number }>;
+}
+
+export declare class FuzzingHarness {
+  constructor(options?: { iterations?: number; seed?: number; timeoutMs?: number; scanFn?: (text: string) => ScanResult });
+  run(options?: { iterations?: number }): FuzzReport;
+  getResults(): any[];
+  getCoverage(): object;
+}
+
+export declare const SEED_CORPUS: string[];
+
+// =========================================================================
+// Model Fingerprinting (v5.0)
+// =========================================================================
+
+export declare class ResponseAnalyzer {
+  constructor();
+  analyze(text: string): { features: Record<string, number>; wordCount: number; sentenceCount: number };
+}
+
+export declare class StyleProfile {
+  constructor(samples?: string[]);
+  addSample(text: string): void;
+  getProfile(): { mean: Record<string, number>; stddev: Record<string, number>; sampleCount: number };
+  similarity(other: StyleProfile): number;
+}
+
+export declare class FingerprintDatabase {
+  constructor();
+  register(name: string, profile: StyleProfile): void;
+  identify(text: string): Array<{ name: string; similarity: number }>;
+  list(): string[];
+}
+
+export declare class SupplyChainDetector {
+  constructor(options?: { database?: FingerprintDatabase });
+  check(text: string, expectedModel?: string): { match: boolean; detectedModel: string; confidence: number; warning?: string };
+}
+
+export declare class ModelFingerprinter {
+  constructor(options?: { database?: FingerprintDatabase });
+  fingerprint(text: string): { profile: object; bestMatch: { name: string; similarity: number } | null };
+  register(name: string, samples: string[]): void;
+  identify(text: string): Array<{ name: string; similarity: number }>;
+}
+
+export declare const MODEL_SIGNATURES: Record<string, { mean: Record<string, number>; stddev: Record<string, number> }>;
+
+// =========================================================================
+// Cost/Latency Optimizer (v5.0)
+// =========================================================================
+
+export declare class ScanPlan {
+  constructor(tier: string, config?: { costPerStep?: number; description?: string });
+  addStep(name: string, config?: { timeout?: number; cost?: number; required?: boolean; type?: string }): this;
+  getEstimatedLatency(): number;
+  getEstimatedCost(): number;
+  getSteps(): object[];
+  toJSON(): object;
+}
+
+export declare class TierManager {
+  constructor();
+  defineTier(name: string, config: object): void;
+  getTier(name: string): object | null;
+  listTiers(): string[];
+}
+
+export declare class LatencyBudget {
+  constructor(options?: { budgetMs?: number; overheadMs?: number });
+  allocate(stepName: string, estimatedMs: number): { allowed: boolean; allocated: number; remaining: number };
+  isExhausted(): boolean;
+  reset(): void;
+}
+
+export declare class AdaptiveScanner {
+  constructor(options?: ShieldOptions & { tiers?: Record<string, object>; defaultTier?: string });
+  scan(text: string, options?: { tier?: string; budgetMs?: number }): ScanResult;
+  selectTier(text: string): string;
+  getStats(): object;
+}
+
+export declare class PerformanceMonitor {
+  constructor(options?: { windowMs?: number; maxSamples?: number });
+  record(durationMs: number, tier: string): void;
+  getPercentiles(): { p50: number; p95: number; p99: number; mean: number };
+  getTierBreakdown(): Record<string, { count: number; avgMs: number }>;
+}
+
+export declare class CostOptimizer {
+  constructor(options?: { budgetPerMinute?: number; latencyTargetMs?: number });
+  optimize(text: string, shield: AgentShield): ScanResult;
+  getRecommendations(): Array<{ action: string; reason: string; impact: string }>;
+  getStats(): object;
+}
+
+export declare const OPTIMIZATION_PRESETS: Record<string, object>;
+
+// =========================================================================
+// Worker Scanner (additional)
+// =========================================================================
+
+export declare class ThreadedWorkerScanner {
+  constructor(options?: { poolSize?: number; timeout?: number });
+  scan(text: string, options?: object): Promise<ScanResult>;
+  scanBatch(texts: string[], options?: object): Promise<ScanResult[]>;
+  getStats(): { activeWorkers: number; queuedJobs: number; completed: number; errors: number; poolSize: number; terminated: boolean };
+  terminate(): void;
+}
