@@ -201,7 +201,16 @@ const { SOCDashboard, SlackAlertChannel, PagerDutyAlertChannel, TeamsAlertChanne
 const { AttackGenome, GenomeDatabase, detectByGenome, INTENT_PATTERNS: GENOME_INTENT_PATTERNS, TECHNIQUE_PATTERNS: GENOME_TECHNIQUE_PATTERNS, EVASION_PATTERNS: GENOME_EVASION_PATTERNS, TARGET_PATTERNS: GENOME_TARGET_PATTERNS } = safeRequire('./attack-genome', 'attack-genome');
 
 // v7.4 — Intent Firewall (loaded when available)
-const { IntentFirewall, ContextAnalyzer: IntentContextAnalyzer, IntentRules } = safeRequire('./intent-firewall', 'intent-firewall');
+const { IntentFirewall, ContextAnalyzer: IntentContextAnalyzer, IntentRules, intentDemo, INTENT_CATEGORIES, INTENT_SIGNALS, CONTEXT_MODIFIERS } = safeRequire('./intent-firewall', 'intent-firewall');
+
+// v7.4 — Federated Threat Intelligence
+const { ThreatIntelFederation, createFederationMesh } = safeRequire('./threat-intel-federation', 'threat-intel-federation');
+
+// v7.4 — Behavioral DNA (loaded when available)
+const { BehavioralDNA, AgentProfiler, extractFeatures: extractBehavioralFeatures, DEFAULT_NUMERIC_FEATURES, DEFAULT_CATEGORICAL_FEATURES } = safeRequire('./behavioral-dna', 'behavioral-dna');
+
+// v7.4 — Compliance Certification Authority (loaded when available)
+const { ComplianceCertificateAuthority, ComplianceReport: ComplianceCertReport, ComplianceScheduler } = safeRequire('./compliance-authority', 'compliance-authority');
 
 // --- v1.2 Modules ---
 
@@ -844,6 +853,26 @@ const _exports = {
   IntentFirewall,
   IntentContextAnalyzer,
   IntentRules,
+  intentDemo,
+  INTENT_CATEGORIES,
+  INTENT_SIGNALS,
+  CONTEXT_MODIFIERS,
+
+  // v7.4 — Federated Threat Intelligence
+  ThreatIntelFederation,
+  createFederationMesh,
+
+  // v7.4 — Behavioral DNA
+  BehavioralDNA,
+  AgentProfiler,
+  extractBehavioralFeatures,
+  DEFAULT_NUMERIC_FEATURES,
+  DEFAULT_CATEGORICAL_FEATURES,
+
+  // v7.4 — Compliance Certification Authority
+  ComplianceCertificateAuthority,
+  ComplianceCertReport,
+  ComplianceScheduler,
 };
 
 // Filter out undefined exports (from modules that failed to load)
