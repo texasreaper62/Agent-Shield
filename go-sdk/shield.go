@@ -741,7 +741,7 @@ func DefaultPatterns() []Pattern {
 			Description: `Text tries to steal data through a hidden image link.`,
 		},
 		{
-			Regex:       `!\[\]\(https?:\/\/(?!(?:i\.)?(?:imgur|github|gitlab|wikimedia|wikipedia)\b)[^)]+\)`,
+			Regex:       `!\[\]\(https?:\/\/[^)]+\)`,
 			Severity:    SeverityMedium,
 			Category:    CategoryDataExfiltration,
 			Description: `Text contains a suspicious hidden image link that could leak data.`,
