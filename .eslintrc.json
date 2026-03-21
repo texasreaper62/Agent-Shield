@@ -4,7 +4,7 @@
     "es2020": true
   },
   "parserOptions": {
-    "ecmaVersion": 2020
+    "ecmaVersion": 2022
   },
   "rules": {
     "no-var": "error",
@@ -27,6 +27,15 @@
       "files": ["test/**/*.js"],
       "rules": {
         "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["wasm/worker.js"],
+      "parserOptions": {
+        "sourceType": "module"
+      },
+      "rules": {
+        "strict": "off"
       }
     }
   ]
