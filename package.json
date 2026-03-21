@@ -14,6 +14,7 @@
     "./detector": "./src/detector-core.js",
     "./middleware": "./src/middleware.js",
     "./integrations": "./src/integrations.js",
+    "./mcp": "./src/mcp-sdk-integration.js",
     "./package.json": "./package.json"
   },
   "bin": {

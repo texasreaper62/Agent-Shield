@@ -96,7 +96,21 @@ const verification = ca.verifyCertificate(incomingCert);
 // { valid: true, trustLevel: 8 }
 ```
 
-**Run the demo:** `node examples/mcp-security-demo.js` — simulates all four Meta attack vectors and shows each one blocked in real-time.
+### Drop-In for @modelcontextprotocol/sdk
+
+```javascript
+const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+const { shieldMCPServer } = require('agent-shield');
+
+const server = shieldMCPServer(new Server({ name: 'my-server', version: '1.0' }));
+// Done. All tool calls scanned, injections blocked, audit trail created.
+```
+
+Or import directly: `const { shieldMCPServer } = require('agent-shield/mcp');`
+
+**Run the demos:**
+- `node examples/mcp-sdk-quickstart.js` — MCP SDK integration in action
+- `node examples/mcp-security-demo.js` — Meta attack vectors blocked in real-time
 
 ---
 

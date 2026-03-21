@@ -59,6 +59,9 @@ const { ERROR_CODES, createShieldError, deprecationWarning } = safeRequire('./er
 // v7.0 — MCP Security Runtime
 const { MCPSecurityRuntime, MCPSessionStateMachine, SESSION_STATES } = safeRequire('./mcp-security-runtime', 'mcp-security-runtime');
 
+// v7.0 — MCP SDK Integration
+const { shieldMCPServer, createMCPSecurityLayer } = safeRequire('./mcp-sdk-integration', 'mcp-sdk-integration');
+
 // v7.0 — MCP Certification & Trust
 const { AgentThreatIntelligence, MCPCertification, CrossOrgAgentTrust, THREAT_CATEGORIES: CERT_THREAT_CATEGORIES, CERTIFICATION_REQUIREMENTS, CERTIFICATION_LEVELS } = safeRequire('./mcp-certification', 'mcp-certification');
 
@@ -709,6 +712,10 @@ const _exports = {
   EphemeralTokenManager,
   IntentValidator,
   ConfusedDeputyGuard,
+
+  // v7.0 — MCP SDK Integration
+  shieldMCPServer,
+  createMCPSecurityLayer,
 
   // v7.0 — MCP Security Runtime
   MCPSecurityRuntime,
