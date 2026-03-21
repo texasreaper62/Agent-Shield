@@ -4,6 +4,41 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [7.4.0] - 2026-03-21
+
+### Added — Detection Hardening
+
+- **21 new detection patterns** (162 total) — prompt extraction, instruction override, authority spoofing, system prompt leakage, and role hijack variants
+- **8-layer text normalization pipeline** (`src/normalizer.js`) — Unicode canonicalization (NFKD→NFC), homoglyph mapping (Cyrillic, Armenian, fullwidth Latin), encoding decode (Base64/hex/URL/HTML entities), leet speak expansion, invisible character removal (zero-width, variation selectors, SMP tag chars), whitespace normalization, repetition collapse, markdown stripping
+- **Edge case test suite** — 77 assertions covering unicode, long inputs, empty inputs, threshold boundaries, and new pattern coverage
+- **Normalizer test suite** — 73 assertions for all 8 normalization layers
+- **Benchmark scorecard** — F1, precision, recall, MCC per-dataset breakdown (HackAPrompt, TensorTrust, research corpus)
+
+### Fixed — 50-Cycle Bug Hunt (30+ bugs)
+
+- Memory leaks in circuit breaker, delegation chain, and behavioral fingerprint
+- Spin-wait in worker scanner replaced with event-loop yielding
+- Falsy-zero defaults in sampling scanner, cost optimizer, and rate limiter
+- Self-matching detection in canary tokens and watermark verification
+- Cache key collisions in scan cache with different configs
+- Unbounded growth in audit trail, threat state, and learning loop history
+- Hot-path optimizations in detector-core regex matching
+
+### Changed
+
+- `src/detector-core.js` — normalizer integration, 21 new regex patterns, pattern dedup
+- `src/normalizer.js` — variation selectors, SMP tag chars, expanded leet/Cyrillic maps
+- Bumped version to 7.4.0
+- Updated README, ROADMAP, and CLAUDE.md with v7.4 metrics
+
+### Metrics
+
+- **F1: 100%** on real-world benchmarks (HackAPrompt, TensorTrust, security research)
+- **False positive accuracy: 99.2%** (118 samples)
+- **Detection rate: 100%** (red team A+)
+- **Shield score: 100/100**
+- **2,400+ test assertions** across 19 test suites
+
 ## [7.3.0] - 2026-03-21
 
 ### Added - CORTEX Autonomous Defense Platform

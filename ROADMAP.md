@@ -116,6 +116,17 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] 28 quality hardening fixes (detection engine, memory, CI, types, docs)
 - [x] Web Playground, competitive benchmark page, Claude/MCP demos
 
+## v7.4 — Detection Hardening & Normalization (Complete)
+
+- [x] Text normalization pipeline — 8-layer pre-processing (unicode canon, homoglyph decode, encoding decode, leet speak, invisible char strip, whitespace norm, repetition collapse, markdown strip)
+- [x] 21 new detection patterns — prompt extraction, instruction override, authority spoofing, conditional bypass, translation trick, developer mode override, task replacement
+- [x] Real-world benchmark scorecard — F1 100%, MCC 1.0 against HackAPrompt, TensorTrust, and security research datasets (68 samples, 0 false positives)
+- [x] 50-cycle bug hunt — 30+ bugs fixed across all 50 source modules (memory leaks, spin-waits, falsy-zero, self-matching, cache collisions, unbounded growth)
+- [x] Hot-path optimization — skip normalized scan when threats already found, ASCII fast-path for homoglyph decode, Set-based dedup
+- [x] 162 detection patterns (up from 141), 395 exports (up from 390)
+- [x] Edge case test coverage — unicode, long inputs, empty inputs, threshold boundaries
+- [x] Normalizer tests — 73 assertions covering all 8 layers
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks

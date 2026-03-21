@@ -335,7 +335,7 @@ class InputQuarantine {
    */
   add(text, scanResult, source = 'unknown') {
     const entry = {
-      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       text,
       scanResult,
       source,

@@ -183,6 +183,10 @@ class HoneypotEngine {
     if (Date.now() - session.startedAt > this.sessionTimeoutMs) {
       session.end();
       this._completedSessions.push(session.getSummary());
+      // Prevent unbounded growth of completed sessions
+      if (this._completedSessions.length > this.maxSessions * 10) {
+        this._completedSessions = this._completedSessions.slice(-this.maxSessions * 5);
+      }
       this._sessions.delete(sid);
     }
 

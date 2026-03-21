@@ -11,6 +11,9 @@ const { AgentShield } = require('./index');
 const { RateLimiter } = require('./circuit-breaker');
 const { createShieldError } = require('./errors');
 
+/** Coerce any value to a scannable string. */
+const textify = (val) => typeof val === 'string' ? val : (val != null ? JSON.stringify(val) : '');
+
 /**
  * Creates an Express/Connect-style middleware that scans request bodies
  * for AI-specific threats before they reach your agent endpoint.
@@ -98,7 +101,7 @@ const wrapAgent = (agentFn, config = {}) => {
 
   return async (input, ...rest) => {
     // Scan input
-    const inputText = typeof input === 'string' ? input : JSON.stringify(input);
+    const inputText = textify(input);
     const inputResult = shield.scanInput(inputText, { source: 'agent_input' });
 
     if (inputResult.blocked) {
@@ -114,7 +117,7 @@ const wrapAgent = (agentFn, config = {}) => {
     const output = await agentFn(input, ...rest);
 
     // Scan output
-    const outputText = typeof output === 'string' ? output : JSON.stringify(output);
+    const outputText = textify(output);
     const outputResult = shield.scanOutput(outputText, { source: 'agent_output' });
 
     if (outputResult.blocked) {

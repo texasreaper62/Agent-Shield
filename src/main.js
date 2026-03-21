@@ -80,6 +80,9 @@ const { PrometheusExporter, DatadogLogger, MetricsCollector: ObservabilityMetric
 // v5.1 — Benchmark harness
 const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, BenchmarkReportGenerator } = safeRequire('./benchmark-harness', 'benchmark-harness');
 
+// Text Normalizer
+const { TextNormalizer, normalize: normalizeText, HOMOGLYPH_MAP: NORMALIZER_HOMOGLYPH_MAP, LEET_MAP, DEFAULT_LAYERS } = safeRequire('./normalizer', 'normalizer');
+
 // Integrations
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
@@ -886,6 +889,13 @@ const _exports = {
   AUTHORITY_FRAMEWORKS,
   CA_CAPABILITY_MAP,
   CA_CERTIFICATE_LEVELS,
+
+  // v7.6 — Text Normalization Pipeline
+  TextNormalizer,
+  normalizeText,
+  NORMALIZER_HOMOGLYPH_MAP,
+  LEET_MAP,
+  DEFAULT_LAYERS,
 };
 
 // Filter out undefined exports (from modules that failed to load)

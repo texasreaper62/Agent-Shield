@@ -226,6 +226,7 @@ class AgentContract {
     this.name = options.name || 'unnamed-agent';
     this.rules = [];
     this.violations = [];
+    this.maxViolations = options.maxViolations || 10000;
   }
 
   /**
@@ -263,9 +264,11 @@ class AgentContract {
   }
 
   mustNotAccessPath(pathPattern) {
+    // Pre-compile regex once to validate the pattern and avoid repeated compilation
+    const regex = new RegExp(pathPattern, 'i');
     return this.addRule({
       name: `no_access_${pathPattern}`,
-      check: (msg) => new RegExp(pathPattern, 'i').test(msg),
+      check: (msg) => regex.test(msg),
       severity: 'high',
       message: `Agent attempted to access restricted path: ${pathPattern}`
     });
@@ -309,7 +312,8 @@ class AgentContract {
           });
         }
       } catch (e) {
-        // Skip rules that error
+        // Log and skip rules that error during validation
+        console.warn('[Agent Shield] Contract rule "%s" threw an error: %s', rule.name, e.message);
       }
     }
 
@@ -319,6 +323,9 @@ class AgentContract {
         violations,
         messagePreview: message.substring(0, 100)
       });
+      while (this.violations.length > this.maxViolations) {
+        this.violations.shift();
+      }
     }
 
     return {
@@ -353,6 +360,7 @@ class BreakglassProtocol {
     this.durationMs = options.defaultDurationMs || 300000; // 5 min default
     this.expiresAt = null;
     this.auditLog = [];
+    this.maxAuditLog = options.maxAuditLog || 10000;
     this.onActivate = options.onActivate || null;
     this.onDeactivate = options.onDeactivate || null;
     this.requireAuth = options.requireAuth || false;
@@ -473,6 +481,9 @@ class BreakglassProtocol {
       detail,
       timestamp: new Date().toISOString()
     });
+    while (this.auditLog.length > this.maxAuditLog) {
+      this.auditLog.shift();
+    }
   }
 
   /**
@@ -480,6 +491,17 @@ class BreakglassProtocol {
    */
   getAuditLog() {
     return this.auditLog;
+  }
+
+  /**
+   * Destroy the breakglass protocol, clearing any pending timers.
+   */
+  destroy() {
+    if (this._timer) {
+      clearTimeout(this._timer);
+      this._timer = null;
+    }
+    this.active = false;
   }
 
   /**

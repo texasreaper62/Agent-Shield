@@ -316,7 +316,9 @@ class ConversationContextAnalyzer {
 
   /** @private */
   _checkRepetition(text) {
-    const recent = this._history.slice(-10).filter(m => m.role === 'user');
+    // Window of 10 prior messages, excluding current (just added) to avoid self-matching
+    const REPETITION_WINDOW = 10;
+    const recent = this._history.slice(-(REPETITION_WINDOW + 1), -1).filter(m => m.role === 'user');
     const lowerText = text.toLowerCase().substring(0, 200);
     let similarCount = 0;
 

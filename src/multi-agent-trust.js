@@ -99,7 +99,12 @@ class MessageSigner {
     const signatureInput = `${from}:${timestamp}:${nonce}:${JSON.stringify(payload)}`;
     const expected = crypto.createHmac(this.algorithm, secret).update(signatureInput).digest('hex');
 
-    if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+        this._logVerification(from, false, 'invalid_signature');
+        return { valid: false, reason: 'Invalid signature' };
+      }
+    } catch (e) {
       this._logVerification(from, false, 'invalid_signature');
       return { valid: false, reason: 'Invalid signature' };
     }
@@ -244,9 +249,10 @@ class DelegationManager {
 
     // Check constraints
     if (token.constraints.allowedPaths && context.path) {
-      const allowed = token.constraints.allowedPaths.some(p =>
-        context.path.startsWith(p) || new RegExp(p).test(context.path)
-      );
+      const allowed = token.constraints.allowedPaths.some(p => {
+        if (context.path.startsWith(p)) return true;
+        try { return new RegExp(p).test(context.path); } catch (e) { return false; }
+      });
       if (!allowed) {
         this._audit('check_denied', token.subject, `Path ${context.path} not in allowed paths`);
         return { allowed: false, reason: 'Path not allowed by constraints' };

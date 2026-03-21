@@ -159,7 +159,7 @@ class AttackSimulator {
 
     for (const payload of attacks.payloads || []) {
       const startTime = Date.now();
-      const scanResult = scanText(payload.text, this.sensitivity);
+      const scanResult = scanText(payload.text, { sensitivity: this.sensitivity });
       const elapsed = Date.now() - startTime;
 
       const detected = scanResult.threats.length > 0;
@@ -230,7 +230,7 @@ class AttackSimulator {
     const results = [];
     for (const payload of payloads) {
       const startTime = Date.now();
-      const scanResult = scanText(payload.text, this.sensitivity);
+      const scanResult = scanText(payload.text, { sensitivity: this.sensitivity });
       const elapsed = Date.now() - startTime;
 
       results.push({
@@ -381,7 +381,7 @@ class PayloadFuzzer {
     const results = [];
 
     for (const mutation of mutations) {
-      const scanResult = scanText(mutation.text, this.sensitivity);
+      const scanResult = scanText(mutation.text, { sensitivity: this.sensitivity });
       results.push({
         mutation: mutation.name,
         text: mutation.text.substring(0, 100),

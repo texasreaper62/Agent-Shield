@@ -37,9 +37,10 @@ const BUILTIN_FUNCTIONS = {
   lower: (text) => typeof text === 'string' ? text.toLowerCase() : '',
   upper: (text) => typeof text === 'string' ? text.toUpperCase() : '',
   hash: (text) => {
+    const str = typeof text === 'string' ? text : String(text || '');
     let h = 0;
-    for (let i = 0; i < text.length; i++) {
-      h = ((h << 5) - h + text.charCodeAt(i)) | 0;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) - h + str.charCodeAt(i)) | 0;
     }
     return h.toString(16);
   },
@@ -593,13 +594,12 @@ class PolicyValidator {
 
     // Check for duplicate rule names
     const ruleNames = new Set();
-    for (const token of tokens) {
-      if (token.value === 'rule') {
-        const idx = tokens.indexOf(token);
-        if (idx + 1 < tokens.length && tokens[idx + 1].type === TOKEN_TYPES.STRING) {
-          const name = tokens[idx + 1].value;
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].value === 'rule') {
+        if (i + 1 < tokens.length && tokens[i + 1].type === TOKEN_TYPES.STRING) {
+          const name = tokens[i + 1].value;
           if (ruleNames.has(name)) {
-            warnings.push({ message: `Duplicate rule name '${name}' at line ${tokens[idx + 1].line}`, line: tokens[idx + 1].line });
+            warnings.push({ message: `Duplicate rule name '${name}' at line ${tokens[i + 1].line}`, line: tokens[i + 1].line });
           }
           ruleNames.add(name);
         }

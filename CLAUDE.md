@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
+Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, prompt extraction, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
 
 **Design Philosophy:** Zero-dependency, local-only detection. Drop it into any Node.js agent and it works. No API keys, no cloud calls, no data leaves the user's environment.
 
@@ -68,7 +68,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (390 exports, 93 modules)
+├── src/                           # Node.js SDK (395 exports, 94 modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -277,6 +277,9 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run test:v6` — v6.0 compliance & standards tests (122 assertions)
 - `npm run test:adaptive` — adaptive defense system tests (85 assertions)
 - `npm run test:ipia` — indirect prompt injection detector tests (117 assertions)
+- `npm run test:normalizer` — text normalization pipeline tests (73 assertions)
+- `npm run test:scorecard` — real-world benchmark scorecard (F1, MCC, per-dataset breakdown)
+- `npm run test:edge` — edge case tests (unicode, long inputs, thresholds)
 - `npm run test:all` — full 40-feature suite (149 assertions)
 - `npm run test:fp` — false positive accuracy tests (118 samples, 99.2% accuracy)
 - `npm run test:production` — production readiness tests (24 assertions)
@@ -284,7 +287,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (32), vscode (607)
-- Total: **2,220 test assertions** across 16 test suites + Python + VSCode
+- Total: **2,400+ test assertions** across 19 test suites + Python + VSCode
 
 ## Architecture Notes
 
@@ -317,3 +320,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v7.1** — Adaptive Defense: learning loops, agent contracts, compliance attestation, CTF challenges, adaptive detection with community patterns, MCP SDK integration, OpenClaw hooks
 - **v7.2** — IPIA Detection: joint-context embedding pipeline, TF-IDF + decision tree classifier, pluggable embedding backends, batch RAG scanning, Express middleware
 - **v7.3** — CORTEX Autonomous Defense: attack genome sequencing, adversarial evolution simulator, intent firewall, herd immunity, federated threat intel, behavioral DNA, pre-deployment audit, flight recorder, supply chain verification, SOC dashboard, compliance certification authority
+- **v7.4** — Detection Hardening & Normalization: 8-layer text normalization pipeline, 21 new detection patterns (162 total), F1 100% on real-world benchmarks (HackAPrompt/TensorTrust/research), 50-cycle bug hunt fixing 30+ bugs, hot-path optimizations

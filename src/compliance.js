@@ -209,7 +209,7 @@ class AuditTrail {
 
     this.events.push(entry);
 
-    // Remove oldest event when at capacity (O(1) vs slice which is O(n))
+    // Remove oldest events when at capacity
     while (this.events.length > this.maxEvents) {
       this.events.shift();
     }
@@ -225,9 +225,10 @@ class AuditTrail {
    * Record a scan event.
    */
   recordScan(input, result, metadata = {}) {
+    const inputStr = typeof input === 'string' ? input : String(input);
     return this.record({
       type: 'scan',
-      input: input.substring(0, 200),
+      input: inputStr.substring(0, 200),
       status: result.status,
       threatCount: result.threats ? result.threats.length : 0,
       blocked: result.blocked || false,
@@ -241,11 +242,12 @@ class AuditTrail {
    */
   recordBlock(reason, input, threats, metadata = {}) {
     const threatList = Array.isArray(threats) ? threats : [];
+    const inputStr = typeof input === 'string' ? input : String(input);
     return this.record({
       type: 'block',
       reason,
       blocked: true,
-      input: input.substring(0, 200),
+      input: inputStr.substring(0, 200),
       threats: threatList.map(t => ({ severity: t.severity, category: t.category })),
       ...metadata
     });

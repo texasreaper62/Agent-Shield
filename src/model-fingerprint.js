@@ -294,7 +294,8 @@ class ResponseAnalyzer {
       question_frequency: this._questionFrequency(sentences),
       contraction_usage: this._contractionUsage(text, words.length),
       passive_voice_estimate: this._passiveVoiceEstimate(text, sentences.length),
-      response_structure: this._responseStructure(text)
+      response_structure: this._responseStructure(text),
+      response_structure_code: this._responseStructureCode(this._responseStructure(text))
     };
   }
 
@@ -319,7 +320,8 @@ class ResponseAnalyzer {
       question_frequency: 0,
       contraction_usage: 0,
       passive_voice_estimate: 0,
-      response_structure: 'prose'
+      response_structure: 'prose',
+      response_structure_code: 0
     };
   }
 
@@ -507,19 +509,34 @@ class ResponseAnalyzer {
     if (bulletRatio > 0.15 || codeRatio > 0.15) return 'mixed';
     return 'prose';
   }
+
+  /**
+   * Encode response_structure as a numeric value for similarity comparison.
+   * @param {string} structure
+   * @returns {number}
+   */
+  _responseStructureCode(structure) {
+    const codes = { prose: 0, list: 1, mixed: 2, code: 3 };
+    return codes[structure] || 0;
+  }
 }
 
 // =========================================================================
 // STYLE PROFILE
 // =========================================================================
 
-/** Feature keys used for numeric comparison (excludes response_structure). */
+/**
+ * Feature keys used for numeric comparison (excludes response_structure which is categorical).
+ * NOTE: MODEL_SIGNATURES use 'response_structure_code' which maps to a numeric encoding
+ * of the categorical 'response_structure' field from the analyzer.
+ */
 const NUMERIC_FEATURE_KEYS = [
   'avg_sentence_length', 'vocabulary_richness', 'punctuation_density',
   'avg_word_length', 'formality_score', 'hedging_frequency',
   'bullet_point_usage', 'code_block_frequency', 'emoji_density',
   'paragraph_count', 'capitalization_pattern', 'transition_words',
-  'question_frequency', 'contraction_usage', 'passive_voice_estimate'
+  'question_frequency', 'contraction_usage', 'passive_voice_estimate',
+  'response_structure_code'
 ];
 
 /**

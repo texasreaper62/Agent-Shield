@@ -198,6 +198,7 @@ class DLPEngine {
     this.rules = options.rules || [];
     this.onViolation = options.onViolation || null;
     this.violations = [];
+    this._maxViolations = options.maxViolations || 1000;
   }
 
   /**
@@ -264,6 +265,9 @@ class DLPEngine {
           };
           violations.push(violation);
           this.violations.push(violation);
+        }
+        if (this.violations.length > this._maxViolations) {
+          this.violations = this.violations.slice(-this._maxViolations);
         }
 
         if (rule.action === 'redact') {
