@@ -89,7 +89,7 @@ function deprecationWarning(feature, replacement, removeVersion) {
   if (typeof process !== 'undefined' && process.emitWarning) {
     process.emitWarning(msg, 'DeprecationWarning');
   } else {
-    console.warn(msg);
+    console.warn(msg); // [Agent Shield] prefix included in msg
   }
 }
 
