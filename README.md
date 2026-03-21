@@ -1,14 +1,14 @@
 # Agent Shield
 
-[![npm version](https://img.shields.io/badge/npm-v6.0.0-blue)](https://www.npmjs.com/package/agent-shield)
+[![npm version](https://img.shields.io/badge/npm-v7.0.0-blue)](https://www.npmjs.com/package/agent-shield)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
-[![tests](https://img.shields.io/badge/tests-850%20passing-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-962%20passing-brightgreen)](#testing)
 
-**Security SDK for AI agents.** Protect your agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats.
+**The security standard for MCP and AI agents.** Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
 
 Zero dependencies. All detection runs locally. No API keys. No data ever leaves your environment.
 
@@ -22,6 +22,84 @@ Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WA
   <b>Try it yourself:</b> <code>npx agent-shield demo</code>
 </p>
 
+## v7.0 — MCP Security Runtime
+
+**One line to secure any MCP server.** The unified security layer that connects per-user authorization, threat scanning, behavioral monitoring, and audit logging into a single runtime.
+
+Directly addresses the [four IAM gaps](https://venturebeat.com/security/meta-rogue-ai-agent-confused-deputy-iam-identity-governance-matrix) from Meta's rogue AI agent incident (March 2026).
+
+```javascript
+const { MCPSecurityRuntime } = require('agent-shield');
+
+const runtime = new MCPSecurityRuntime({
+  signingKey: process.env.SHIELD_KEY,
+  enforceAuth: true,
+  enableBehaviorMonitoring: true
+});
+
+// Register tools with security requirements
+runtime.registerTool('read_data', { scopes: ['data:read'], roles: ['analyst'] });
+runtime.registerTool('delete_data', { scopes: ['admin:write'], roles: ['admin'], requiresHumanApproval: true });
+
+// Create authenticated session
+const { sessionId } = runtime.createSession({
+  userId: 'jane@company.com',
+  agentId: 'research-agent',
+  roles: ['analyst'],
+  scopes: ['data:read'],
+  intent: 'quarterly_report'
+});
+
+// Every tool call is secured — auth, scanning, behavior monitoring, audit
+const result = runtime.secureToolCall(sessionId, 'read_data', { query: 'Q4 revenue' });
+// { allowed: true, threats: [], violations: [], anomalies: [], token: {...} }
+
+// Blocked: agent tries to access data beyond its scope
+const blocked = runtime.secureToolCall(sessionId, 'delete_data', { target: 'all' });
+// { allowed: false, violations: [{ type: 'scope', message: 'Missing admin:write' }] }
+```
+
+### MCP Certification — "Agent Shield Certified"
+
+```javascript
+const { MCPCertification } = require('agent-shield');
+
+// Audit your MCP server against 15 security requirements
+const cert = MCPCertification.evaluate({
+  enforceAuth: true,
+  signingKey: 'production-key',
+  scanInputs: true,
+  scanOutputs: true,
+  enableBehaviorMonitoring: true,
+  onThreat: alertSecurityTeam,
+  registeredTools: 12
+});
+// { certified: true, level: 'Platinum', score: 98, badge: '🛡️ Agent Shield Certified — Platinum' }
+```
+
+### Cross-Organization Agent Trust
+
+```javascript
+const { CrossOrgAgentTrust } = require('agent-shield');
+
+// Issue trust certificates for agents crossing organizational boundaries
+const ca = new CrossOrgAgentTrust({ orgId: 'acme-corp', signingKey: process.env.CA_KEY });
+const cert = ca.issueCertificate({
+  agentId: 'acme-assistant',
+  capabilities: ['read_docs', 'search'],
+  allowedOrgs: ['partner-corp'],
+  trustLevel: 8
+});
+
+// Verify incoming agent certificates
+const verification = ca.verifyCertificate(incomingCert);
+// { valid: true, trustLevel: 8 }
+```
+
+**Run the demo:** `node examples/mcp-security-demo.js` — simulates all four Meta attack vectors and shows each one blocked in real-time.
+
+---
+
 ## 3 Lines to Protect Your Agent
 
 ```javascript
@@ -30,10 +108,11 @@ const shield = new AgentShield({ blockOnThreat: true });
 const result = shield.scanInput(userMessage); // { blocked: true, threats: [...] }
 ```
 
-- 302 exports across 74+ modules
-- 850 test assertions across 11 test suites, 100% pass rate
+- 310+ exports across 77+ modules
+- 962 test assertions across 13 test suites, 100% pass rate
 - 100% red team detection rate (A+ grade)
 - Shield Score: 100/100 — fortress-grade protection
+- AES-256-GCM encryption, HMAC-SHA256 signing throughout
 - Multi-language: CJK, Arabic, Cyrillic, Indic + 7 European languages
 
 ## Benchmark Results

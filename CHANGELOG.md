@@ -4,6 +4,37 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [7.0.0] — 2026-03-21
+
+### Added
+
+- **MCP Security Runtime** — `MCPSecurityRuntime` unified security layer for MCP servers with per-user/per-session/per-tool authorization, session state machine (prevents tool ordering attacks), behavioral anomaly detection, delegation with scope narrowing, and one-line middleware integration (`src/mcp-security-runtime.js`)
+- **MCP Certification** — `MCPCertification` with 15 security requirements (auth, scanning, rate limiting, audit, crypto, monitoring, policy), Platinum/Gold/Silver/Bronze levels, formatted reports with actionable recommendations (`src/mcp-certification.js`)
+- **Cross-Org Agent Trust** — `CrossOrgAgentTrust` certificate authority for AI agents crossing organizational boundaries — issue, verify, and revoke HMAC-signed certificates with trust levels, org restrictions, and automatic expiry (`src/mcp-certification.js`)
+- **Agent Threat Intelligence** — `AgentThreatIntelligence` local threat pattern corpus with confidence decay, trend analysis (attack rate, bypass rate, direction), and corpus export/import for federated learning (`src/mcp-certification.js`)
+- **Live Demo** — `examples/mcp-security-demo.js` simulating all four Meta rogue AI agent attack vectors with real-time blocking
+
+### Changed
+
+- **AES-256-GCM encryption** replaces XOR cipher in `SecureChannel` (`src/agent-protocol.js`)
+- **HMAC-SHA256 signing** replaces plain SHA256 in `AuthorizationContext` and `EphemeralTokenManager` with configurable signing keys (`src/confused-deputy.js`)
+- Timing-safe signature verification throughout using `crypto.timingSafeEqual()`
+- Automatic expired token cleanup in `EphemeralTokenManager`
+- Intent matching uses word-boundary matching instead of substring to prevent spoofing
+- Token issuance now verifies context integrity before minting
+- Delegation depth enforcement (configurable, default 5)
+- Total exports increased from 302 to 310+ across 77+ modules
+- Test suite expanded to 962 assertions across 13 test suites (112 MCP security tests)
+
+### Fixed
+
+- 37 bugs fixed across two deep bug hunting cycles (see commit history)
+- Memory leaks in pending timestamps, revoked tokens, user tokens, behavior profiles
+- Double-counting in tool call blocked stats
+- Certificate eviction with LRU fallback for non-expired overflow
+- Map modification during iteration in session cleanup
+- Orphaned child sessions on parent termination
+
 ## [6.0.0] — 2026-03-21
 
 ### Added

@@ -71,10 +71,22 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] RAG/vector vulnerability scanner — `RAGVulnerabilityScanner` for chunk manipulation, metadata injection, retrieval poisoning; `EmbeddingIntegrityChecker`, `RAGPipelineAuditor` (OWASP LLM08-2025)
 - [x] Confused deputy prevention — `AuthorizationContext` (user-to-agent binding), `EphemeralTokenManager` (scoped auto-rotating tokens), `IntentValidator` (post-auth action verification), `ConfusedDeputyGuard` (per-user MCP authorization). Addresses Meta rogue AI agent IAM gaps (March 2026)
 
+## v7.0 — MCP Security Runtime (Complete)
+
+- [x] MCP Security Runtime — `MCPSecurityRuntime` unified security layer with per-user/per-session/per-tool authorization, session state machine, behavioral anomaly detection, delegation with scope narrowing, one-line middleware integration
+- [x] AES-256-GCM encryption — replaces XOR cipher in `SecureChannel` with authenticated encryption using 96-bit IV and auth tags
+- [x] HMAC-SHA256 context signing — tamper-proof `AuthorizationContext` and `EphemeralTokenManager` with configurable signing keys and timing-safe verification
+- [x] MCP Certification — `MCPCertification` with 15 security requirements, Platinum/Gold/Silver/Bronze levels, formatted reports, actionable recommendations
+- [x] Cross-Org Agent Trust — `CrossOrgAgentTrust` certificate authority for AI agents crossing organizational boundaries with HMAC signing, trust levels, org restrictions, automatic expiry
+- [x] Agent Threat Intelligence — `AgentThreatIntelligence` local threat pattern corpus with confidence decay, trend analysis, and corpus export/import for federated learning
+- [x] Delegation depth enforcement — configurable max delegation depth (default 5) to prevent infinite delegation chains
+- [x] Intent word-boundary matching — prevents intent spoofing via substring injection
+- [x] Token integrity verification — context integrity checked before token issuance to prevent forgery
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs — publish an open threat taxonomy for AI agent attacks
-- [ ] Certification program — "Agent Shield Certified" badge for agent frameworks that pass the test suite
+- [x] Certification program — "Agent Shield Certified" badge for MCP servers (implemented in v7.0)
 - [ ] Community CTF events — regular public competitions using the CTF engine
 - [ ] Research partnerships — collaborate with academic labs on novel attack/defense research
 

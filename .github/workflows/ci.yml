@@ -55,6 +55,15 @@ jobs:
       - name: Core tests
         run: npm test
 
+      - name: MCP security tests
+        run: node test/test-mcp-security.js
+
+      - name: Confused deputy tests
+        run: node test/test-confused-deputy.js
+
+      - name: v6 module tests
+        run: node test/test-v6-modules.js
+
       - name: Full test suite (40 features)
         run: npm run test:all
 
@@ -69,6 +78,9 @@ jobs:
 
       - name: Verify examples
         run: node examples/quick-start.js
+
+      - name: MCP security demo
+        run: node examples/mcp-security-demo.js
 
   coverage:
     runs-on: ubuntu-latest

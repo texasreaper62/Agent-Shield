@@ -1910,3 +1910,179 @@ export declare class ThreadedWorkerScanner {
   getStats(): { activeWorkers: number; queuedJobs: number; completed: number; errors: number; poolSize: number; terminated: boolean };
   terminate(): void;
 }
+
+// =========================================================================
+// v7.0 — MCP Security Runtime
+// =========================================================================
+
+export interface MCPSecurityRuntimeOptions {
+  signingKey?: string;
+  enforceAuth?: boolean;
+  enableBehaviorMonitoring?: boolean;
+  enableStateMachine?: boolean;
+  maxSessionsPerUser?: number;
+  maxDelegationDepth?: number;
+  sessionTtlMs?: number;
+  maxToolCallsPerMinute?: number;
+  maxAuditEntries?: number;
+  allowedTools?: string[];
+  blockedTools?: string[];
+  policies?: any[];
+  onThreat?: (event: any) => void;
+  onBlock?: (event: any) => void;
+  onAudit?: (event: any) => void;
+}
+
+export interface SecureToolCallResult {
+  allowed: boolean;
+  threats: Threat[];
+  violations: Array<{ type: string; message: string; tool?: string }>;
+  anomalies: any[];
+  token: { tokenId: string; token: string; expiresAt: number; scopes: string[] } | null;
+  reason?: string;
+  sanitizedArgs?: any;
+}
+
+export interface MCPSessionInfo {
+  sessionId: string;
+  authCtx: AuthorizationContext;
+}
+
+export declare class MCPSecurityRuntime {
+  stats: {
+    sessionsCreated: number;
+    toolCallsProcessed: number;
+    toolCallsBlocked: number;
+    threatsDetected: number;
+    authFailures: number;
+    behaviorAnomalies: number;
+    stateViolations: number;
+  };
+  constructor(options?: MCPSecurityRuntimeOptions);
+  createSession(params: { userId: string; agentId: string; roles?: string[]; scopes?: string[]; intent?: string; maxToolCalls?: number; maxTokenBudget?: number; allowedTools?: string[] }): MCPSessionInfo;
+  terminateSession(sessionId: string): boolean;
+  secureToolCall(sessionId: string, toolName: string, args?: any): SecureToolCallResult;
+  secureToolResult(sessionId: string, toolName: string, result: any): { safe: boolean; threats: Threat[]; sanitizedResult?: any };
+  secureResource(uri: string, content: string, mimeType?: string): { safe: boolean; threats: Threat[] };
+  registerTool(toolName: string, requirements?: { scopes?: string[]; roles?: string[]; requiresHumanApproval?: boolean; allowedIntents?: string[] }): void;
+  addPolicy(rule: any): void;
+  delegateSession(sessionId: string, delegateAgentId: string, delegateScopes?: string[]): MCPSessionInfo;
+  createMiddleware(): {
+    createSession(params: any): MCPSessionInfo;
+    onToolCall(sessionId: string, toolName: string, args: any): SecureToolCallResult;
+    onToolResult(sessionId: string, toolName: string, result: any): { safe: boolean; threats: Threat[] };
+    onResourceAccess(uri: string, content: string, mimeType: string): { safe: boolean; threats: Threat[] };
+    terminateSession(sessionId: string): boolean;
+    getStats(): any;
+  };
+  getReport(): any;
+  getAuditLog(limit?: number): any[];
+  getBehaviorProfile(userId: string): any | null;
+  shutdown(): void;
+}
+
+export declare class MCPSessionStateMachine {
+  sessionId: string;
+  state: string;
+  transitions: Array<{ from: string; to: string; timestamp: number }>;
+  constructor(sessionId: string);
+  transition(newState: string): { allowed: boolean; from: string; to: string; reason?: string };
+  isTerminated(): boolean;
+}
+
+export declare const SESSION_STATES: Readonly<Record<string, string[]>>;
+
+// =========================================================================
+// v7.0 — MCP Certification & Trust
+// =========================================================================
+
+export interface CertificationResult {
+  certified: boolean;
+  level: string;
+  score: number;
+  badge: string;
+  timestamp: number;
+  results: Array<{ id: string; name: string; category: string; severity: string; passed: boolean; description: string }>;
+  recommendations: Array<{ id: string; priority: string; action: string }>;
+  summary: { total: number; passed: number; failed: number; criticalFailures: number };
+}
+
+export declare class MCPCertification {
+  static evaluate(config: any): CertificationResult;
+  static formatReport(evaluation: CertificationResult): string;
+}
+
+export declare class AgentThreatIntelligence {
+  stats: { patternsLearned: number; attacksObserved: number; trendsGenerated: number };
+  constructor(options?: { maxPatterns?: number; decayHalfLifeMs?: number; minConfidence?: number });
+  recordAttack(attack: { category: string; pattern: string; source?: string; context?: any; blocked?: boolean }): { patternId: string; isNew: boolean; confidence: number };
+  checkAgainstIntel(input: string): { matches: any[]; riskScore: number };
+  getTrends(windowMs?: number): { topCategories: any[]; attackRate: number; trendDirection: string; bypassRate: number; totalObserved: number };
+  exportCorpus(): any;
+  importCorpus(corpus: any): { imported: number; merged: number; skipped: number };
+}
+
+export declare class CrossOrgAgentTrust {
+  stats: { issued: number; verified: number; rejected: number; revoked: number };
+  constructor(options: { orgId: string; signingKey: string; certificateTtlMs?: number; maxCertificates?: number });
+  issueCertificate(params: { agentId: string; capabilities?: string[]; allowedOrgs?: string[]; trustLevel?: number }): any;
+  verifyCertificate(certificate: any): { valid: boolean; reason?: string; trustLevel: number };
+  revokeCertificate(certId: string): boolean;
+  trustOrganization(orgId: string, publicKey: string, trustLevel?: number): void;
+  untrustOrganization(orgId: string): void;
+  getTrustReport(): any;
+}
+
+export declare const MCP_THREAT_CATEGORIES: Readonly<Record<string, { severity: string; weight: number }>>;
+export declare const CERTIFICATION_REQUIREMENTS: ReadonlyArray<{ id: string; name: string; category: string; severity: string; description: string }>;
+export declare const CERTIFICATION_LEVELS: Readonly<Record<string, { minScore: number; label: string; badge: string }>>;
+
+// =========================================================================
+// v7.0 — Authorization Context (enhanced)
+// =========================================================================
+
+export declare class AuthorizationContext {
+  contextId: string;
+  userId: string;
+  agentId: string;
+  roles: readonly string[];
+  scopes: readonly string[];
+  intent: string | null;
+  createdAt: number;
+  expiresAt: number;
+  parentContextId: string | null;
+  delegationDepth: number;
+  constructor(params: { userId: string; agentId: string; roles?: string[]; scopes?: string[]; intent?: string; ttlMs?: number; parentContextId?: string; signingKey?: string });
+  isExpired(): boolean;
+  hasScope(scope: string): boolean;
+  hasRole(role: string): boolean;
+  delegate(delegateAgentId: string, delegateScopes?: string[]): AuthorizationContext;
+  verify(): boolean;
+}
+
+export declare class EphemeralTokenManager {
+  constructor(options?: { tokenTtlMs?: number; maxTokensPerUser?: number; rotationWindowMs?: number; signingKey?: string });
+  issueToken(authCtx: AuthorizationContext, scopes?: string[]): { tokenId: string; token: string; expiresAt: number; scopes: string[] };
+  validateToken(tokenId: string): { valid: boolean; reason: string | null; userId: string | null; scopes: string[] };
+  rotateToken(tokenId: string, authCtx: AuthorizationContext): any;
+  revokeToken(tokenId: string): void;
+  startCleanup(intervalMs?: number): void;
+  stopCleanup(): void;
+  getStats(): { issued: number; rotated: number; revoked: number; expired: number; validated: number };
+}
+
+export declare class IntentValidator {
+  constructor(options?: any);
+  addPolicy(policy: { tool: string; requiredScopes?: string[]; requiredRoles?: string[]; allowedIntents?: string[]; requiresHumanApproval?: boolean }): void;
+  validateAction(toolName: string, args: any, authCtx: AuthorizationContext): { allowed: boolean; violations: any[]; requiresApproval: boolean };
+  getAuditLog(limit?: number): any[];
+}
+
+export declare class ConfusedDeputyGuard {
+  stats: { checked: number; allowed: number; denied: number; escalations: number };
+  constructor(options?: { enforceContext?: boolean; logOnly?: boolean; signingKey?: string });
+  registerTool(toolName: string, requirements?: { scopes?: string[]; roles?: string[]; requiresHumanApproval?: boolean }): void;
+  wrapToolCall(toolName: string, args: any, authCtx?: AuthorizationContext): { allowed: boolean; violations: any[]; requiresApproval: boolean; token: any | null };
+  getStats(): any;
+  getAuditLog(limit?: number): any[];
+}

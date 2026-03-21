@@ -124,7 +124,11 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── eu-ai-act.js                # EU AI Act risk classification, conformity
 │   ├── prompt-leakage.js           # System prompt extraction detection (LLM07)
 │   ├── rag-vulnerability.js        # RAG/vector vulnerability scanning (LLM08)
-│   └── confused-deputy.js          # Confused deputy prevention (Meta incident)
+│   ├── confused-deputy.js          # Confused deputy prevention (Meta incident)
+│   │
+│   │  # v7.0 — MCP Security Runtime
+│   ├── mcp-security-runtime.js     # Unified MCP security layer (auth+scan+behavior+audit)
+│   └── mcp-certification.js        # MCP certification, threat intel, cross-org trust
 │
 ├── python-sdk/                    # Python SDK
 │   ├── agent_shield/              # Core package
@@ -213,13 +217,15 @@ cd python-sdk && python -m unittest tests/test_detector.py
 ## Testing
 
 - `npm test` — core, module, and new feature tests (248 assertions)
+- `npm run test:mcp` — MCP security runtime, certification & trust tests (112 assertions)
+- `npm run test:deputy` — confused deputy prevention tests (85 assertions)
+- `npm run test:v6` — v6.0 compliance & standards tests (122 assertions)
 - `npm run test:all` — full 40-feature suite (149 assertions)
-- `node test/test-v6-modules.js` — v6.0 compliance & standards tests (122 assertions)
-- `node test/test-confused-deputy.js` — confused deputy prevention tests (85 assertions)
+- `npm run test:full` — runs all test suites together
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (23), vscode (167)
-- Total: **850 test assertions** across 11 test suites
+- Total: **962 test assertions** across 13 test suites
 
 ## Architecture Notes
 
@@ -245,3 +251,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v4.0** — Polyglot: Rust core, Go SDK, Terraform, OTel, GitHub App, benchmarks, i18n, red team
 - **v5.0** — Advanced: agent protocol, live dashboard, policy DSL, fuzzer, fingerprinting, cost optimizer
 - **v6.0** — Compliance: OWASP LLM Top 10 v2025, MCP Bridge, NIST AI RMF, EU AI Act, prompt leakage detector, RAG vulnerability scanner, confused deputy prevention
+- **v7.0** — MCP Security: unified runtime (auth+scan+behavior+audit), AES-256-GCM encryption, HMAC signing, MCP certification framework, cross-org agent trust CA, threat intelligence engine
