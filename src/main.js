@@ -257,6 +257,9 @@ const { PROMPT_EXTRACTION_PATTERNS, SystemPromptGuard, PromptFingerprinter, Prom
 // RAG/Vector Vulnerability Scanner (OWASP LLM08-2025)
 const { RAG_VULNERABILITY_PATTERNS, VECTOR_DB_SECURITY_CHECKLIST, RAGVulnerabilityScanner, EmbeddingIntegrityChecker, RAGPipelineAuditor } = safeRequire('./rag-vulnerability', 'rag-vulnerability');
 
+// Confused Deputy Prevention (Meta Incident Response)
+const { AuthorizationContext, EphemeralTokenManager, IntentValidator, ConfusedDeputyGuard } = safeRequire('./confused-deputy', 'confused-deputy');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -700,6 +703,12 @@ const _exports = {
   RAGVulnerabilityScanner,
   EmbeddingIntegrityChecker,
   RAGPipelineAuditor,
+
+  // Confused Deputy Prevention
+  AuthorizationContext,
+  EphemeralTokenManager,
+  IntentValidator,
+  ConfusedDeputyGuard,
 };
 
 // Filter out undefined exports (from modules that failed to load)

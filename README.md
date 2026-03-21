@@ -6,7 +6,7 @@
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
-[![tests](https://img.shields.io/badge/tests-765%20passing-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-850%20passing-brightgreen)](#testing)
 
 **Security SDK for AI agents.** Protect your agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats.
 
@@ -30,8 +30,8 @@ const shield = new AgentShield({ blockOnThreat: true });
 const result = shield.scanInput(userMessage); // { blocked: true, threats: [...] }
 ```
 
-- 298 exports across 73+ modules
-- 765 test assertions across 10 test suites, 100% pass rate
+- 302 exports across 74+ modules
+- 850 test assertions across 11 test suites, 100% pass rate
 - 100% red team detection rate (A+ grade)
 - Shield Score: 100/100 — fortress-grade protection
 - Multi-language: CJK, Arabic, Cyrillic, Indic + 7 European languages
@@ -220,7 +220,7 @@ grpc.NewServer(grpc.UnaryInterceptor(shield.GRPCInterceptor(s)))
 
 | Platform | Location | Description |
 |----------|----------|-------------|
-| **Node.js** | `src/` | Core SDK — 298 exports, zero dependencies |
+| **Node.js** | `src/` | Core SDK — 302 exports, zero dependencies |
 | **Python** | `python-sdk/` | Full detection, Flask/FastAPI middleware, LangChain/LlamaIndex wrappers, CLI |
 | **Go** | `go-sdk/` | Full detection engine, HTTP/gRPC middleware, CLI, zero external deps |
 | **Rust** | `rust-core/` | High-performance `RegexSet` O(n) engine, WASM/NAPI/PyO3 targets |
@@ -526,6 +526,40 @@ const auditor = new RAGPipelineAuditor();
 const audit = auditor.audit({ retriever, vectorDB, embedder });
 ```
 
+### Confused Deputy Prevention (v6.0)
+
+Directly addresses the [four IAM gaps](https://venturebeat.com/security/meta-rogue-ai-agent-confused-deputy-iam-identity-governance-matrix) exposed by Meta's rogue AI agent incident (March 2026).
+
+```javascript
+const { AuthorizationContext, ConfusedDeputyGuard, EphemeralTokenManager } = require('agent-shield');
+
+// Bind user identity to agent actions (survives delegation chains)
+const authCtx = new AuthorizationContext({
+  userId: 'user-123',
+  agentId: 'research-agent',
+  roles: ['analyst'],
+  scopes: ['fs:read', 'db:query'],
+  intent: 'Generate Q4 report'
+});
+
+// Delegate to sub-agent — scopes can only narrow, never widen
+const delegated = authCtx.delegate('summarizer-agent', ['fs:read']);
+
+// Guard enforces per-user authorization on every tool call
+const guard = new ConfusedDeputyGuard({ enforceContext: true });
+guard.registerTool('database_query', { scopes: ['db:query'], roles: ['analyst'] });
+guard.registerTool('file_delete', { scopes: ['fs:delete'], roles: ['admin'], requiresHumanApproval: true });
+
+const result = guard.wrapToolCall('database_query', { sql: 'SELECT ...' }, delegated);
+// { allowed: false, violations: [{ type: 'scope', message: 'Missing db:query' }] }
+// Sub-agent can't query DB — scope wasn't delegated. Confused deputy prevented.
+
+// Replace static API keys with ephemeral, scoped tokens
+const tokenMgr = new EphemeralTokenManager({ tokenTtlMs: 900000 }); // 15-min tokens
+const token = tokenMgr.issueToken(authCtx, ['db:query']);
+const rotated = tokenMgr.rotateToken(token.tokenId, authCtx); // Auto-rotate
+```
+
 ### Canary Tokens — Detect Prompt Leaks
 
 ```javascript
@@ -743,6 +777,7 @@ npx agent-shield dashboard                          # Security dashboard
 npm test                 # Core + module tests (248 assertions)
 npm run test:all         # Full 40-feature suite (149 assertions)
 node test/test-v6-modules.js  # v6.0 compliance & standards (122 assertions)
+node test/test-confused-deputy.js  # Confused deputy prevention (85 assertions)
 npm run redteam          # Attack simulation (100% detection)
 npm run score            # Shield Score (100/100 A+)
 npm run benchmark        # Performance benchmarks
@@ -757,13 +792,13 @@ node vscode-extension/test/extension.test.js  # VS Code (167 tests)
 cd python-sdk && python -m unittest tests/test_detector.py  # Python (23 tests)
 ```
 
-Total: **765 test assertions** across 10 test suites.
+Total: **850 test assertions** across 11 test suites.
 
 ## Project Structure
 
 ```
 /
-├── src/                        # Node.js SDK (298 exports)
+├── src/                        # Node.js SDK (302 exports)
 │   ├── index.js                # AgentShield class — main entry point
 │   ├── main.js                 # Unified re-export of all modules
 │   ├── detector-core.js        # Core detection engine (patterns, scanning)
@@ -778,6 +813,7 @@ Total: **765 test assertions** across 10 test suites.
 │   ├── eu-ai-act.js            # v6.0 — EU AI Act risk classification & conformity
 │   ├── prompt-leakage.js       # v6.0 — System prompt extraction detection (LLM07)
 │   ├── rag-vulnerability.js    # v6.0 — RAG/vector vulnerability scanning (LLM08)
+│   ├── confused-deputy.js      # v6.0 — Confused deputy prevention (Meta incident)
 │   ├── i18n-patterns.js        # v4.0 — CJK, Arabic, Cyrillic, Indic detection patterns
 │   ├── llm-redteam.js          # v4.0 — Jailbreak library & adversarial generator
 │   ├── self-healing.js         # v3.0 — Auto-generated patterns from false negatives

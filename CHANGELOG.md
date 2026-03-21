@@ -15,10 +15,12 @@ This project follows [Semantic Versioning](https://semver.org/).
 - **System Prompt Leakage Detector** — `SystemPromptGuard` detecting 20+ prompt extraction attack patterns (direct requests, indirect extraction, roleplay-based attacks), `PromptFingerprinter` for output leak scoring, `PromptLeakageMitigation` with configurable response strategies (OWASP LLM07-2025) (`src/prompt-leakage.js`)
 - **RAG/Vector Vulnerability Scanner** — `RAGVulnerabilityScanner` detecting chunk boundary manipulation, metadata injection, authority spoofing, retrieval poisoning, and context window stuffing; `EmbeddingIntegrityChecker` for vector integrity; `RAGPipelineAuditor` for end-to-end RAG pipeline security (OWASP LLM08-2025) (`src/rag-vulnerability.js`)
 
+- **Confused Deputy Prevention** — `AuthorizationContext` (immutable user-to-agent binding with delegation chain), `EphemeralTokenManager` (scoped, auto-rotating tokens replacing static API keys), `IntentValidator` (post-auth action verification with scope/role/intent policies), `ConfusedDeputyGuard` (per-user MCP authorization preventing privilege escalation through delegation). Directly addresses the four IAM gaps from Meta's rogue AI agent incident (March 2026) (`src/confused-deputy.js`)
+
 ### Changed
 
-- Total exports increased from 254 to 298 across 73+ modules
-- Test suite expanded to 765 assertions across 10 test suites (122 new v6 tests)
+- Total exports increased from 254 to 302 across 74+ modules
+- Test suite expanded to 850 assertions across 11 test suites (122 v6 tests + 85 confused deputy tests)
 
 ## [5.0.0] — 2026-03-20
 

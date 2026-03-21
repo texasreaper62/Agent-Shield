@@ -69,6 +69,7 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] EU AI Act compliance — `RiskClassifier`, `ConformityAssessment` (Article 43), `TransparencyReporter` (Article 13), `EUIncidentReporter` (Article 62), `EUAIActDashboard` with deadline/penalty tracking
 - [x] System prompt leakage detector — `SystemPromptGuard` with 20+ extraction patterns, `PromptFingerprinter`, `PromptLeakageMitigation` (OWASP LLM07-2025)
 - [x] RAG/vector vulnerability scanner — `RAGVulnerabilityScanner` for chunk manipulation, metadata injection, retrieval poisoning; `EmbeddingIntegrityChecker`, `RAGPipelineAuditor` (OWASP LLM08-2025)
+- [x] Confused deputy prevention — `AuthorizationContext` (user-to-agent binding), `EphemeralTokenManager` (scoped auto-rotating tokens), `IntentValidator` (post-auth action verification), `ConfusedDeputyGuard` (per-user MCP authorization). Addresses Meta rogue AI agent IAM gaps (March 2026)
 
 ## Ongoing
 
