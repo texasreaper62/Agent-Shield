@@ -116,7 +116,7 @@ class ThreatStreamServer {
     this._scanTimestamps = this._scanTimestamps.filter(t => t >= cutoff);
 
     // Track latency
-    if (scanResult.latency != null) {
+    if (scanResult.latency !== null && scanResult.latency !== undefined) {
       this._stats.latencyHistogram.push(scanResult.latency);
       if (this._stats.latencyHistogram.length > this.historySize) {
         this._stats.latencyHistogram.shift();
@@ -133,7 +133,7 @@ class ThreatStreamServer {
         const severity = threat.severity || 'medium';
 
         this._stats.threatsByCategory[category] = (this._stats.threatsByCategory[category] || 0) + 1;
-        if (this._stats.threatsBySeverity[severity] != null) {
+        if (this._stats.threatsBySeverity[severity] !== null && this._stats.threatsBySeverity[severity] !== undefined) {
           this._stats.threatsBySeverity[severity]++;
         }
 

@@ -50,7 +50,7 @@ class AuthorizationContext {
     this.scopes = Object.freeze([...(params.scopes || [])]);
     this.intent = params.intent || null;
     this.createdAt = Date.now();
-    this.expiresAt = this.createdAt + (params.ttlMs != null ? params.ttlMs : 300000);
+    this.expiresAt = this.createdAt + (params.ttlMs !== null && params.ttlMs !== undefined ? params.ttlMs : 300000);
     this.parentContextId = params.parentContextId || null;
     this.delegationDepth = 0;
 

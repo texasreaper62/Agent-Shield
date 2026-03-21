@@ -470,7 +470,7 @@ class MCPServer {
     if (!message || message.jsonrpc !== '2.0') {
       return {
         jsonrpc: '2.0',
-        id: message && message.id != null ? message.id : null,
+        id: message && message.id !== null && message.id !== undefined ? message.id : null,
         error: { code: JSON_RPC_ERRORS.INVALID_REQUEST.code, message: JSON_RPC_ERRORS.INVALID_REQUEST.message }
       };
     }
@@ -478,7 +478,7 @@ class MCPServer {
     const { id, method, params } = message;
 
     // Notifications (no id) don't get responses
-    if (id == null && method !== 'initialize') {
+    if ((id === null || id === undefined) && method !== 'initialize') {
       return null;
     }
 
