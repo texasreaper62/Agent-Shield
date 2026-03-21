@@ -61,6 +61,15 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Model fingerprinting — `ModelFingerprinter` with `ResponseAnalyzer` (16 stylistic features), `StyleProfile` (cosine similarity), `FingerprintDatabase` (5 built-in model profiles), `SupplyChainDetector` for swap detection
 - [x] Cost/latency optimizer — `CostOptimizer` with `AdaptiveScanner` (auto-escalating tiers: fast/standard/deep/paranoid), `LatencyBudget`, `PerformanceMonitor` (p50/p95/p99), `TierManager`, 4 optimization presets
 
+## v6.0 — Compliance & Standards (Complete)
+
+- [x] OWASP LLM Top 10 v2025 coverage matrix — `OWASPCoverageMatrix` with per-category scoring, gap analysis, and compliance reporting against all 10 OWASP threat categories
+- [x] MCP Bridge — `MCPBridge` with `MCPToolPolicy`, `MCPSessionGuard`, `MCPResourceScanner` for native Model Context Protocol security scanning
+- [x] NIST AI RMF mapping — `NISTMapper` across GOVERN/MAP/MEASURE/MANAGE/MONITOR functions, `AIBOMGenerator` for AI Bill of Materials, `NISTComplianceChecker` with SP 800-53 AI controls
+- [x] EU AI Act compliance — `RiskClassifier`, `ConformityAssessment` (Article 43), `TransparencyReporter` (Article 13), `EUIncidentReporter` (Article 62), `EUAIActDashboard` with deadline/penalty tracking
+- [x] System prompt leakage detector — `SystemPromptGuard` with 20+ extraction patterns, `PromptFingerprinter`, `PromptLeakageMitigation` (OWASP LLM07-2025)
+- [x] RAG/vector vulnerability scanner — `RAGVulnerabilityScanner` for chunk manipulation, metadata injection, retrieval poisoning; `EmbeddingIntegrityChecker`, `RAGPipelineAuditor` (OWASP LLM08-2025)
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs — publish an open threat taxonomy for AI agent attacks

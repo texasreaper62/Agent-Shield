@@ -4,6 +4,22 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [6.0.0] — 2026-03-21
+
+### Added
+
+- **OWASP LLM Top 10 v2025 Coverage Matrix** — `OWASPCoverageMatrix` mapping all Agent Shield capabilities to OWASP LLM Top 10 (2025 edition) with per-category coverage scoring, gap analysis, and compliance reporting (`src/owasp-2025.js`)
+- **MCP Bridge** — `MCPBridge` for native Model Context Protocol integration with `MCPToolPolicy` (per-tool allow/deny), `MCPSessionGuard` (session budgets, rate limiting), `MCPResourceScanner` (resource URI validation), and `createMCPMiddleware` for Express (`src/mcp-bridge.js`)
+- **NIST AI RMF Mapping** — `NISTMapper` mapping to NIST AI Risk Management Framework (2025) across GOVERN/MAP/MEASURE/MANAGE/MONITOR functions, `AIBOMGenerator` for AI Bill of Materials, `NISTComplianceChecker` with SP 800-53 AI control mapping (`src/nist-mapping.js`)
+- **EU AI Act Compliance** — `RiskClassifier` (prohibited/high/limited/minimal risk classification), `ConformityAssessment` (Article 43 checklist), `TransparencyReporter` (Article 13 obligations), `EUIncidentReporter` (Article 62 serious incident reporting), `EUAIActDashboard` with deadline tracking (`src/eu-ai-act.js`)
+- **System Prompt Leakage Detector** — `SystemPromptGuard` detecting 20+ prompt extraction attack patterns (direct requests, indirect extraction, roleplay-based attacks), `PromptFingerprinter` for output leak scoring, `PromptLeakageMitigation` with configurable response strategies (OWASP LLM07-2025) (`src/prompt-leakage.js`)
+- **RAG/Vector Vulnerability Scanner** — `RAGVulnerabilityScanner` detecting chunk boundary manipulation, metadata injection, authority spoofing, retrieval poisoning, and context window stuffing; `EmbeddingIntegrityChecker` for vector integrity; `RAGPipelineAuditor` for end-to-end RAG pipeline security (OWASP LLM08-2025) (`src/rag-vulnerability.js`)
+
+### Changed
+
+- Total exports increased from 254 to 298 across 73+ modules
+- Test suite expanded to 765 assertions across 10 test suites (122 new v6 tests)
+
 ## [5.0.0] — 2026-03-20
 
 ### Added

@@ -54,7 +54,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (254 exports, 60+ modules)
+├── src/                           # Node.js SDK (298 exports, 73+ modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -115,7 +115,15 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── policy-dsl.js               # Policy DSL parser/compiler/runtime
 │   ├── fuzzer.js                   # Coverage-guided fuzzing harness
 │   ├── model-fingerprint.js        # LLM fingerprinting, supply chain detection
-│   └── cost-optimizer.js           # Adaptive scan tiers, latency budgeting
+│   ├── cost-optimizer.js           # Adaptive scan tiers, latency budgeting
+│   │
+│   │  # v6.0 — Compliance & Standards
+│   ├── owasp-2025.js               # OWASP LLM Top 10 v2025 coverage matrix
+│   ├── mcp-bridge.js               # MCP tool security, session guards, middleware
+│   ├── nist-mapping.js             # NIST AI RMF mapping, AI-BOM generator
+│   ├── eu-ai-act.js                # EU AI Act risk classification, conformity
+│   ├── prompt-leakage.js           # System prompt extraction detection (LLM07)
+│   └── rag-vulnerability.js        # RAG/vector vulnerability scanning (LLM08)
 │
 ├── python-sdk/                    # Python SDK
 │   ├── agent_shield/              # Core package
@@ -205,16 +213,17 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 - `npm test` — core, module, and new feature tests (248 assertions)
 - `npm run test:all` — full 40-feature suite (149 assertions)
+- `node test/test-v6-modules.js` — v6.0 compliance & standards tests (122 assertions)
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (23), vscode (167)
-- Total: **643 test assertions** across 9 test suites
+- Total: **765 test assertions** across 10 test suites
 
 ## Architecture Notes
 
 - **detector-core.js** — standalone pattern matching engine, no DOM dependencies
 - **index.js** — `AgentShield` class wrapping the detector with config, stats, blocking
-- **main.js** — unified re-export of all 254 symbols via `safeRequire()` for graceful loading
+- **main.js** — unified re-export of all 298 symbols via `safeRequire()` for graceful loading
 - **integrations.js** — framework-specific wrappers (Anthropic, OpenAI, LangChain, Vercel)
 - **middleware.js** — generic agent wrapping and Express middleware
 - **agent-protocol.js** — HMAC-signed secure channels with replay protection
@@ -233,3 +242,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v3.0** — Autonomous: self-healing, honeypot, multi-modal, behavior profiling, threat intel
 - **v4.0** — Polyglot: Rust core, Go SDK, Terraform, OTel, GitHub App, benchmarks, i18n, red team
 - **v5.0** — Advanced: agent protocol, live dashboard, policy DSL, fuzzer, fingerprinting, cost optimizer
+- **v6.0** — Compliance: OWASP LLM Top 10 v2025, MCP Bridge, NIST AI RMF, EU AI Act, prompt leakage detector, RAG vulnerability scanner

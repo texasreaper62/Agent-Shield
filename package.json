@@ -1,6 +1,6 @@
 {
   "name": "agent-shield",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "Protect AI agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI threats. All detection runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
