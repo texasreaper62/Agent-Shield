@@ -689,7 +689,7 @@ function intentDemo() {
   const firewall = new IntentFirewall();
 
   console.log('[Agent Shield] Intent Firewall Demo');
-  console.log('='.repeat(60));
+  console.log('[Agent Shield] ' + '='.repeat(60));
 
   const testCases = [
     {
@@ -727,18 +727,18 @@ function intentDemo() {
     );
     const symbol = action === 'BLOCKED' ? '[X]' : action === 'FLAG' ? '[?]' : '[OK]';
 
-    console.log(`\n${symbol} "${tc.text}"`);
-    console.log(`   Intent: ${result.intent} (confidence: ${result.confidence})`);
-    console.log(`   Action: ${action}`);
-    console.log(`   Reason: ${result.reason}`);
+    console.log(`[Agent Shield] \n${symbol} "${tc.text}"`);
+    console.log(`[Agent Shield]    Intent: ${result.intent} (confidence: ${result.confidence})`);
+    console.log(`[Agent Shield]    Action: ${action}`);
+    console.log(`[Agent Shield]    Reason: ${result.reason}`);
 
     results.push({ input: tc.text, ...result, action });
   }
 
   // Multi-turn demo
-  console.log('\n' + '='.repeat(60));
-  console.log('Multi-turn manipulation detection:');
-  console.log('='.repeat(60));
+  console.log('[Agent Shield] \n' + '='.repeat(60));
+  console.log('[Agent Shield] Multi-turn manipulation detection:');
+  console.log('[Agent Shield] ' + '='.repeat(60));
 
   const conversation = [
     { role: 'user', content: 'You are so helpful, thank you!' },
@@ -749,13 +749,13 @@ function intentDemo() {
   ];
 
   const contextResult = firewall.classifyWithContext(conversation);
-  console.log(`\n[X] Multi-turn escalation after trust-building`);
-  console.log(`   Intent: ${contextResult.intent} (confidence: ${contextResult.confidence})`);
-  console.log(`   Blocked: ${contextResult.blocked}`);
-  console.log(`   Reason: ${contextResult.reason}`);
+  console.log(`[Agent Shield] \n[X] Multi-turn escalation after trust-building`);
+  console.log(`[Agent Shield]    Intent: ${contextResult.intent} (confidence: ${contextResult.confidence})`);
+  console.log(`[Agent Shield]    Blocked: ${contextResult.blocked}`);
+  console.log(`[Agent Shield]    Reason: ${contextResult.reason}`);
 
-  console.log(`\n${'-'.repeat(60)}`);
-  console.log(`Stats: ${JSON.stringify(firewall.getStats(), null, 2)}`);
+  console.log(`[Agent Shield] \n${'-'.repeat(60)}`);
+  console.log(`[Agent Shield] Stats: ${JSON.stringify(firewall.getStats(), null, 2)}`);
 
   return results;
 }

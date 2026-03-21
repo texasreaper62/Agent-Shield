@@ -49,8 +49,8 @@ class HerdImmunity {
       attacksBlocked: 0
     };
 
-    console.log('%s HerdImmunity initialized (anonymize: %s, maxPatterns: %d)',
-      LOG_PREFIX, this._anonymize, this._maxPatterns);
+    console.log('%s HerdImmunity initialized (anonymize: %s, maxPatterns: %d)', LOG_PREFIX,
+      this._anonymize, this._maxPatterns);
   }
 
   // -----------------------------------------------------------------------
@@ -66,8 +66,8 @@ class HerdImmunity {
     this._connectedAgents.add(agentId);
     this._ensureSubscription();
     this._adapter.publish(CHANNEL_CONNECT, { type: 'join', agentId, timestamp: Date.now() });
-    console.log('%s Agent "%s" connected to herd (%d total)',
-      LOG_PREFIX, agentId, this._connectedAgents.size);
+    console.log('%s Agent "%s" connected to herd (%d total)', LOG_PREFIX,
+      agentId, this._connectedAgents.size);
   }
 
   /**
@@ -78,8 +78,8 @@ class HerdImmunity {
     if (!agentId) return;
     this._connectedAgents.delete(agentId);
     this._adapter.publish(CHANNEL_CONNECT, { type: 'leave', agentId, timestamp: Date.now() });
-    console.log('%s Agent "%s" disconnected from herd (%d remaining)',
-      LOG_PREFIX, agentId, this._connectedAgents.size);
+    console.log('%s Agent "%s" disconnected from herd (%d remaining)', LOG_PREFIX,
+      agentId, this._connectedAgents.size);
   }
 
   // -----------------------------------------------------------------------
@@ -140,8 +140,8 @@ class HerdImmunity {
     this._adapter.publish(CHANNEL_IMMUNITY, pattern);
     this.stats.patternsShared++;
 
-    console.log('%s Attack reported -- signature %s, broadcast to %d agent(s)',
-      LOG_PREFIX, signature, broadcastedTo);
+    console.log('%s Attack reported -- signature %s, broadcast to %d agent(s)', LOG_PREFIX,
+      signature, broadcastedTo);
 
     return { signature, pattern, broadcastedTo };
   }
@@ -157,8 +157,8 @@ class HerdImmunity {
     if (this._patterns.some(p => p.signature === pattern.signature)) return;
 
     this._addPattern(pattern);
-    console.log('%s Immunity received -- signature %s, category %s',
-      LOG_PREFIX, pattern.signature, pattern.category || 'unknown');
+    console.log('%s Immunity received -- signature %s, category %s', LOG_PREFIX,
+      pattern.signature, pattern.category || 'unknown');
   }
 
   /**
@@ -397,8 +397,8 @@ class ImmuneMemory {
       imported++;
     }
 
-    console.log('%s ImmuneMemory imported %d pattern(s), skipped %d',
-      LOG_PREFIX, imported, skipped);
+    console.log('%s ImmuneMemory imported %d pattern(s), skipped %d', LOG_PREFIX,
+      imported, skipped);
 
     return { imported, skipped };
   }
