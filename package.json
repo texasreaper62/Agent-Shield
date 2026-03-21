@@ -45,6 +45,7 @@
     "audit": "npm audit --omit=dev",
     "sbom": "node scripts/generate-sbom.js",
     "audit:security": "node -e \"const {runAuditCLI}=require('./src/audit');runAuditCLI()\"",
+    "report": "node -e \"const {SecurityAudit}=require('./src/audit');const {generateReportFile}=require('./src/report-generator');const r=new SecurityAudit().run();generateReportFile(r,'shield-report.html');console.log('Report saved to shield-report.html')\"",
     "mcp": "node src/mcp-server.js",
     "sidecar": "node sidecar/server.js",
     "ctf": "node -e \"const {CTFEngine,CTFReporter}=require('./src/ctf');const e=new CTFEngine();console.log(new CTFReporter().formatReport(e.getScoreboard()))\"",

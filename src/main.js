@@ -179,6 +179,12 @@ const { SecurityAudit, AuditReport, AUDIT_ATTACKS, generateMutations: auditMutat
 // v7.2.1 — Flight Recorder
 const { FlightRecorder } = safeRequire('./flight-recorder', 'flight-recorder');
 
+// v7.2.1 — HTML Report Generator
+const { generateHTMLReport, generateReportFile } = safeRequire('./report-generator', 'report-generator');
+
+// v7.3 — Supply Chain Verification
+const { ToolChainValidator, ResponseScanner, DomainAllowlist, RESPONSE_INJECTION_PATTERNS, EXFILTRATION_URL_PATTERNS, CREDENTIAL_PATTERNS, CHAIN_SUSPICIOUS_PATTERNS } = safeRequire('./supply-chain', 'supply-chain');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -773,6 +779,19 @@ const _exports = {
 
   // v7.2.1 — Flight Recorder
   FlightRecorder,
+
+  // v7.2.1 — HTML Report Generator
+  generateHTMLReport,
+  generateReportFile,
+
+  // v7.3 — Supply Chain Verification
+  ToolChainValidator,
+  ResponseScanner,
+  DomainAllowlist,
+  RESPONSE_INJECTION_PATTERNS,
+  EXFILTRATION_URL_PATTERNS,
+  CREDENTIAL_PATTERNS,
+  CHAIN_SUSPICIOUS_PATTERNS,
 };
 
 // Filter out undefined exports (from modules that failed to load)
