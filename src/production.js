@@ -20,7 +20,7 @@ const { scanText } = require('./detector-core');
 
 class SamplingScanner {
   constructor(options = {}) {
-    this.sampleRate = options.sampleRate || 0.1; // 10% default
+    this.sampleRate = options.sampleRate !== undefined ? options.sampleRate : 0.1; // 10% default
     this.scanFn = options.scanFn || ((text) => scanText(text, options.sensitivity || 'high'));
     this.stats = { total: 0, sampled: 0, threats: 0, extrapolatedThreats: 0 };
   }
