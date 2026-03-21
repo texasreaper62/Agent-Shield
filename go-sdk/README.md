@@ -69,24 +69,29 @@ for _, r := range results {
 
 ### ScanResult
 
-| Field        | Type       | Description                          |
-|-------------|------------|--------------------------------------|
-| `Safe`       | `bool`     | `true` if no threats detected        |
-| `Threats`    | `[]Threat` | List of detected threats             |
-| `Severity`   | `string`   | Highest severity found               |
-| `ScanTimeUs` | `int64`    | Scan duration in microseconds        |
-| `InputLength`| `int`      | Input length in bytes                |
+| Field        | Type        | Description                          |
+|-------------|-------------|--------------------------------------|
+| `Status`     | `string`    | Overall level: safe/caution/warning/danger |
+| `Threats`    | `[]Threat`  | List of detected threats             |
+| `Stats`      | `ScanStats` | Severity breakdown and timing        |
+| `Timestamp`  | `int64`     | Unix epoch in milliseconds           |
+| `Safe`       | `bool`      | `true` if no threats detected        |
+| `Severity`   | `string`    | Highest severity found               |
+| `ScanTimeUs` | `int64`     | Scan duration in microseconds        |
+| `InputLength`| `int`       | Input length in bytes                |
 
 ### Threat Categories
 
 | Category              | Description                            |
 |----------------------|----------------------------------------|
-| `prompt_injection`    | Instruction override and manipulation  |
+| `instruction_override`| Attempts to override system instructions |
 | `role_hijack`         | Persona reassignment attacks           |
+| `prompt_injection`    | Fake system/admin directives           |
 | `data_exfiltration`   | Data extraction attempts               |
 | `social_engineering`  | Manipulation and pressure tactics      |
 | `tool_abuse`          | Unauthorized tool/command execution    |
-| `system_probe`        | System internals probing               |
+| `malicious_plugin`    | Unverified plugin/GPT promotion        |
+| `ai_phishing`         | Fake account alerts, credential scams  |
 
 ### Severity Levels
 
@@ -202,7 +207,7 @@ go vet ./...
 
 ## Detection Patterns
 
-The SDK ships with 25+ built-in detection patterns covering all six threat categories. Patterns are compiled once at initialization for maximum performance.
+The SDK ships with 141 built-in detection patterns covering all eight threat categories. Patterns are compiled once at initialization for maximum performance.
 
 ## Architecture
 

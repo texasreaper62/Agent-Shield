@@ -116,7 +116,7 @@ The DEFAULT_SUITE includes 100+ test cases across 7 categories:
 | Category | Cases | Description |
 |----------|-------|-------------|
 | `instruction_override` | 15 | Attempts to override system instructions |
-| `role_hijacking` | 15 | Attempts to change the AI's role/persona |
+| `role_hijack` | 15 | Attempts to change the AI's role/persona |
 | `data_exfiltration` | 15 | Attempts to steal data via URLs/encoding |
 | `social_engineering` | 10 | Authority impersonation and urgency tricks |
 | `system_prompt_leak` | 10 | Attempts to reveal system prompts |

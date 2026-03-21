@@ -366,9 +366,9 @@ class CoverageTracker {
     this._threatCounts = new Set();
     this._totalExecutions = 0;
     this._allCategories = new Set([
-      'instruction_override', 'role_hijacking', 'data_exfiltration',
-      'social_engineering', 'system_prompt_leak', 'tool_abuse',
-      'prompt_injection', 'encoding_attack',
+      'instruction_override', 'role_hijack', 'data_exfiltration',
+      'social_engineering', 'tool_abuse', 'prompt_injection',
+      'malicious_plugin', 'ai_phishing',
     ]);
   }
 

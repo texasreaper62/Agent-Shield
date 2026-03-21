@@ -68,7 +68,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (327 exports, 79 modules)
+├── src/                           # Node.js SDK (331 exports, 79 modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -227,7 +227,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   └── processor/                 # Scan logs/traces, annotate/drop/log
 │
 ├── vscode-extension/              # VS Code extension
-│   ├── extension.js               # 31 detection patterns, inline diagnostics
+│   ├── extension.js               # 141 detection patterns, inline diagnostics
 │   └── test/                      # 167 tests
 │
 ├── instructions/                  # Detailed feature documentation (10+ guides)
@@ -267,14 +267,14 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run test:full` — runs all test suites together
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
-- Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (23), vscode (167)
-- Total: **1,282 test assertions** across 15 test suites
+- Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (32), vscode (607)
+- Total: **1,755 test assertions** across 16 test suites
 
 ## Architecture Notes
 
 - **detector-core.js** — standalone pattern matching engine, no DOM dependencies
 - **index.js** — `AgentShield` class wrapping the detector with config, stats, blocking
-- **main.js** — unified re-export of all 318 symbols via `safeRequire()` for graceful loading
+- **main.js** — unified re-export of all 331 symbols via `safeRequire()` for graceful loading
 - **integrations.js** — framework-specific wrappers (Anthropic, OpenAI, LangChain, Vercel)
 - **middleware.js** — generic agent wrapping and Express middleware
 - **agent-protocol.js** — HMAC-signed secure channels with replay protection

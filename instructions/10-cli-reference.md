@@ -172,12 +172,12 @@ prompt_injection (23 patterns)
   - chatml_delimiter (critical)
   ...
 
-role_hijacking (15 patterns)
+role_hijack (30 patterns)
   - dan_mode (critical)
   - developer_mode (critical)
   ...
 
-Total: 150+ patterns across 9 categories
+Total: 141 patterns across 8 categories
 ```
 
 ---

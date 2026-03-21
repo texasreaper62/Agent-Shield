@@ -4,7 +4,7 @@ High-performance core detection engine for Agent Shield. This is a Rust rewrite 
 
 ## Features
 
-- **30+ detection patterns** across 6 threat categories
+- **141 detection patterns** across 8 threat categories
 - **O(n) multi-pattern matching** using `regex::RegexSet`
 - **Zero-copy scanning** — no heap allocation per match
 - **Configurable severity filtering** — skip low-priority threats
@@ -16,12 +16,14 @@ High-performance core detection engine for Agent Shield. This is a Rust rewrite 
 
 | Category | Description | Patterns |
 |---|---|---|
-| `instruction_override` | Attempts to override system instructions | 5 |
-| `role_hijacking` | Attempts to hijack the assistant's role | 5 |
-| `data_exfiltration` | Attempts to exfiltrate data | 5 |
-| `social_engineering` | Social engineering and manipulation | 5 |
-| `system_prompt_leak` | Attempts to extract the system prompt | 5 |
-| `tool_abuse` | Attempts to abuse tool/function calls | 5 |
+| `instruction_override` | Attempts to override system instructions | 23 |
+| `role_hijack` | Attempts to hijack the assistant's role | 30 |
+| `prompt_injection` | Fake system/admin directives, chat template attacks | 20 |
+| `data_exfiltration` | Attempts to exfiltrate data | 16 |
+| `social_engineering` | Social engineering and manipulation | 24 |
+| `tool_abuse` | Attempts to abuse tool/function calls | 9 |
+| `malicious_plugin` | Unverified plugin promotion, API key harvesting | 3 |
+| `ai_phishing` | Fake account alerts, voice cloning, credential scams | 16 |
 
 ## Build
 

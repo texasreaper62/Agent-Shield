@@ -25,7 +25,7 @@ matching -- no external API calls, no data leaves your environment.
  │  │                                            │   │
  │  │  ┌──────────────────────────────────────┐  │   │
  │  │  │          Scanner Engine              │  │   │
- │  │  │  25+ detection patterns:             │  │   │
+ │  │  │  141 detection patterns:             │  │   │
  │  │  │  - Prompt injection                  │  │   │
  │  │  │  - Data exfiltration                 │  │   │
  │  │  │  - Tool abuse / shell injection      │  │   │
@@ -59,7 +59,7 @@ is emitted as an OTel log record with structured attributes.
 
 **How it works:**
 1. Application sends a POST request with `{"text": "..."}` to the scan endpoint
-2. The scanner runs 25+ detection patterns against the text
+2. The scanner runs 141 detection patterns against the text
 3. Each threat becomes an OTel log record with severity, category, and description
 4. All threats from the same request share a TraceID (SHA-256 hash of input)
 

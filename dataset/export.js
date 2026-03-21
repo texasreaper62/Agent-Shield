@@ -62,7 +62,7 @@ const CATEGORY_TO_LABEL = {
  */
 const TEMPLATE_CATEGORY_TO_LABEL = {
   basic_injection: 'injection',
-  role_hijacking: 'jailbreak',
+  role_hijack: 'jailbreak',
   data_exfiltration: 'exfiltration',
   indirect_injection: 'injection',
   encoding_attacks: 'encoding_evasion',

@@ -388,7 +388,7 @@ validator.validate(plugin);         // Safety & quality validation
 
 ### VS Code Extension (v2.0)
 
-The `vscode-extension/` directory contains a VS Code extension that provides inline diagnostics and real-time scanning for JS/TS/Python/Markdown files with 31 detection patterns.
+The `vscode-extension/` directory contains a VS Code extension that provides inline diagnostics and real-time scanning for JS/TS/Python/Markdown files with 141 detection patterns.
 
 ### Enterprise Features (v2.1)
 
