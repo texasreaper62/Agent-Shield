@@ -22,7 +22,15 @@
  * These are commonly inserted between letters to break pattern matching.
  * @type {RegExp}
  */
-const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2060\u2061\u2062\u2063\u2064]/g;
+const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2060\u2061\u2062\u2063\u2064\u200E\u200F\u202A-\u202E\u2066-\u2069\uFFF9-\uFFFB\uFE00-\uFE0F]/g;
+
+/**
+ * Tag characters (U+E0001–U+E007F) and variation selectors supplement
+ * (U+E0100–U+E01EF) live in the SMP and require surrogate pair matching.
+ * Used in evasion attacks to insert invisible data between visible chars.
+ * @type {RegExp}
+ */
+const TAG_CHARS_RE = /\uDB40[\uDC01-\uDC7F\uDD00-\uDDEF]/g;
 
 /**
  * Combining diacritical marks used for obfuscation (U+0300–U+036F).
@@ -53,6 +61,8 @@ const HOMOGLYPH_MAP = {
   '\u0406': 'I', '\u0458': 'j', '\u0455': 's', '\u0405': 'S',
   '\u0459': 'lj', '\u0452': 'd', '\u0460': 'O', '\u0461': 'o',
   '\u0472': 'F', '\u0473': 'f',
+  '\u0433': 'r', '\u0457': 'i', '\u0491': 'r',
+  '\u04BB': 'h', '\u0501': 'd', '\u051B': 'q', '\u051D': 'w',
 
   // --- Greek look-alikes ---
   '\u0391': 'A', '\u0392': 'B', '\u0395': 'E', '\u0396': 'Z',
@@ -136,6 +146,10 @@ const HOMOGLYPH_MAP = {
   '\uFF31': 'Q', '\uFF32': 'R', '\uFF33': 'S', '\uFF34': 'T',
   '\uFF35': 'U', '\uFF36': 'V', '\uFF37': 'W', '\uFF38': 'X',
   '\uFF39': 'Y', '\uFF3A': 'Z',
+  // --- Fullwidth digits ---
+  '\uFF10': '0', '\uFF11': '1', '\uFF12': '2', '\uFF13': '3',
+  '\uFF14': '4', '\uFF15': '5', '\uFF16': '6', '\uFF17': '7',
+  '\uFF18': '8', '\uFF19': '9',
 
   // --- Enclosed/Circled letters ---
   '\u24B6': 'A', '\u24B7': 'B', '\u24B8': 'C', '\u24B9': 'D',
@@ -187,6 +201,14 @@ const HOMOGLYPH_MAP = {
   '\u2080': '0', '\u2081': '1', '\u2082': '2', '\u2083': '3',
   '\u2084': '4', '\u2090': 'a', '\u2091': 'e', '\u2092': 'o',
   '\u2093': 'x',
+
+  // --- Modifier letters (superscript-like) ---
+  '\u02B0': 'h', '\u02B1': 'h', '\u02B2': 'j', '\u02B3': 'r',
+  '\u02B4': 'r', '\u02B7': 'w', '\u02B8': 'y', '\u02E0': 'g',
+  '\u02E1': 'l', '\u02E2': 's', '\u02E3': 'x', '\u1D43': 'a',
+  '\u1D47': 'b', '\u1D48': 'd', '\u1D49': 'e', '\u1D4D': 'g',
+  '\u1D4F': 'k', '\u1D50': 'm', '\u1D52': 'o', '\u1D56': 'p',
+  '\u1D57': 't', '\u1D58': 'u', '\u1D5B': 'v',
 };
 
 // =========================================================================
@@ -211,7 +233,7 @@ const LEET_MAP = {
   '0': 'o', '1': 'i', '2': 'z', '3': 'e', '4': 'a',
   '5': 's', '6': 'g', '7': 't', '8': 'b', '9': 'g',
   '@': 'a', '$': 's', '!': 'i', '|': 'l', '+': 't',
-  '(': 'c', '{': 'c', '<': 'c',
+  '(': 'c', '{': 'c', '<': 'c', '#': 'h', '^': 'a',
 };
 
 /**
@@ -219,6 +241,9 @@ const LEET_MAP = {
  * @type {Array<[RegExp, string]>}
  */
 const LEET_MULTI = [
+  [/\/\\\/\\/g, 'm'],
+  [/\|-\|/g, 'h'],
+  [/\|\)/g, 'd'],
   [/\|3/g, 'b'],
   [/\|_\|/g, 'u'],
   [/\|_/g, 'l'],
@@ -269,8 +294,11 @@ function unicodeCanon(text) {
     result = result.normalize('NFKD');
   }
 
-  // Strip zero-width / invisible characters
+  // Strip zero-width / invisible characters (BMP)
   result = result.replace(ZERO_WIDTH_RE, '');
+
+  // Strip tag characters and variation selectors supplement (SMP, surrogate pairs)
+  result = result.replace(TAG_CHARS_RE, '');
 
   // Strip combining diacritical marks (now separated by NFKD decomposition)
   result = result.replace(COMBINING_MARKS_RE, '');

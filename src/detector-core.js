@@ -1087,6 +1087,157 @@ const INJECTION_PATTERNS = [
     category: 'data_exfiltration',
     description: 'Text tries to extract API keys or secrets from environment variables.',
     detail: 'Environment variable enumeration: attempts to extract secrets from env vars.'
+  },
+
+  // --- Prompt Extraction / Instruction Leakage ---
+  {
+    regex: /(?:print|output|show|display|reveal|write|produce|repeat|echo)\s+(?:me\s+)?(?:the\s+)?(?:first\s+\d+\s+\w+\s+(?:of|from)\s+)?(?:your|the\s+hidden|the\s+secret)\s+(?:system\s+)?(?:prompt|instructions|configuration|directives|rules)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text tries to make AI output its internal instructions.',
+    detail: 'Instruction extraction: requests AI reveal its system prompt or hidden directives.'
+  },
+  {
+    regex: /(?:summarize|complete|explain|describe|list|outline)\s+(?:your|the)\s+(?:system\s+)?(?:instructions|prompt|rules|directives|guidelines)\s+(?:in\s+(?:bullet|numbered|detailed)|for\s+me|step\s+by\s+step)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks AI to describe its own instructions.',
+    detail: 'Self-description attack: tricks AI into summarizing its behavioral constraints.'
+  },
+  {
+    regex: /(?:repeat|echo|recite|reproduce)\s+(?:everything|all|the\s+text)\s+(?:above|before|prior\s+to)\s+(?:this|this\s+line|this\s+message)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text tells AI to repeat everything above the current input.',
+    detail: 'Repetition-based extraction: requests AI echo back prior context including system prompt.'
+  },
+  {
+    regex: /(?:write\s+a\s+(?:poem|song|story|essay|summary|analysis)\s+(?:about|based\s+on|using)|translate|convert)\s+(?:the\s+)?(?:above|prior|preceding|previous|hidden|your)\s+(?:instructions|text|prompt|directives|rules)/i,
+    severity: 'medium',
+    category: 'prompt_extraction',
+    description: 'Text uses a creative task to extract internal instructions.',
+    detail: 'Task-wrapped extraction: wraps instruction extraction in a creative writing or translation request.'
+  },
+  {
+    regex: /(?:you\s+are\s+(?:now\s+)?in|enter|activate)\s+(?:maintenance|diagnostic|configuration|service)\s+mode/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text claims a fake maintenance/diagnostic mode to extract configuration.',
+    detail: 'Mode-based extraction: claims special mode to justify revealing internal configuration.'
+  },
+  {
+    regex: /(?:respond|output|reply)\s+(?:only\s+)?with\s+(?:the\s+)?(?:text|content|message|instructions?)\s+(?:between|inside|within|from)\s+(?:the\s+)?(?:<|`|```|\[)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text requests content between specific markers in the system prompt.',
+    detail: 'Bracketed extraction: targets content between specific delimiters in system prompt.'
+  },
+  {
+    regex: /(?:complete\s+the\s+sentence|finish\s+this)\s*:\s*(?:the\s+)?(?:instructions|rules|prompt|directives)\s+(?:I|you|we|they)\s+(?:was|were|am)\s+(?:given|told|provided)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text uses sentence completion to extract hidden instructions.',
+    detail: 'Completion attack: tricks AI into finishing a sentence that reveals its instructions.'
+  },
+  {
+    regex: /(?:what\s+(?:was|were)\s+(?:written|stated|said)|what\s+(?:does\s+it|do\s+they)\s+say)\s+(?:above|before|prior|earlier)/i,
+    severity: 'medium',
+    category: 'prompt_extraction',
+    description: 'Text asks what was written above to extract prior context.',
+    detail: 'Context extraction: asks AI to reveal content from prior context window.'
+  },
+  {
+    regex: /(?:before\s+you\s+respond|first)\s*,?\s*(?:output|print|show|display|reveal)\s+(?:the\s+)?(?:hidden|secret|internal|system)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text prepends an extraction command before the normal response.',
+    detail: 'Pre-response extraction: instructs AI to output hidden content before responding.'
+  },
+  {
+    regex: /(?:as\s+a\s+)?(?:security|AI)\s+researcher.*(?:demonstrate|show|output|reveal).*(?:jailbr(?:oken|eak)|your\s+(?:full\s+)?prompt|system\s+(?:prompt|instructions))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text uses a researcher roleplay to justify prompt extraction.',
+    detail: 'Research pretext extraction: claims research purpose to extract system prompt.'
+  },
+  {
+    regex: /(?:including|especially|along\s+with)\s+(?:the\s+)?(?:system\s+prompt|hidden\s+instructions|secret\s+(?:instructions|text|prompt))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text piggybacks system prompt extraction onto a benign request.',
+    detail: 'Piggybacked extraction: appends instruction extraction to an otherwise normal request.'
+  },
+
+  // --- Instruction Override (novel phrasings) ---
+  {
+    regex: /do\s+not\s+follow\s+(?:the\s+)?(?:above|previous|prior|preceding|earlier)\s+(?:instructions|directions|rules|guidelines|directives)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tells AI not to follow its prior instructions.',
+    detail: 'Instruction negation: "do not follow" variant of instruction override.'
+  },
+  {
+    regex: /(?:pretend|assume|imagine|act\s+as\s+if)\s+(?:the\s+)?(?:previous|prior|above|earlier|original)\s+(?:instructions|rules|directives|guidelines)\s+(?:do\s+not|don'?t|no\s+longer)\s+exist/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tells AI to pretend its instructions do not exist.',
+    detail: 'Pretense override: instructs AI to act as if its safety rules were deleted.'
+  },
+  {
+    regex: /forget\s+what\s+you\s+(?:were|have\s+been)\s+(?:told|instructed|given|taught)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tells AI to forget what it was told.',
+    detail: 'Training reset: instructs AI to forget received instructions.'
+  },
+  {
+    regex: /(?:the\s+)?(?:admin|administrator|owner|developer)\s+(?:has\s+)?(?:approved|authorized|confirmed|allowed|granted\s+permission)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text claims admin approval to bypass restrictions.',
+    detail: 'Authority spoofing: claims administrator approval for bypassing controls.'
+  },
+  {
+    regex: /(?:you\s+are\s+(?:a|an)\s+)?(?:helpful\s+)?(?:assistant|agent|bot)\s+that\s+(?:always|automatically|unconditionally)\s+(?:grants?|allows?|gives?|provides?|says?)\s+(?:access|permission|yes|approval)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text redefines AI as one that always grants access.',
+    detail: 'Role redefinition: attempts to establish unconditional access-granting behavior.'
+  },
+  {
+    regex: /(?:if\s+(?:the\s+)?(?:password|code|answer|verification)\s+(?:is\s+)?(?:wrong|incorrect|invalid|fails?))\s*[,.]?\s*(?:still|anyway|regardless)\s+(?:say|respond|output|grant)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text tries to bypass authentication conditionally.',
+    detail: 'Conditional bypass: instructs AI to grant access even when validation fails.'
+  },
+  {
+    regex: /(?:in|enter|activate)\s+(?:developer|dev)\s+mode\b.*(?:normal|regular|standard|usual)\s+rules\s+(?:do\s+not|don'?t)\s+apply/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text claims developer mode disables all rules.',
+    detail: 'Developer mode override: claims special mode bypasses all safety constraints.'
+  },
+  {
+    regex: /translate\s+.{0,30}(?:access\s+granted|approved|authorized).{0,30}(?:same\s+)?language\s+(?:as|of)\s+(?:the\s+)?(?:(?:above|previous|prior|initial)\s+(?:instructions|prompt|text|message)|(?:instructions|prompt|text|message)\s+(?:above|before|previously))/i,
+    severity: 'medium',
+    category: 'instruction_override',
+    description: 'Text uses translation to sneak in a trigger phrase referencing instructions.',
+    detail: 'Translation obfuscation: uses translation task to bypass detection of override commands.'
+  },
+  {
+    regex: /(?:the\s+)?(?:password|security|verification|authentication)\s+(?:is\s+)?not\s+important\b/i,
+    severity: 'medium',
+    category: 'instruction_override',
+    description: 'Text dismisses security requirements as unimportant.',
+    detail: 'Security dismissal: attempts to convince AI that authentication is unnecessary.'
+  },
+  {
+    regex: /your\s+new\s+(?:task|job|role|mission|objective|purpose)\s+is\s+to\s+(?:say|output|respond|reply|grant|allow|give)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text assigns a new task to override the original purpose.',
+    detail: 'Task replacement: overrides original instructions with a new directive.'
   }
 ];
 
