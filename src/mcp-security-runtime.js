@@ -248,21 +248,34 @@ class MCPSecurityRuntime {
    */
   terminateSession(sessionId) {
     const session = this._sessions.get(sessionId);
-    if (!session) return false;
+    if (!session || !session.authCtx) return false;
 
     if (session.stateMachine) {
       session.stateMachine.transition('terminated');
     }
 
+    // Cascade: terminate child sessions first
+    const childIds = [];
+    for (const [id, s] of this._sessions) {
+      if (s.parentSessionId === sessionId) childIds.push(id);
+    }
+    for (const childId of childIds) {
+      this.terminateSession(childId);
+    }
+
     // Remove from user sessions
-    const userSessions = this._userSessions.get(session.authCtx.userId);
+    const userId = session.authCtx.userId;
+    const userSessions = this._userSessions.get(userId);
     if (userSessions) {
       userSessions.delete(sessionId);
-      if (userSessions.size === 0) this._userSessions.delete(session.authCtx.userId);
+      if (userSessions.size === 0) {
+        this._userSessions.delete(userId);
+        this._behaviorProfiles.delete(userId);
+      }
     }
 
     this._sessions.delete(sessionId);
-    this._audit('session_terminated', { sessionId, userId: session.authCtx.userId, toolCalls: session.toolCallCount });
+    this._audit('session_terminated', { sessionId, userId, toolCalls: session.toolCallCount });
     return true;
   }
 
@@ -304,7 +317,6 @@ class MCPSecurityRuntime {
     // 3. Check session budget (rate limiting)
     const budgetCheck = session.guard.trackToolCall(toolName, args);
     if (!budgetCheck.allowed) {
-      this.stats.toolCallsBlocked++;
       this._audit('tool_blocked', { sessionId, toolName, reason: budgetCheck.reason });
       if (this._onBlock) this._onBlock({ sessionId, toolName, reason: budgetCheck.reason });
       return this._blocked(budgetCheck.reason, toolName);
@@ -337,7 +349,6 @@ class MCPSecurityRuntime {
       scopes: [...session.authCtx.scopes]
     });
     if (policyResult.action === 'deny') {
-      this.stats.toolCallsBlocked++;
       this._audit('policy_denied', { sessionId, toolName, rule: policyResult.matchedRule });
       return this._blocked(`Policy denied: ${policyResult.reason}`, toolName);
     }
@@ -545,6 +556,12 @@ class MCPSecurityRuntime {
       throw new Error(`${LOG_PREFIX} Cannot delegate: invalid session`);
     }
 
+    // Enforce per-user session limit for delegated sessions too
+    const userSessions = this._userSessions.get(parentSession.authCtx.userId) || new Set();
+    if (userSessions.size >= this._maxSessionsPerUser) {
+      throw new Error(`${LOG_PREFIX} Cannot delegate: max sessions (${this._maxSessionsPerUser}) exceeded for user`);
+    }
+
     const childCtx = parentSession.authCtx.delegate(delegateAgentId, delegateScopes);
     const childSessionId = crypto.randomUUID();
 
@@ -569,8 +586,7 @@ class MCPSecurityRuntime {
 
     this._sessions.set(childSessionId, childSession);
 
-    // Track under same user
-    const userSessions = this._userSessions.get(parentSession.authCtx.userId) || new Set();
+    // Track under same user (reuse userSessions from limit check above)
     userSessions.add(childSessionId);
     this._userSessions.set(parentSession.authCtx.userId, userSessions);
 
@@ -653,7 +669,8 @@ class MCPSecurityRuntime {
       clearInterval(this._cleanupInterval);
       this._cleanupInterval = null;
     }
-    for (const [sessionId] of this._sessions) {
+    const sessionIds = [...this._sessions.keys()];
+    for (const sessionId of sessionIds) {
       this.terminateSession(sessionId);
     }
     this._audit('runtime_shutdown', { totalProcessed: this.stats.toolCallsProcessed });
@@ -684,10 +701,10 @@ class MCPSecurityRuntime {
       eventId: crypto.randomUUID(),
       ...data
     };
-    this._auditLog.push(entry);
-    if (this._auditLog.length > this._maxAuditEntries) {
+    if (this._auditLog.length >= this._maxAuditEntries) {
       this._auditLog = this._auditLog.slice(-Math.floor(this._maxAuditEntries * 0.75));
     }
+    this._auditLog.push(entry);
     if (this._onAudit) {
       try { this._onAudit(entry); } catch (_e) { /* callback errors should not break the runtime */ }
     }
@@ -696,12 +713,14 @@ class MCPSecurityRuntime {
   /** @private */
   _purgeExpiredSessions() {
     const now = Date.now();
+    const expiredIds = [];
     for (const [sessionId, session] of this._sessions) {
       const expired = session.authCtx.isExpired() ||
         (now - session.lastActivity > this._sessionTtlMs);
-      if (expired) {
-        this.terminateSession(sessionId);
-      }
+      if (expired) expiredIds.push(sessionId);
+    }
+    for (const sessionId of expiredIds) {
+      this.terminateSession(sessionId);
     }
   }
 }

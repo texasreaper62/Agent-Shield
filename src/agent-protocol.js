@@ -234,9 +234,12 @@ class SecureChannel {
     this.recvSeq = 0;
     this.messageHistory = [];
     this._maxHistory = 1000;
+    this._maxLatencies = 100;
     this.latencies = [];
     this.createdAt = Date.now();
     this._pendingTimestamps = new Map();
+    this._lastPendingPurge = Date.now();
+    this._pendingPurgeIntervalMs = 60000;
   }
 
   /**
@@ -265,15 +268,15 @@ class SecureChannel {
     this._pendingTimestamps.set(this.sendSeq, Date.now());
     this.sendSeq++;
 
+    if (this.messageHistory.length >= this._maxHistory) {
+      this.messageHistory = this.messageHistory.slice(-Math.floor(this._maxHistory * 0.75));
+    }
     this.messageHistory.push({
       direction: 'sent',
       type,
       sequenceNum: msg.sequenceNum,
       timestamp: msg.timestamp
     });
-    if (this.messageHistory.length > this._maxHistory) {
-      this.messageHistory = this.messageHistory.slice(-Math.floor(this._maxHistory * 0.75));
-    }
 
     return envelope;
   }
@@ -317,9 +320,22 @@ class SecureChannel {
     if (this._pendingTimestamps.has(sequenceNum)) {
       const latency = Date.now() - this._pendingTimestamps.get(sequenceNum);
       this.latencies.push(latency);
+      if (this.latencies.length > this._maxLatencies) this.latencies.shift();
       this._pendingTimestamps.delete(sequenceNum);
     }
 
+    // Purge stale pending timestamps periodically (not on every message)
+    const now = Date.now();
+    if (now - this._lastPendingPurge > this._pendingPurgeIntervalMs) {
+      this._lastPendingPurge = now;
+      for (const [seq, ts] of this._pendingTimestamps) {
+        if (now - ts > this._pendingPurgeIntervalMs) this._pendingTimestamps.delete(seq);
+      }
+    }
+
+    if (this.messageHistory.length >= this._maxHistory) {
+      this.messageHistory = this.messageHistory.slice(-Math.floor(this._maxHistory * 0.75));
+    }
     this.messageHistory.push({
       direction: 'received',
       type: msg.type,
@@ -347,6 +363,7 @@ class SecureChannel {
     }
 
     this.open = false;
+    this._pendingTimestamps.clear();
     return closeMsg;
   }
 

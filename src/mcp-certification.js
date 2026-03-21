@@ -99,6 +99,9 @@ class AgentThreatIntelligence {
     }
 
     // Record in timeline
+    if (this._timeline.length >= this._maxTimeline) {
+      this._timeline = this._timeline.slice(-Math.floor(this._maxTimeline * 0.75));
+    }
     this._timeline.push({
       timestamp: Date.now(),
       category: attack.category,
@@ -106,9 +109,6 @@ class AgentThreatIntelligence {
       blocked: attack.blocked !== false,
       source: attack.source || 'unknown'
     });
-    if (this._timeline.length > this._maxTimeline) {
-      this._timeline = this._timeline.slice(-Math.floor(this._maxTimeline * 0.75));
-    }
 
     // Update or create pattern
     const existing = this._patterns.get(patternId);
@@ -204,7 +204,7 @@ class AgentThreatIntelligence {
     const topCategories = Object.entries(catCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([category, count]) => ({ category, count, percentage: Math.round(count / recent.length * 100) }));
+      .map(([category, count]) => ({ category, count, percentage: recent.length > 0 ? Math.round(count / recent.length * 100) : 0 }));
 
     // Trend direction — compare first half vs second half
     const midpoint = cutoff + windowMs / 2;
@@ -216,7 +216,7 @@ class AgentThreatIntelligence {
 
     return {
       topCategories,
-      attackRate: recent.length > 0 ? Math.round(recent.length / (windowMs / 3600000) * 100) / 100 : 0,
+      attackRate: recent.length > 0 && windowMs > 0 ? Math.round(recent.length / Math.max(1, windowMs / 3600000) * 100) / 100 : 0,
       trendDirection,
       bypassRate: (blocked + bypassed) > 0 ? Math.round(bypassed / (blocked + bypassed) * 100) / 100 : 0,
       totalObserved: recent.length,
@@ -281,8 +281,9 @@ class AgentThreatIntelligence {
 
   /** @private */
   _applyDecay(entry) {
-    const age = Date.now() - entry.lastSeen;
-    const decayFactor = Math.pow(0.5, age / this._decayHalfLife);
+    const age = Math.max(0, Date.now() - entry.lastSeen);
+    const halfLife = Math.max(1, this._decayHalfLife);
+    const decayFactor = Math.pow(0.5, age / halfLife);
     return entry.confidence * decayFactor;
   }
 
@@ -662,6 +663,12 @@ class CrossOrgAgentTrust {
       return { valid: false, reason: 'Certificate has expired', trustLevel: 0 };
     }
 
+    // Validate signature format
+    if (typeof certificate.signature !== 'string' || !/^[0-9a-f]{64}$/i.test(certificate.signature)) {
+      this.stats.rejected++;
+      return { valid: false, reason: 'Invalid signature format', trustLevel: 0 };
+    }
+
     // Verify signature — if from our org, use our key
     if (certificate.issuer === this._orgId) {
       const expectedSig = this._signCertificate(certificate);
@@ -792,10 +799,13 @@ class CrossOrgAgentTrust {
   /** @private */
   _evictExpired() {
     const now = Date.now();
+    const expiredIds = [];
     for (const [certId, cert] of this._certificates) {
-      if (now > cert.expiresAt) {
-        this._certificates.delete(certId);
-      }
+      if (now > cert.expiresAt) expiredIds.push(certId);
+    }
+    for (const certId of expiredIds) {
+      this._certificates.delete(certId);
+      this._revokedCerts.delete(certId);
     }
   }
 }

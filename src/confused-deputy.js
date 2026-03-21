@@ -183,13 +183,33 @@ class EphemeralTokenManager {
   /** @private */
   _purgeExpired() {
     let purged = 0;
+    const expiredIds = [];
+
     for (const [tokenId, tokenData] of this.tokens) {
       if (this._isTokenExpired(tokenData)) {
-        this.tokens.delete(tokenId);
-        purged++;
-        this.stats.expired++;
+        expiredIds.push(tokenId);
       }
     }
+
+    for (const tokenId of expiredIds) {
+      this.tokens.delete(tokenId);
+      this.revokedTokens.delete(tokenId);
+      purged++;
+      this.stats.expired++;
+    }
+
+    // Clean stale entries from userTokens
+    if (purged > 0) {
+      for (const [userId, tokenIds] of this.userTokens) {
+        const active = tokenIds.filter(id => this.tokens.has(id));
+        if (active.length === 0) {
+          this.userTokens.delete(userId);
+        } else {
+          this.userTokens.set(userId, active);
+        }
+      }
+    }
+
     return purged;
   }
 
