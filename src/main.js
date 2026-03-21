@@ -644,12 +644,6 @@ const _exports = {
   createShieldError,
   deprecationWarning,
 
-  // v5.1 — Stream scanning
-  StreamScanner,
-  createStreamWrapper,
-  scanAsyncIterator,
-  StreamBuffer,
-
   // v5.1 — Immutable audit log
   ImmutableAuditLog,
   AuditEntry,
