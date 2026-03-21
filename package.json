@@ -1,7 +1,7 @@
 {
   "name": "agentshield-sdk",
-  "version": "7.2.1",
-  "description": "The security standard for MCP and AI agents. Protects against prompt injection, confused deputy attacks, data exfiltration, and 30+ threats. Zero dependencies, runs locally.",
+  "version": "7.3.0",
+  "description": "The security standard for MCP and AI agents. 141 detection patterns, CORTEX threat intelligence, pre-deployment audit, intent firewall, flight recorder, and 390+ exports. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -45,6 +45,7 @@
     "audit": "npm audit --omit=dev",
     "sbom": "node scripts/generate-sbom.js",
     "audit:security": "node -e \"const {runAuditCLI}=require('./src/audit');runAuditCLI()\"",
+    "report": "node -e \"const {SecurityAudit}=require('./src/audit');const {generateReportFile}=require('./src/report-generator');const r=new SecurityAudit().run();generateReportFile(r,'shield-report.html');console.log('Report saved to shield-report.html')\"",
     "mcp": "node src/mcp-server.js",
     "sidecar": "node sidecar/server.js",
     "ctf": "node -e \"const {CTFEngine,CTFReporter}=require('./src/ctf');const e=new CTFEngine();console.log(new CTFReporter().formatReport(e.getScoreboard()))\"",

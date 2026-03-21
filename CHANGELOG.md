@@ -4,6 +4,42 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [7.3.0] - 2026-03-21
+
+### Added - CORTEX Autonomous Defense Platform
+
+- **Attack Genome Sequencing** (`src/attack-genome.js`) - Decompose attacks into intent/technique/evasion/target genome. Detect unseen variants by recognizing the genome, not the surface text. GenomeDatabase clusters attack families.
+- **Adversarial Evolution Simulator** (`src/evolution-simulator.js`) - GAN-style mutation engine generates attack variants across generations. Tests against defenses automatically. hardenFromEvolution() generates new patterns from evasive survivors.
+- **Intent Firewall** (`src/intent-firewall.js`) - Classifies user INTENT, not just content. Same words blocked or allowed based on context. "Help me write a phishing email" = BLOCKED. "Help me write about phishing training" = ALLOWED. ContextAnalyzer detects multi-turn manipulation.
+- **Cross-Agent Herd Immunity** (`src/herd-immunity.js`) - When one agent detects an attack, all connected agents receive the pattern. ImmuneMemory provides collective memory that new agents inherit from day one.
+- **Federated Threat Intelligence** (`src/threat-intel-federation.js`) - CrowdStrike model: anonymous attack pattern sharing with differential privacy. Consensus-based promotion. createFederationMesh() connects nodes.
+- **Agent Behavioral DNA** (`src/behavioral-dna.js`) - Learn per-agent behavioral baselines (tool usage, response patterns, timing). Detect anomalies when agent is compromised. Portable fingerprints.
+
+### Added - Enterprise & Production
+
+- **Pre-Deployment Security Audit** (`src/audit.js`) - Run 617+ attacks with mutation engine in under 100ms. SecurityAudit generates category breakdown, findings, fix recommendations, and production-readiness verdict.
+- **Agent Flight Recorder** (`src/flight-recorder.js`) - Forensic conversation replay. Records every interaction, detects incidents, reconstructs attack timeline and escalation path. Auto-generates fix patterns.
+- **Supply Chain Verification** (`src/supply-chain.js`) - ToolChainValidator scans tool arguments and responses for injection. ResponseScanner deep-scans JSON/nested data for hidden instructions. DomainAllowlist for URL validation.
+- **Visual HTML Security Report** (`src/report-generator.js`) - Lighthouse-style HTML report with SVG gauge, category bar charts, severity breakdown, fix recommendations. Self-contained, print-friendly.
+- **Enterprise SOC Dashboard** (`src/soc-dashboard.js`) - Real-time event aggregation from multiple agents. Query by agent/category/severity/time. Alert channels: Slack, PagerDuty, Microsoft Teams.
+- **Attack Replay Platform** (`src/attack-replay.js`) - Record real attacks, replay against updated defenses. Track improvements vs regressions. Export/import attack corpora.
+- **Compliance Certification Authority** (`src/compliance-authority.js`) - HMAC-signed compliance certificates against OWASP, NIST, EU AI Act, SOC 2. Platinum/Gold/Silver/Bronze levels. Verify and revoke certificates.
+- **Real Attack Dataset Testing** (`src/real-attack-datasets.js`) - 48 samples from HackAPrompt, TensorTrust, and security research. DatasetRunner with precision/recall/F1 metrics.
+
+### Added - Developer Experience
+
+- **Web Playground** (`playground/index.html`) - Paste text, see threats. 47 embedded patterns, dark mode, preset examples. Zero install.
+- **Claude SDK 3-Line Demo** (`examples/claude-3-lines.js`) - Simplest possible Claude integration.
+- **MCP Attack Demo** (`examples/mcp-attack-demo.js`) - 5 real MCP attacks all blocked in real-time.
+- **Competitive Benchmark Page** (`benchmark/competitive.html`) - Agent Shield vs Rebuff, LLM Guard, Lakera, Prompt Armor.
+- **CLI pentest command** - `npx agentshield-sdk security-audit` runs full audit with HTML report.
+
+### Changed
+
+- Total exports: 390 across 93 modules (was 331 across 79)
+- Total test assertions: 2,220 across 13 test suites + Python + VSCode
+- 14 new source modules in this release
+
 ## [7.2.1] - 2026-03-21
 
 ### Added

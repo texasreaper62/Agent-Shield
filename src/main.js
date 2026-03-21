@@ -179,6 +179,42 @@ const { SecurityAudit, AuditReport, AUDIT_ATTACKS, generateMutations: auditMutat
 // v7.2.1 — Flight Recorder
 const { FlightRecorder } = safeRequire('./flight-recorder', 'flight-recorder');
 
+// v7.2.1 — HTML Report Generator
+const { generateHTMLReport, generateReportFile } = safeRequire('./report-generator', 'report-generator');
+
+// v7.3 — Supply Chain Verification
+const { ToolChainValidator, ResponseScanner, DomainAllowlist, RESPONSE_INJECTION_PATTERNS, EXFILTRATION_URL_PATTERNS, CREDENTIAL_PATTERNS, CHAIN_SUSPICIOUS_PATTERNS } = safeRequire('./supply-chain', 'supply-chain');
+
+// v7.4 — Herd Immunity
+const { HerdImmunity, ImmuneMemory, createHerdNetwork } = safeRequire('./herd-immunity', 'herd-immunity');
+
+// v7.4 — Adversarial Evolution Simulator
+const { EvolutionSimulator, MutationEngine, hardenFromEvolution } = safeRequire('./evolution-simulator', 'evolution-simulator');
+
+// v7.4 — Attack Replay Platform
+const { AttackReplayEngine, compareDefenses } = safeRequire('./attack-replay', 'attack-replay');
+
+// v7.4 — Enterprise SOC Dashboard
+const { SOCDashboard, SlackAlertChannel, PagerDutyAlertChannel, TeamsAlertChannel } = safeRequire('./soc-dashboard', 'soc-dashboard');
+
+// v7.4 — Attack Genome (loaded when available)
+const { AttackGenome, GenomeDatabase, detectByGenome, INTENT_PATTERNS: GENOME_INTENT_PATTERNS, TECHNIQUE_PATTERNS: GENOME_TECHNIQUE_PATTERNS, EVASION_PATTERNS: GENOME_EVASION_PATTERNS, TARGET_PATTERNS: GENOME_TARGET_PATTERNS } = safeRequire('./attack-genome', 'attack-genome');
+
+// v7.4 — Intent Firewall (loaded when available)
+const { IntentFirewall, ContextAnalyzer: IntentContextAnalyzer, IntentRules, intentDemo, INTENT_CATEGORIES, INTENT_SIGNALS, CONTEXT_MODIFIERS } = safeRequire('./intent-firewall', 'intent-firewall');
+
+// v7.4 — Real Attack Dataset Testing
+const { DatasetRunner, HACKAPROMPT_SAMPLES, TENSORTRUST_SAMPLES, RESEARCH_SAMPLES, BENIGN_SAMPLES } = safeRequire('./real-attack-datasets', 'real-attack-datasets');
+
+// v7.4 — Federated Threat Intelligence
+const { ThreatIntelFederation, createFederationMesh } = safeRequire('./threat-intel-federation', 'threat-intel-federation');
+
+// v7.4 — Behavioral DNA (loaded when available)
+const { BehavioralDNA, AgentProfiler, extractFeatures: extractBehavioralFeatures, DEFAULT_NUMERIC_FEATURES, DEFAULT_CATEGORICAL_FEATURES } = safeRequire('./behavioral-dna', 'behavioral-dna');
+
+// v7.4 — Compliance Certification Authority (loaded when available)
+const { ComplianceCertificateAuthority, ComplianceReport: ComplianceCertReport, ComplianceScheduler, AUTHORITY_FRAMEWORKS, CAPABILITY_MAP: CA_CAPABILITY_MAP, CERTIFICATE_LEVELS: CA_CERTIFICATE_LEVELS } = safeRequire('./compliance-authority', 'compliance-authority');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -773,6 +809,83 @@ const _exports = {
 
   // v7.2.1 — Flight Recorder
   FlightRecorder,
+
+  // v7.2.1 — HTML Report Generator
+  generateHTMLReport,
+  generateReportFile,
+
+  // v7.3 — Supply Chain Verification
+  ToolChainValidator,
+  ResponseScanner,
+  DomainAllowlist,
+  RESPONSE_INJECTION_PATTERNS,
+  EXFILTRATION_URL_PATTERNS,
+  CREDENTIAL_PATTERNS,
+  CHAIN_SUSPICIOUS_PATTERNS,
+
+  // v7.4 — Herd Immunity
+  HerdImmunity,
+  ImmuneMemory,
+  createHerdNetwork,
+
+  // v7.4 — Adversarial Evolution Simulator
+  EvolutionSimulator,
+  MutationEngine,
+  hardenFromEvolution,
+
+  // v7.4 — Attack Replay Platform
+  AttackReplayEngine,
+  compareDefenses,
+
+  // v7.4 — Enterprise SOC Dashboard
+  SOCDashboard,
+  SlackAlertChannel,
+  PagerDutyAlertChannel,
+  TeamsAlertChannel,
+
+  // v7.4 — Attack Genome
+  AttackGenome,
+  GenomeDatabase,
+  detectByGenome,
+  GENOME_INTENT_PATTERNS,
+  GENOME_TECHNIQUE_PATTERNS,
+  GENOME_EVASION_PATTERNS,
+  GENOME_TARGET_PATTERNS,
+
+  // v7.4 — Intent Firewall
+  IntentFirewall,
+  IntentContextAnalyzer,
+  IntentRules,
+  intentDemo,
+  INTENT_CATEGORIES,
+  INTENT_SIGNALS,
+  CONTEXT_MODIFIERS,
+
+  // v7.4 — Real Attack Datasets
+  DatasetRunner,
+  HACKAPROMPT_SAMPLES,
+  TENSORTRUST_SAMPLES,
+  RESEARCH_SAMPLES,
+  BENIGN_SAMPLES,
+
+  // v7.4 — Federated Threat Intelligence
+  ThreatIntelFederation,
+  createFederationMesh,
+
+  // v7.4 — Behavioral DNA
+  BehavioralDNA,
+  AgentProfiler,
+  extractBehavioralFeatures,
+  DEFAULT_NUMERIC_FEATURES,
+  DEFAULT_CATEGORICAL_FEATURES,
+
+  // v7.5 — Compliance Certification Authority
+  ComplianceCertificateAuthority,
+  ComplianceCertReport,
+  ComplianceScheduler,
+  AUTHORITY_FRAMEWORKS,
+  CA_CAPABILITY_MAP,
+  CA_CERTIFICATE_LEVELS,
 };
 
 // Filter out undefined exports (from modules that failed to load)

@@ -349,6 +349,21 @@ const commandScore = () => {
   console.log(calc.formatReport());
 };
 
+const commandSecurityAudit = () => {
+  console.log(ASCII_BANNER);
+  const { runAuditCLI } = require('../src/audit');
+  const report = runAuditCLI();
+
+  // Try to generate HTML report
+  try {
+    const { generateReportFile } = require('../src/report-generator');
+    generateReportFile(report, 'shield-report.html');
+    console.log(`\n${COLORS.green}HTML report saved to shield-report.html${COLORS.reset}`);
+  } catch (_) {
+    // report-generator not available, skip HTML
+  }
+};
+
 const commandRedteam = (args) => {
   console.log(ASCII_BANNER);
   const { AttackSimulator } = require('../src/redteam');
@@ -625,6 +640,10 @@ const main = () => {
     case 'init':
     case 'setup':
       commandInit();
+      break;
+    case 'security-audit':
+    case 'pentest':
+      commandSecurityAudit();
       break;
     case 'demo':
     case 'prove-it':
