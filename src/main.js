@@ -185,6 +185,24 @@ const { generateHTMLReport, generateReportFile } = safeRequire('./report-generat
 // v7.3 — Supply Chain Verification
 const { ToolChainValidator, ResponseScanner, DomainAllowlist, RESPONSE_INJECTION_PATTERNS, EXFILTRATION_URL_PATTERNS, CREDENTIAL_PATTERNS, CHAIN_SUSPICIOUS_PATTERNS } = safeRequire('./supply-chain', 'supply-chain');
 
+// v7.4 — Herd Immunity
+const { HerdImmunity, ImmuneMemory, createHerdNetwork } = safeRequire('./herd-immunity', 'herd-immunity');
+
+// v7.4 — Adversarial Evolution Simulator
+const { EvolutionSimulator, MutationEngine, hardenFromEvolution } = safeRequire('./evolution-simulator', 'evolution-simulator');
+
+// v7.4 — Attack Replay Platform
+const { AttackReplayEngine, compareDefenses } = safeRequire('./attack-replay', 'attack-replay');
+
+// v7.4 — Enterprise SOC Dashboard
+const { SOCDashboard, SlackAlertChannel, PagerDutyAlertChannel, TeamsAlertChannel } = safeRequire('./soc-dashboard', 'soc-dashboard');
+
+// v7.4 — Attack Genome (loaded when available)
+const { AttackGenome, GenomeDatabase, detectByGenome, INTENT_PATTERNS: GENOME_INTENT_PATTERNS, TECHNIQUE_PATTERNS: GENOME_TECHNIQUE_PATTERNS, EVASION_PATTERNS: GENOME_EVASION_PATTERNS, TARGET_PATTERNS: GENOME_TARGET_PATTERNS } = safeRequire('./attack-genome', 'attack-genome');
+
+// v7.4 — Intent Firewall (loaded when available)
+const { IntentFirewall, ContextAnalyzer: IntentContextAnalyzer, IntentRules } = safeRequire('./intent-firewall', 'intent-firewall');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -792,6 +810,40 @@ const _exports = {
   EXFILTRATION_URL_PATTERNS,
   CREDENTIAL_PATTERNS,
   CHAIN_SUSPICIOUS_PATTERNS,
+
+  // v7.4 — Herd Immunity
+  HerdImmunity,
+  ImmuneMemory,
+  createHerdNetwork,
+
+  // v7.4 — Adversarial Evolution Simulator
+  EvolutionSimulator,
+  MutationEngine,
+  hardenFromEvolution,
+
+  // v7.4 — Attack Replay Platform
+  AttackReplayEngine,
+  compareDefenses,
+
+  // v7.4 — Enterprise SOC Dashboard
+  SOCDashboard,
+  SlackAlertChannel,
+  PagerDutyAlertChannel,
+  TeamsAlertChannel,
+
+  // v7.4 — Attack Genome
+  AttackGenome,
+  GenomeDatabase,
+  detectByGenome,
+  GENOME_INTENT_PATTERNS,
+  GENOME_TECHNIQUE_PATTERNS,
+  GENOME_EVASION_PATTERNS,
+  GENOME_TARGET_PATTERNS,
+
+  // v7.4 — Intent Firewall
+  IntentFirewall,
+  IntentContextAnalyzer,
+  IntentRules,
 };
 
 // Filter out undefined exports (from modules that failed to load)
