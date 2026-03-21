@@ -170,6 +170,9 @@ const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequir
 // OpenClaw
 const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = safeRequire('./openclaw', 'openclaw');
 
+// v7.2 — IPIA Detector
+const { IPIADetector, ContextConstructor, FeatureExtractor, TreeClassifier, ExternalEmbedder, createIPIAScanner, ipiaMiddleware, FEATURE_NAMES: IPIA_FEATURE_NAMES, INJECTION_LEXICON: IPIA_INJECTION_LEXICON } = safeRequire('./ipia-detector', 'ipia-detector');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -739,6 +742,17 @@ const _exports = {
   MCP_THREAT_CATEGORIES: CERT_THREAT_CATEGORIES,
   CERTIFICATION_REQUIREMENTS,
   CERTIFICATION_LEVELS,
+
+  // v7.2 — IPIA Detector
+  IPIADetector,
+  ContextConstructor,
+  FeatureExtractor,
+  TreeClassifier,
+  ExternalEmbedder,
+  createIPIAScanner,
+  ipiaMiddleware,
+  IPIA_FEATURE_NAMES,
+  IPIA_INJECTION_LEXICON,
 };
 
 // Filter out undefined exports (from modules that failed to load)

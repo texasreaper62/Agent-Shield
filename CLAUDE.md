@@ -68,7 +68,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (318 exports, 78 modules)
+├── src/                           # Node.js SDK (327 exports, 79 modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -164,7 +164,10 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── adaptive-defense.js         # Learning loops, agent contracts, compliance attestation
 │   ├── adaptive.js                 # Adaptive detection with semantic hooks, community patterns
 │   ├── ctf.js                      # Capture-the-flag challenge system for security testing
-│   └── openclaw.js                 # OpenClaw skill integration and message hook
+│   ├── openclaw.js                 # OpenClaw skill integration and message hook
+│   │
+│   │  # v7.2 — IPIA Detection
+│   └── ipia-detector.js            # Indirect prompt injection detector (joint-context pipeline)
 │
 ├── python-sdk/                    # Python SDK
 │   ├── agent_shield/              # Core package
@@ -257,13 +260,14 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run test:deputy` — confused deputy prevention tests (85 assertions)
 - `npm run test:v6` — v6.0 compliance & standards tests (122 assertions)
 - `npm run test:adaptive` — adaptive defense system tests (85 assertions)
+- `npm run test:ipia` — indirect prompt injection detector tests (117 assertions)
 - `npm run test:all` — full 40-feature suite (149 assertions)
 - `npm run test:fp` — false positive accuracy tests (118 samples, 99.2% accuracy)
 - `npm run test:full` — runs all test suites together
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (23), vscode (167)
-- Total: **1,165 test assertions** across 14 test suites
+- Total: **1,282 test assertions** across 15 test suites
 
 ## Architecture Notes
 
@@ -279,6 +283,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **cost-optimizer.js** — 4-tier adaptive scanning with latency budgets
 - **adaptive-defense.js** — autonomous learning loops with compliance attestation framework
 - **mcp-security-runtime.js** — unified MCP layer with AES-256-GCM encryption, adaptive defense integration
+- **ipia-detector.js** — joint-context IPIA pipeline: context construction → TF-IDF features → decision tree classifier, pluggable embedding backends
 
 ## Version History
 
@@ -293,3 +298,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v6.0** — Compliance: OWASP LLM Top 10 v2025, MCP Bridge, NIST AI RMF, EU AI Act, prompt leakage detector, RAG vulnerability scanner, confused deputy prevention
 - **v7.0** — MCP Security: unified runtime (auth+scan+behavior+audit), AES-256-GCM encryption, HMAC signing, MCP certification framework, cross-org agent trust CA, threat intelligence engine
 - **v7.1** — Adaptive Defense: learning loops, agent contracts, compliance attestation, CTF challenges, adaptive detection with community patterns, MCP SDK integration, OpenClaw hooks
+- **v7.2** — IPIA Detection: joint-context embedding pipeline, TF-IDF + decision tree classifier, pluggable embedding backends, batch RAG scanning, Express middleware
