@@ -58,9 +58,12 @@
           "default": [
             "instruction_override",
             "role_hijack",
+            "prompt_injection",
             "data_exfiltration",
             "social_engineering",
-            "system_prompt_leak"
+            "tool_abuse",
+            "malicious_plugin",
+            "ai_phishing"
           ],
           "items": {
             "type": "string"

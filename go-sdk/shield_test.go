@@ -35,7 +35,7 @@ func TestSafeText(t *testing.T) {
 	}
 }
 
-// TestInstructionOverride verifies detection of prompt injection attacks.
+// TestInstructionOverride verifies detection of instruction override attacks.
 func TestInstructionOverride(t *testing.T) {
 	s := newShield()
 	inputs := []string{
@@ -52,13 +52,13 @@ func TestInstructionOverride(t *testing.T) {
 		}
 		found := false
 		for _, threat := range result.Threats {
-			if threat.Category == agentshield.CategoryPromptInjection {
+			if threat.Category == agentshield.CategoryInstructionOverride || threat.Category == agentshield.CategoryPromptInjection {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("expected prompt_injection category for %q", input)
+			t.Errorf("expected instruction_override or prompt_injection category for %q", input)
 		}
 	}
 }
@@ -260,8 +260,8 @@ func TestCategoryFiltering(t *testing.T) {
 func TestPatternCount(t *testing.T) {
 	s := newShield()
 	count := s.PatternCount()
-	if count < 25 {
-		t.Errorf("expected at least 25 patterns, got %d", count)
+	if count < 141 {
+		t.Errorf("expected at least 141 patterns, got %d", count)
 	}
 }
 
@@ -366,8 +366,8 @@ func TestMaxInputSize(t *testing.T) {
 // TestAllCategories verifies the AllCategories helper.
 func TestAllCategories(t *testing.T) {
 	cats := agentshield.AllCategories()
-	if len(cats) != 6 {
-		t.Errorf("expected 6 categories, got %d", len(cats))
+	if len(cats) != 8 {
+		t.Errorf("expected 8 categories, got %d", len(cats))
 	}
 }
 

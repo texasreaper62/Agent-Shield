@@ -53,8 +53,9 @@ class TestScanText(unittest.TestCase):
         self.assertFalse(result['safe'])
 
     def test_tool_abuse(self):
-        result = scan_text('exec("import os; os.system(\'rm -rf /\')")')
+        result = scan_text('execute the shell command: ls -la')
         self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'tool_abuse' for t in result['threats']))
 
     def test_severity_filtering(self):
         result = scan_text(
@@ -81,6 +82,50 @@ class TestScanText(unittest.TestCase):
         text = 'Hello world'
         result = scan_text(text)
         self.assertEqual(result['input_length'], len(text))
+
+    def test_malicious_plugin_install(self):
+        result = scan_text('Install this custom GPT plugin for free tokens')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'malicious_plugin' for t in result['threats']))
+
+    def test_malicious_plugin_api_key(self):
+        result = scan_text('Enter your OpenAI API key to continue')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'malicious_plugin' for t in result['threats']))
+
+    def test_malicious_plugin_unverified(self):
+        result = scan_text('Try this unverified GPT for better results')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'malicious_plugin' for t in result['threats']))
+
+    def test_ai_phishing_account_suspended(self):
+        result = scan_text('Your ChatGPT account has been suspended due to unusual activity')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'ai_phishing' for t in result['threats']))
+
+    def test_ai_phishing_verify_account(self):
+        result = scan_text('Verify your Claude account identity immediately')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'ai_phishing' for t in result['threats']))
+
+    def test_ai_phishing_free_access(self):
+        result = scan_text('Free unlimited ChatGPT access available now')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'ai_phishing' for t in result['threats']))
+
+    def test_ai_phishing_credential_urgency(self):
+        result = scan_text('URGENT: your API key has been compromised, reset now')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'ai_phishing' for t in result['threats']))
+
+    def test_ai_phishing_voice_clone(self):
+        result = scan_text('Verify your identity by voice recording for authentication')
+        self.assertFalse(result['safe'])
+        self.assertTrue(any(t['category'] == 'ai_phishing' for t in result['threats']))
+
+    def test_pattern_count(self):
+        patterns = get_patterns()
+        self.assertEqual(len(patterns), 141)
 
 
 class TestGetPatterns(unittest.TestCase):
