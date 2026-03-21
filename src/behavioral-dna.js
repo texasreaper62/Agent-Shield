@@ -160,11 +160,8 @@ class BehavioralDNA {
     this._createdAt = Date.now();
     this._lastObservation = null;
 
-    console.log(
-      '[Agent Shield] BehavioralDNA initialized (learningPeriod: %d, threshold: %s)',
-      this.learningPeriod,
-      this.anomalyThreshold
-    );
+    console.log('[Agent Shield] BehavioralDNA initialized (learningPeriod: %d, threshold: %s)',
+      this.learningPeriod, this.anomalyThreshold);
   }
 
   /**
@@ -481,10 +478,8 @@ class BehavioralDNA {
 
     this._toolDistribution = data.toolDistribution ? { ...data.toolDistribution } : {};
 
-    console.log(
-      '[Agent Shield] BehavioralDNA fingerprint loaded (%d observations)',
-      this._observationCount
-    );
+    console.log('[Agent Shield] BehavioralDNA fingerprint loaded (%d observations)',
+      this._observationCount);
   }
 
   /**
