@@ -173,6 +173,12 @@ const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = s
 // v7.2 — IPIA Detector
 const { IPIADetector, ContextConstructor, FeatureExtractor, TreeClassifier, ExternalEmbedder, createIPIAScanner, ipiaMiddleware, FEATURE_NAMES: IPIA_FEATURE_NAMES, INJECTION_LEXICON: IPIA_INJECTION_LEXICON } = safeRequire('./ipia-detector', 'ipia-detector');
 
+// v7.2.1 — Pre-Deployment Audit
+const { SecurityAudit, AuditReport, AUDIT_ATTACKS, generateMutations: auditMutations, runAuditCLI } = safeRequire('./audit', 'audit');
+
+// v7.2.1 — Flight Recorder
+const { FlightRecorder } = safeRequire('./flight-recorder', 'flight-recorder');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -757,6 +763,16 @@ const _exports = {
   ipiaMiddleware,
   IPIA_FEATURE_NAMES,
   IPIA_INJECTION_LEXICON,
+
+  // v7.2.1 — Pre-Deployment Audit
+  SecurityAudit,
+  AuditReport,
+  AUDIT_ATTACKS,
+  auditMutations,
+  runAuditCLI,
+
+  // v7.2.1 — Flight Recorder
+  FlightRecorder,
 };
 
 // Filter out undefined exports (from modules that failed to load)
