@@ -44,7 +44,7 @@ const (
 	// CategoryPromptInjection covers instruction override and prompt manipulation attacks.
 	CategoryPromptInjection Category = "prompt_injection"
 	// CategoryRoleHijacking covers attempts to change the AI's role or persona.
-	CategoryRoleHijacking Category = "role_hijacking"
+	CategoryRoleHijacking Category = "role_hijack"
 	// CategoryDataExfiltration covers attempts to extract sensitive data.
 	CategoryDataExfiltration Category = "data_exfiltration"
 	// CategorySocialEngineering covers manipulation and social engineering attacks.

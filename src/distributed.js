@@ -229,6 +229,7 @@ class DistributedShield {
     this.threatTTLMs = options.threatTTLMs || 3600000;
 
     this._localThreats = [];
+    this._maxLocalThreats = options.maxLocalThreats || 1000;
     this._syncTimer = null;
     this._started = false;
 
@@ -259,6 +260,9 @@ class DistributedShield {
     await this.adapter.subscribe('threats', (threat) => {
       if (threat.instanceId !== this.instanceId) {
         this._localThreats.push(threat);
+        if (this._localThreats.length > this._maxLocalThreats) {
+          this._localThreats = this._localThreats.slice(-Math.floor(this._maxLocalThreats * 0.75));
+        }
         console.log('[Agent Shield] Received threat from instance %s: %s', threat.instanceId, threat.category);
       }
     });
@@ -271,6 +275,7 @@ class DistributedShield {
         lastHeartbeat: Date.now()
       }, this.threatTTLMs);
     }, this.syncIntervalMs);
+    if (this._syncTimer.unref) this._syncTimer.unref();
 
     console.log('[Agent Shield] DistributedShield started');
   }
@@ -299,6 +304,9 @@ class DistributedShield {
       await this.adapter.publish('threats', entry);
 
       this._localThreats.push(entry);
+      if (this._localThreats.length > this._maxLocalThreats) {
+        this._localThreats = this._localThreats.slice(-Math.floor(this._maxLocalThreats * 0.75));
+      }
     } finally {
       this._trackOp(-1);
     }

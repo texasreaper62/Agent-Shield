@@ -953,6 +953,18 @@ export declare class TokenStreamScanner {
   flush(): { threats: Threat[] };
 }
 
+export declare class StreamBuffer {
+  constructor(options?: { windowSize?: number });
+  push(token: string): void;
+  getWindow(): string;
+  getFullText(): string;
+  lastN(n: number): string;
+  clear(): void;
+}
+
+export declare function createStreamWrapper(stream: any, options?: { sensitivity?: string; extractText?: (chunk: any) => string; onThreat?: (threat: Threat) => void }): any;
+export declare function scanAsyncIterator(iterator: AsyncIterable<any>, options?: { sensitivity?: string; extractText?: (chunk: any) => string; onThreat?: (threat: Threat) => void }): Promise<{ threats: Threat[]; text: string }>;
+
 // =========================================================================
 // Plugin System
 // =========================================================================
@@ -1148,6 +1160,54 @@ export declare class MCPToolHandler {
 }
 
 // =========================================================================
+// MCP Bridge (v6.0)
+// =========================================================================
+
+export declare class MCPBridge {
+  constructor(options?: { scanner?: Function; allowedTools?: string[]; blockedTools?: string[]; scanInputs?: boolean; scanOutputs?: boolean; maxToolCallsPerMinute?: number });
+  wrapToolCall(toolName: string, args?: object): { allowed: boolean; threats: Threat[]; sanitizedArgs: object; reason: string | null };
+  wrapToolResult(toolName: string, result: any): { safe: boolean; threats: Threat[]; sanitizedResult?: any };
+  validateToolSchema(schema?: object): { valid: boolean; issues: string[] };
+  getStats(): object;
+}
+
+export declare class MCPToolPolicy {
+  constructor(rules?: Array<{ id?: string; tool: string; action: string; conditions?: object }>);
+  evaluate(toolName: string, args?: object, context?: object): { action: string; rule: string | null };
+  addRule(rule: object): void;
+  removeRule(ruleId: string): boolean;
+  toJSON(): object;
+}
+
+export declare class MCPSessionGuard {
+  constructor(sessionId: string, options?: { maxToolCalls?: number; maxTokenBudget?: number; ttlMs?: number });
+  trackToolCall(toolName: string, args?: object): { allowed: boolean; reason?: string };
+  checkBudget(): { withinBudget: boolean; remaining: number };
+  getSessionReport(): object;
+  reset(): void;
+}
+
+export declare class MCPResourceScanner {
+  constructor(options?: { scanner?: Function });
+  scanResource(uri: string, content: string, mimeType?: string): { safe: boolean; threats: Threat[]; uri: string };
+  scanPromptTemplate(template: string): { safe: boolean; threats: Threat[] };
+}
+
+export declare function createMCPMiddleware(options?: { scanner?: Function; allowedTools?: string[]; blockedTools?: string[]; scanInputs?: boolean; scanOutputs?: boolean }): {
+  onToolCall(toolName: string, args: object): { allowed: boolean; threats: Threat[]; sanitizedArgs: object; reason: string | null };
+  onToolResult(toolName: string, result: any): { safe: boolean; threats: Threat[] };
+  onResourceAccess(uri: string, content: string, mimeType?: string): { safe: boolean; threats: Threat[] };
+  getBridge(): MCPBridge;
+};
+
+// =========================================================================
+// MCP SDK Integration (v7.1)
+// =========================================================================
+
+export declare function shieldMCPServer(server: any, options?: { scanInputs?: boolean; scanOutputs?: boolean; blockOnThreat?: boolean; sensitivity?: string; onThreat?: (info: any) => void }): any;
+export declare function createMCPSecurityLayer(options?: { scanInputs?: boolean; scanOutputs?: boolean; blockOnThreat?: boolean; sensitivity?: string }): object;
+
+// =========================================================================
 // CTF
 // =========================================================================
 
@@ -1224,6 +1284,236 @@ export declare class CommunityPatterns {
 }
 
 // =========================================================================
+// OWASP LLM Top 10 v2025 (v6.0)
+// =========================================================================
+
+export declare class OWASPCoverageMatrix {
+  constructor(options?: { agentShield?: AgentShield; organizationName?: string });
+  getCoverage(): object;
+  getCoverageScore(): { score: number; covered: number; total: number };
+  getGaps(): Array<{ id: string; name: string; recommendation: string }>;
+  getRecommendations(): Array<{ id: string; priority: string; action: string }>;
+  validateCompliance(scanResults?: object): object;
+  getCoverageReport(format?: 'text' | 'markdown'): string;
+}
+
+// =========================================================================
+// NIST AI RMF Mapping (v6.0)
+// =========================================================================
+
+export declare class NISTMapper {
+  constructor(options?: { organizationName?: string; systemName?: string; riskLevel?: 'low' | 'medium' | 'high' | 'critical' });
+  getCoverageMap(): object;
+  getCoverageScore(): { score: number; covered: number; total: number };
+  getGaps(): Array<{ id: string; name: string; recommendation: string }>;
+  generateProfile(systemDescription?: string): object;
+  generateReport(format?: 'text' | 'markdown'): string;
+}
+
+export declare class AIBOMGenerator {
+  constructor(options?: { format?: 'spdx' | 'cyclonedx' | 'custom'; organizationName?: string; systemName?: string });
+  addComponent(component: object): void;
+  addModel(model: object): void;
+  addDataset(dataset: object): void;
+  addService(service: object): void;
+  generate(): object;
+  validate(): { valid: boolean; errors: string[] };
+  toJSON(): object;
+  toSPDX(): object;
+  toCycloneDX(): object;
+}
+
+export declare class NISTComplianceChecker {
+  constructor(nistMapper: NISTMapper);
+  checkAgainstProfile(profile: object, currentState?: object): object;
+  generateActionPlan(): object;
+  generateAuditArtifact(format?: 'json' | 'text'): any;
+}
+
+// =========================================================================
+// EU AI Act Compliance (v6.0)
+// =========================================================================
+
+export declare class RiskClassifier {
+  constructor(options?: { sector?: string; purpose?: string; dataTypes?: string[] });
+  classify(systemDescription?: string): { riskLevel: string; category: string; articles: string[] };
+  getApplicableArticles(): object[];
+  generateRiskAssessment(): object;
+}
+
+export declare class ConformityAssessment {
+  constructor(systemInfo?: { name?: string; provider?: string; version?: string });
+  addEvidence(reqArticle: string, evidence: string): void;
+  checkRequirement(reqArticle: string): object;
+  getStatus(): object;
+  generateReport(format?: 'json' | 'text'): any;
+  generateTechnicalDocumentation(): object;
+  generateDeclarationOfConformity(): object;
+}
+
+export declare class TransparencyReporter {
+  constructor(options?: { providerName?: string });
+  generateModelCard(modelInfo?: object): object;
+  generateTrainingDataSummary(dataInfo?: object): object;
+  generateCopyrightPolicy(): object;
+  generateEnergyReport(metrics?: object): object;
+}
+
+export declare class EUIncidentReporter {
+  constructor(options?: { providerName?: string; contactEmail?: string; nationalAuthority?: string });
+  createReport(incident?: object): object;
+  getNotificationDeadline(severity?: string): object;
+  generateCorrective(incident?: object): object;
+}
+
+export declare class EUAIActDashboard {
+  constructor(riskClassifier?: RiskClassifier, conformity?: ConformityAssessment);
+  getComplianceStatus(): object;
+  getDeadlines(): object[];
+  getActionItems(): object[];
+}
+
+// =========================================================================
+// Prompt Leakage Detection (v6.0)
+// =========================================================================
+
+export declare class PromptFingerprinter {
+  constructor();
+  fingerprint(text: string): object;
+  compare(fp: object, text: string): { similarity: number; leaked: boolean };
+  detectPartialLeak(fp: object, output: string): { leaked: boolean; matches: any[] };
+}
+
+export declare class SystemPromptGuard {
+  constructor(options?: { systemPrompt?: string; sensitivity?: 'low' | 'medium' | 'high'; enableFingerprinting?: boolean });
+  registerSystemPrompt(prompt: string): void;
+  scanInput(input: string): { suspicious: boolean; threats: any[]; action: string };
+  scanOutput(output: string): { leaked: boolean; findings: any[]; leakageScore: number };
+  getLeakageScore(output: string): number;
+  getStats(): object;
+}
+
+export declare class PromptLeakageMitigation {
+  constructor();
+  addDefenseLayer(prompt: string): string;
+  wrapPrompt(prompt: string): string;
+  generateDecoy(): string;
+}
+
+// =========================================================================
+// RAG Vulnerability Scanning (v6.0)
+// =========================================================================
+
+export declare class RAGVulnerabilityScanner {
+  constructor(options?: { chunkSize?: number; overlapSize?: number; maxRetrievedDocs?: number });
+  scanChunk(chunk: string, metadata?: object): object;
+  scanRetrievalSet(chunks: string[], query: string): object;
+  analyzeChunkBoundaries(chunks: string[]): object;
+  validateMetadata(metadata: object): object;
+  assessContextWindowRisk(systemPrompt: string, retrievedDocs: string[], userQuery: string, contextWindowSize?: number): object;
+  getStats(): object;
+}
+
+export declare class EmbeddingIntegrityChecker {
+  constructor(options?: { distanceThreshold?: number; anomalyMethod?: 'zscore' | 'isolation' });
+  checkDistribution(embeddings: number[][]): object;
+  detectOutliers(embeddings: number[][], labels?: string[]): object;
+  measureDrift(baselineEmbeddings: number[][], currentEmbeddings: number[][]): object;
+  validateEmbeddingConsistency(text: string, embedding: number[]): object;
+}
+
+export declare class RAGPipelineAuditor {
+  constructor(pipelineConfig?: { chunkingStrategy?: string; embeddingModel?: string; vectorDB?: string });
+  audit(): object;
+  getVulnerabilities(): object[];
+  getRecommendations(): object[];
+  generateReport(format?: 'text' | 'markdown'): string;
+}
+
+// =========================================================================
+// Benchmark Harness (v5.0)
+// =========================================================================
+
+export declare class DatasetLoader {
+  load(filePath: string): { entries: object[]; meta: object };
+  validate(entries: object[]): { valid: boolean; errors: string[] };
+  fromBIPIA(entries: object[]): object[];
+  fromGarak(entries: object[]): object[];
+}
+
+export declare class BenchmarkMetrics {
+  compute(results: Array<{ entry: object; detected: boolean; expected: boolean; latencyMs: number }>): object;
+}
+
+export declare class RegressionTracker {
+  constructor(options?: { f1Threshold?: number; latencyThreshold?: number });
+  saveBaseline(metrics: object, filePath: string): void;
+  loadBaseline(filePath: string): object;
+  compare(current: object, baseline: object): object;
+}
+
+export declare class BenchmarkReportGenerator {
+  text(metrics: object, options?: { title?: string }): string;
+  json(metrics: object): string;
+  markdown(metrics: object, options?: { title?: string }): string;
+  comparisonText(comparison: object): string;
+}
+
+export declare class BenchmarkHarness {
+  constructor(options?: { warmupRuns?: number });
+  loadDataset(filePath: string): void;
+  loadEntries(entries: object[]): void;
+  run(detectorFn: (text: string) => any): object;
+  compare(detectors: Record<string, (text: string) => any>): object;
+  formatReport(results: object): string;
+  formatComparison(comparison: object): string;
+  formatMarkdown(results: object): string;
+}
+
+// =========================================================================
+// Adaptive Defense (v7.1)
+// =========================================================================
+
+export declare class LearningLoop {
+  constructor(options?: { minHitsToPromote?: number; maxLearnedPatterns?: number; promotionConfidence?: number });
+  ingest(attack: { text: string; category?: string; source?: string }): object;
+  check(text: string): { matches: any[]; boosted: boolean };
+  recordFeedback(patternId: string, type: 'confirmed' | 'false_positive', reason?: string): void;
+  getActivePatterns(): object[];
+  getReport(): object;
+  exportPatterns(): string;
+  importPatterns(data: string): void;
+}
+
+export declare class BehaviorContract {
+  constructor(spec: { agentId: string; allowedTools?: string[]; deniedTools?: string[]; maxToolCallsPerMinute?: number; maxDelegationDepth?: number; allowedScopes?: string[]; requiredIntents?: boolean; maxResponseLength?: number; timeWindows?: Array<{ start: number; end: number }>; customValidator?: Function });
+  verify(action: { type: string; tool?: string; args?: any; depth?: number; scope?: string; intent?: string; responseLength?: number }): { allowed: boolean; violations: any[] };
+  getViolations(limit?: number): any[];
+  getComplianceRate(): { total: number; passed: number; violated: number; rate: string };
+  toJSON(): object;
+}
+
+export declare class ContractRegistry {
+  constructor();
+  register(contract: BehaviorContract): void;
+  onViolation(callback: (violation: any) => void): void;
+  enforce(agentId: string, action: object): { allowed: boolean; violations: any[] };
+  getComplianceReport(): object;
+  getRegisteredAgents(): string[];
+}
+
+export declare class ComplianceAttestor {
+  constructor(options?: { frameworks?: string[]; attestationIntervalMs?: number; onComplianceDrift?: Function });
+  updateSignal(signal: string, value: any): void;
+  updateSignals(signals: Record<string, any>): void;
+  attest(): object;
+  getCurrentState(): object;
+  getHistory(limit?: number): object[];
+  getTrend(): object;
+  generateProof(signingKey?: string): object;
+}
+
+// =========================================================================
 // Constants
 // =========================================================================
 
@@ -1275,6 +1565,13 @@ export interface LoadEnvResult {
 }
 
 export declare function loadEnvFile(options?: { path?: string; overwrite?: boolean }): LoadEnvResult;
+
+// =========================================================================
+// Errors
+// =========================================================================
+
+export declare function createShieldError(code: string, details?: object): Error;
+export declare function deprecationWarning(feature: string, replacement: string, removeVersion: string): void;
 
 // =========================================================================
 // OpenClaw Integration
@@ -1450,6 +1747,50 @@ export declare class AuditStreamManager {
   flush(): Promise<void>;
   close(): Promise<void>;
   getStats(): object;
+}
+
+// =========================================================================
+// Immutable Audit Log (v2.1)
+// =========================================================================
+
+export declare class AuditEntry {
+  id: string;
+  sequence: number;
+  timestamp: string;
+  type: string;
+  data: object;
+  actor: { type: string; id: string; name?: string };
+  previousHash: string;
+  hash: string;
+  constructor(params: { id: string; timestamp: string; type: string; data: object; actor: { type: string; id: string; name?: string }; previousHash: string; hash: string; sequence: number });
+  toJSON(): object;
+}
+
+export declare class AuditProof {
+  proofId: string;
+  generatedAt: string;
+  anchorHash: string;
+  entries: AuditEntry[];
+  startId: string;
+  endId: string;
+  entryCount: number;
+  chainHead: string;
+  proofHash: string;
+  constructor(params: { proofId: string; generatedAt: string; anchorHash: string; entries: AuditEntry[]; startId: string; endId: string; entryCount: number; chainHead: string; proofHash: string });
+  verify(): { valid: boolean; error: string | null };
+  toJSON(): object;
+}
+
+export declare class ImmutableAuditLog {
+  constructor(options?: { store?: object; maxEntries?: number; maxAge?: number; archiveCallback?: (entries: AuditEntry[]) => void; genesisHash?: string });
+  append(type: string, data: object, actor: { type: string; id: string; name?: string }): Promise<AuditEntry>;
+  verify(): Promise<{ valid: boolean; brokenAt: number | null; totalEntries: number }>;
+  exportProof(startId: string, endId: string): Promise<AuditProof>;
+  query(filters?: { type?: string; actorId?: string; since?: string; until?: string }): Promise<AuditEntry[]>;
+  export(format?: 'json' | 'csv'): Promise<string>;
+  getStats(): Promise<object>;
+  getChainHead(): Promise<string | null>;
+  count(): Promise<number>;
 }
 
 // =========================================================================

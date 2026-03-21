@@ -86,7 +86,7 @@ func TestRoleHijacking(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("expected role_hijacking category for %q", input)
+			t.Errorf("expected role_hijack category for %q", input)
 		}
 	}
 }

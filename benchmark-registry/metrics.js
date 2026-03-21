@@ -157,8 +157,13 @@ class MetricsCalculator {
     const len = sorted.length;
 
     const percentile = (p) => {
-      const idx = Math.ceil((p / 100) * len) - 1;
-      return sorted[Math.max(0, Math.min(idx, len - 1))];
+      const rank = (p / 100) * (len - 1);
+      const lower = Math.floor(rank);
+      const upper = Math.ceil(rank);
+      if (lower === upper) return sorted[lower];
+      // Linear interpolation between adjacent ranks
+      const frac = rank - lower;
+      return sorted[lower] + frac * (sorted[upper] - sorted[lower]);
     };
 
     const sum = sorted.reduce((a, b) => a + b, 0);

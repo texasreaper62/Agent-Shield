@@ -424,9 +424,22 @@ class ThreatStreamServer {
    * Handle POST /api/ingest for standalone scan ingestion.
    */
   _handleIngest(req, res) {
+    const MAX_BODY_SIZE = 1024 * 1024; // 1MB limit
     let body = '';
-    req.on('data', (chunk) => { body += chunk; });
+    let overflow = false;
+    req.on('data', (chunk) => {
+      if (overflow) return;
+      body += chunk;
+      if (body.length > MAX_BODY_SIZE) {
+        overflow = true;
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body too large (max 1MB)' }));
+        req.destroy();
+        return;
+      }
+    });
     req.on('end', () => {
+      if (overflow) return;
       try {
         const scanResult = JSON.parse(body);
         this.ingestScan(scanResult);

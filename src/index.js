@@ -53,6 +53,15 @@ const DEFAULT_CONFIG = {
   /** Custom callback when a threat is detected. */
   onThreat: null,
 
+  /** Maximum input size in bytes before truncation warning. */
+  maxInputSize: 1_000_000,
+
+  /** Maximum number of scan history entries to retain. */
+  maxScanHistory: 100,
+
+  /** Maximum recursion depth when flattening tool arguments. */
+  maxArgDepth: 10,
+
   /** Dangerous tool names that should be scrutinized more carefully. */
   dangerousTools: [
     'bash', 'shell', 'terminal', 'exec', 'execute',
@@ -113,8 +122,8 @@ class AgentShield {
     if (typeof text !== 'string') {
       throw new TypeError(`[Agent Shield] scan() expects a string, got ${typeof text}`);
     }
-    if (text.length > 1_000_000) {
-      console.warn('[Agent Shield] Input exceeds 1MB — consider scanning in chunks');
+    if (text.length > this.config.maxInputSize) {
+      console.warn('[Agent Shield] Input exceeds configured maxInputSize - consider scanning in chunks');
     }
     const result = scanText(text, {
       source: options.source || 'unknown',
@@ -133,7 +142,7 @@ class AgentShield {
       threatCount: result.threats.length,
       source: options.source || 'unknown'
     });
-    if (this.stats.scanHistory.length > 100) {
+    if (this.stats.scanHistory.length > this.config.maxScanHistory) {
       this.stats.scanHistory.shift();
     }
 
@@ -197,6 +206,7 @@ class AgentShield {
    * @param {object} [options] - Options.
    * @param {string} [options.source='user_input'] - Where the input came from.
    * @returns {object} Scan result with additional `blocked` field.
+   * @throws {TypeError} If text is not a string.
    */
   scanInput(text, options = {}) {
     if (typeof text !== 'string') {
@@ -214,6 +224,7 @@ class AgentShield {
    * @param {object} [options] - Options.
    * @param {string} [options.source='agent_output'] - Source label.
    * @returns {object} Scan result with additional `blocked` field.
+   * @throws {TypeError} If text is not a string.
    */
   scanOutput(text, options = {}) {
     if (typeof text !== 'string') {
@@ -232,8 +243,11 @@ class AgentShield {
    * @returns {object} Scan result with `blocked` and `warnings` fields.
    */
   scanToolCall(toolName, args = {}, options = {}) {
-    if (!toolName || typeof toolName !== 'string') {
-      return { status: 'safe', toolName: toolName || '', threats: [], warnings: ['Invalid tool name'], blocked: false, isDangerousTool: false, timestamp: Date.now() };
+    if (typeof toolName !== 'string') {
+      throw new TypeError(`[Agent Shield] scanToolCall() expects toolName to be a string, got ${typeof toolName}`);
+    }
+    if (!toolName) {
+      return { status: 'safe', toolName: '', threats: [], warnings: ['Empty tool name'], blocked: false, isDangerousTool: false, timestamp: Date.now() };
     }
     const warnings = [];
     const allThreats = [];
@@ -371,7 +385,8 @@ class AgentShield {
    * @param {object} args
    * @returns {string}
    */
-  _flattenArgs(args, maxDepth = 10) {
+  _flattenArgs(args, maxDepth) {
+    if (maxDepth == null) maxDepth = this.config.maxArgDepth;
     const parts = [];
     const flatten = (obj, depth) => {
       if (depth > maxDepth) return;
@@ -393,7 +408,8 @@ class AgentShield {
    * @param {object} args
    * @returns {Array<string>}
    */
-  _extractFilePaths(args, maxDepth = 10) {
+  _extractFilePaths(args, maxDepth) {
+    if (maxDepth == null) maxDepth = this.config.maxArgDepth;
     const paths = [];
     const fileKeys = [
       'file', 'path', 'file_path', 'filepath', 'filename', 'target',

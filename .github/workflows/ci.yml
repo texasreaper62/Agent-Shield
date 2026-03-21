@@ -64,11 +64,23 @@ jobs:
       - name: v6 module tests
         run: node test/test-v6-modules.js
 
+      - name: Adaptive defense tests
+        run: node test/test-adaptive-defense.js
+
+      - name: IPIA detector tests
+        run: node test/test-ipia-detector.js
+
+      - name: Production readiness tests
+        run: node test/test-production-readiness.js
+
       - name: Full test suite (40 features)
         run: npm run test:all
 
       - name: False positive tests
         run: npm run test:fp
+
+      - name: Adversarial resilience tests
+        run: node test/test-adversarial.js
 
       - name: Red team simulation
         run: npm run redteam
@@ -77,10 +89,17 @@ jobs:
         run: npm run score
 
       - name: Verify examples
-        run: node examples/quick-start.js
-
-      - name: MCP security demo
-        run: node examples/mcp-security-demo.js
+        run: |
+          node examples/quick-start.js
+          node examples/mcp-security-demo.js
+          node examples/express-server.js
+          node examples/protect-agent.js
+          node examples/multi-agent.js
+          node examples/compliance-audit.js
+          node examples/anthropic-agent.js
+          node examples/openai-agent.js
+          node examples/langchain-agent.js
+          node examples/mcp-sdk-quickstart.js
 
   coverage:
     runs-on: ubuntu-latest
@@ -97,7 +116,7 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        run: npx c8 --reporter=text --reporter=lcov --reporter=json-summary node test/test.js node test/test-modules.js node test/test-new-features.js
+        run: npx c8 --reporter=text --reporter=lcov --reporter=json-summary node test/test.js node test/test-modules.js node test/test-new-features.js node test/test-mcp-security.js node test/test-confused-deputy.js node test/test-v6-modules.js node test/test-production-readiness.js
 
       - name: Upload coverage
         if: always()

@@ -57,7 +57,7 @@
           "type": "array",
           "default": [
             "instruction_override",
-            "role_hijacking",
+            "role_hijack",
             "data_exfiltration",
             "social_engineering",
             "system_prompt_leak"

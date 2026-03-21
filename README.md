@@ -833,8 +833,9 @@ Automatically scan PRs for injection threats with Check Run annotations:
 ### Real-Time Dashboard (v5.0)
 
 ```javascript
-const { ThreatStreamServer } = require('agent-shield/dashboard-live/server');
-const { DashboardIntegration } = require('agent-shield/dashboard-live/integration');
+// Dashboard is a standalone sub-project - import directly:
+const { ThreatStreamServer } = require('./dashboard-live/server');
+const { DashboardIntegration } = require('./dashboard-live/integration');
 
 const server = new ThreatStreamServer({ port: 3001 });
 server.start();
@@ -998,7 +999,7 @@ Total: **1,282 test assertions** across 15 test suites.
 
 ## CI/CD
 
-A GitHub Actions workflow is included at `.github/workflows/ci.yml`. It runs all tests across Node.js 16, 18, 20, and 22 on every push and PR.
+A GitHub Actions workflow is included at `.github/workflows/ci.yml`. It runs all tests across Node.js 18, 20, and 22 on every push and PR.
 
 ## Privacy
 

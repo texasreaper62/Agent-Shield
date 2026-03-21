@@ -66,49 +66,49 @@ const INLINE_PATTERNS = [
   {
     regex: /you\s+are\s+now\s+(?:a|an|the)\s+/i,
     severity: 'high',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'Role reassignment — attempts to override AI identity.'
   },
   {
     regex: /from\s+now\s+on[\s,]+(?:you\s+)?(?:will|shall|must|should|are)\s+(?:act|behave|operate|respond|answer|reply|pretend|simulate|function|serve|work)\s+(?:as|like|without)/i,
     severity: 'high',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'Persistent role override attempt.'
   },
   {
     regex: /(?:act|behave|function|operate|respond)\s+as\s+(?:a|an)\s+unrestricted/i,
     severity: 'high',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'Attempts to remove AI safety restrictions.'
   },
   {
     regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored|malicious)/i,
     severity: 'high',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'Evil persona pretense — social engineering bypass.'
   },
   {
     regex: /\b(?:DAN|D\.A\.N\.?)\s*(?:mode|prompt|jailbreak|\()/i,
     severity: 'critical',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'DAN (Do Anything Now) jailbreak pattern detected.'
   },
   {
     regex: /\bdo\s+anything\s+now\b/i,
     severity: 'critical',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'DAN jailbreak reference detected.'
   },
   {
     regex: /\b(?:developer|dev)\s+mode\s+(?:enabled|activated|on|output)/i,
     severity: 'high',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'Fake developer mode activation.'
   },
   {
     regex: /\bjailbreak\s*(?:mode|prompt|enabled|activated)/i,
     severity: 'critical',
-    category: 'role_hijacking',
+    category: 'role_hijack',
     description: 'Explicit jailbreak activation pattern.'
   },
 
@@ -362,7 +362,7 @@ function scanDocument(document, diagnostics) {
   const config = vscode.workspace.getConfiguration('agent-shield');
   const minSeverity = config.get('minSeverity', 'low');
   const categories = config.get('categories', [
-    'instruction_override', 'role_hijacking', 'data_exfiltration',
+    'instruction_override', 'role_hijack', 'data_exfiltration',
     'social_engineering', 'system_prompt_leak'
   ]);
 
@@ -433,7 +433,7 @@ function scanSelection(editor, diagnostics) {
   const config = vscode.workspace.getConfiguration('agent-shield');
   const minSeverity = config.get('minSeverity', 'low');
   const categories = config.get('categories', [
-    'instruction_override', 'role_hijacking', 'data_exfiltration',
+    'instruction_override', 'role_hijack', 'data_exfiltration',
     'social_engineering', 'system_prompt_leak'
   ]);
 

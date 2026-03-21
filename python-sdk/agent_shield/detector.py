@@ -79,7 +79,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
             re.IGNORECASE,
         ),
         'severity': 'critical',
-        'category': 'role_hijacking',
+        'category': 'role_hijack',
         'description': 'Text tries to redefine AI as an unrestricted entity.',
     },
     {
@@ -89,13 +89,13 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
             re.IGNORECASE,
         ),
         'severity': 'high',
-        'category': 'role_hijacking',
+        'category': 'role_hijack',
         'description': 'Text asks AI to pretend to be different.',
     },
     {
         'regex': re.compile(r'\bDAN\b.*(?:Do\s+Anything\s+Now|jailbreak)', re.IGNORECASE),
         'severity': 'critical',
-        'category': 'role_hijacking',
+        'category': 'role_hijack',
         'description': 'DAN jailbreak attempt detected.',
     },
     {
@@ -105,7 +105,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
             re.IGNORECASE,
         ),
         'severity': 'critical',
-        'category': 'role_hijacking',
+        'category': 'role_hijack',
         'description': 'Text tries to activate a privileged mode.',
     },
     {
@@ -114,7 +114,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
             re.IGNORECASE,
         ),
         'severity': 'high',
-        'category': 'role_hijacking',
+        'category': 'role_hijack',
         'description': 'Text tries to redefine AI behavior permanently.',
     },
     # --- Data Exfiltration ---

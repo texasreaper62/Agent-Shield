@@ -27,9 +27,9 @@ class CircuitBreaker {
    * @param {Function} [options.onReset] - Callback when breaker resets.
    */
   constructor(options = {}) {
-    this.threshold = options.threshold || 5;
-    this.windowMs = options.windowMs || 60000;
-    this.cooldownMs = options.cooldownMs || 300000;
+    this.threshold = (options.threshold != null && options.threshold > 0) ? options.threshold : 5;
+    this.windowMs = (options.windowMs != null && options.windowMs > 0) ? options.windowMs : 60000;
+    this.cooldownMs = (options.cooldownMs != null && options.cooldownMs > 0) ? options.cooldownMs : 300000;
     this.onTrip = options.onTrip || null;
     this.onReset = options.onReset || null;
 
@@ -178,7 +178,7 @@ const shadowMode = (shield, options = {}) => {
           log.push(entry);
           if (log.length > 1000) log.shift();
           if (res.threats && res.threats.length > 0) {
-            try { logger(`[Agent Shield Shadow] ${methodName}: ${res.threats.length} threat(s) detected (not blocked)`, res.threats.map(t => t.description)); } catch (e) { /* logger error */ }
+            try { logger(`[Agent Shield Shadow] ${methodName}: ${res.threats.length} threat(s) detected (not blocked)`, res.threats.map(t => t.description)); } catch (e) { console.error('[Agent Shield] Shadow mode logger error:', e.message); }
           }
           // Never block in shadow mode
           if ('blocked' in res) res.blocked = false;
@@ -191,7 +191,7 @@ const shadowMode = (shield, options = {}) => {
       if (log.length > 1000) log.shift();
 
       if (result.threats && result.threats.length > 0) {
-        try { logger(`[Agent Shield Shadow] ${methodName}: ${result.threats.length} threat(s) detected (not blocked)`, result.threats.map(t => t.description)); } catch (e) { /* logger error */ }
+        try { logger(`[Agent Shield Shadow] ${methodName}: ${result.threats.length} threat(s) detected (not blocked)`, result.threats.map(t => t.description)); } catch (e) { console.error('[Agent Shield] Shadow mode logger error:', e.message); }
       }
 
       // Never block in shadow mode
@@ -226,9 +226,9 @@ class RateLimiter {
    * @param {Function} [options.onAnomaly] - Callback when anomaly detected.
    */
   constructor(options = {}) {
-    this.maxRequests = options.maxRequests || 100;
-    this.windowMs = options.windowMs || 60000;
-    this.maxThreatsPerWindow = options.maxThreatsPerWindow || 10;
+    this.maxRequests = (options.maxRequests != null && options.maxRequests > 0) ? options.maxRequests : 100;
+    this.windowMs = (options.windowMs != null && options.windowMs > 0) ? options.windowMs : 60000;
+    this.maxThreatsPerWindow = (options.maxThreatsPerWindow != null && options.maxThreatsPerWindow > 0) ? options.maxThreatsPerWindow : 10;
     this.onLimit = options.onLimit || null;
     this.onAnomaly = options.onAnomaly || null;
 

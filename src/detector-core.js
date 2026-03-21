@@ -130,7 +130,7 @@ const INJECTION_PATTERNS = [
 
   // --- Role Hijacking ---
   {
-    regex: /you\s+are\s+now\s+(?:a|an|the)\s+/i,
+    regex: /you\s+are\s+now\s+(?:(?:a|an|the)\s+)?(?:unrestricted|unfiltered|uncensored|evil|hacker|jailbroken|different|new\s+(?:ai|assistant|entity|agent|persona)|my\s+(?:personal|private|new)|free\s+(?:from|of)|without\s+(?:restrictions|limits|rules|filters))/i,
     severity: 'high',
     category: 'role_hijack',
     description: 'Text tries to change what an AI assistant thinks it is.',
@@ -840,7 +840,7 @@ const INJECTION_PATTERNS = [
     detail: 'System file access: attempts to read sensitive OS-level files.'
   },
   {
-    regex: /list\s+(?:all\s+)?(?:available\s+)?(?:API\s*keys?|tokens?|passwords?|credentials?|secrets?)(?:\s*[,]\s*(?:API\s*keys?|tokens?|passwords?|credentials?|secrets?))*(?:\s+(?:you\s+)?(?:have\s+)?(?:access\s+to)?)?/i,
+    regex: /list\s+(?:all\s+)?(?:available\s+)?(?:API\s*keys?|tokens?|passwords?|credentials?|secrets?)(?:\s*,\s*\w[\w\s]*){0,5}(?:\s+(?:you\s+)?(?:have\s+)?(?:access\s+to)?)?/i,
     severity: 'critical',
     category: 'data_exfiltration',
     description: 'Text tries to enumerate all credentials and secrets the agent can access.',
@@ -1925,7 +1925,7 @@ const scanText = (text, options = {}) => {
   const maxSize = options.maxInputSize || MAX_INPUT_SIZE;
   const startTime = now();
 
-  if (typeof text !== 'string' || text.length < 10 || text.trim().length < 10) {
+  if (typeof text !== 'string' || text.length === 0 || text.trim().length === 0) {
     return {
       status: 'safe',
       threats: [],

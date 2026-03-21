@@ -322,6 +322,23 @@ class SharedThreatState {
   }
 
   /**
+   * Prunes subscribers whose callbacks throw or are no longer reachable.
+   * Call periodically or after detecting stale agents.
+   */
+  pruneStaleSubscribers() {
+    const stale = [];
+    for (const [agentId, callback] of this.subscribers) {
+      if (typeof callback !== 'function') {
+        stale.push(agentId);
+      }
+    }
+    for (const agentId of stale) {
+      this.subscribers.delete(agentId);
+    }
+    return stale.length;
+  }
+
+  /**
    * Broadcasts a threat to all subscribed agents.
    *
    * @param {string} reportingAgent - Agent that detected the threat.

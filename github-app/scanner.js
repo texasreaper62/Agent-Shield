@@ -402,7 +402,8 @@ class PRScanner {
     ];
 
     for (const [category, count] of Object.entries(summary.categoryCounts)) {
-      lines.push(`| ${category} | ${count} |`);
+      const safeCategory = String(category).replace(/\|/g, '\\|');
+      lines.push(`| ${safeCategory} | ${count} |`);
     }
 
     lines.push('');

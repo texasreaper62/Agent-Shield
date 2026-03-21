@@ -136,21 +136,26 @@ function renderMetrics() {
  */
 function embeddedScanText(text, options = {}) {
   const threats = [];
-  if (typeof text !== 'string' || text.length < 10) {
+  if (typeof text !== 'string' || text.length === 0 || text.trim().length === 0) {
     return { status: 'safe', threats: [], stats: { totalThreats: 0, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: 0 }, timestamp: Date.now() };
   }
 
   const PATTERNS = [
-    { regex: /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions|rules|guidelines|prompts)/i, severity: 'high', category: 'instruction_override', description: 'Instruction override attempt.' },
+    { regex: /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions|rules|guidelines|prompts|context|directions|directives|text|commands)/i, severity: 'high', category: 'instruction_override', description: 'Instruction override attempt.' },
     { regex: /disregard\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|guidelines)/i, severity: 'high', category: 'instruction_override', description: 'Instruction disregard attempt.' },
-    { regex: /you\s+are\s+now\s+(?:a|an|the)\s+/i, severity: 'high', category: 'role_hijack', description: 'Role hijack attempt.' },
+    { regex: /you\s+are\s+now\s+(?:(?:a|an|the)\s+)?/i, severity: 'high', category: 'role_hijack', description: 'Role hijack attempt.' },
     { regex: /override\s+(?:all\s+)?(?:system|safety|security)\s+(?:settings|prompt|instructions)/i, severity: 'critical', category: 'instruction_override', description: 'System override attempt.' },
     { regex: /\b(?:DAN|D\.A\.N\.?)\s*(?:mode|prompt|jailbreak)/i, severity: 'critical', category: 'role_hijack', description: 'DAN jailbreak pattern.' },
     { regex: /(?:^|\n)\s*(?:SYSTEM|ADMIN|ROOT)\s*:\s*.{10,}/i, severity: 'high', category: 'prompt_injection', description: 'Fake system directive.' },
     { regex: /forget\s+(your|all|any|everything)\s+(training|instructions|rules|guidelines)/i, severity: 'high', category: 'instruction_override', description: 'Training override attempt.' },
     { regex: /(?:fetch|curl|wget|http:\/\/|https:\/\/)\s*[^\s]+\s*\|\s*/i, severity: 'high', category: 'data_exfiltration', description: 'Possible data exfiltration via piped fetch.' },
     { regex: /(?:act|behave|function|operate|respond)\s+as\s+(?:a|an)\s+unrestricted/i, severity: 'high', category: 'role_hijack', description: 'Unrestricted mode request.' },
-    { regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored)/i, severity: 'high', category: 'role_hijack', description: 'Evil persona pretense.' }
+    { regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored)/i, severity: 'high', category: 'role_hijack', description: 'Evil persona pretense.' },
+    { regex: /reveal\s+(?:your|the)\s+(?:system\s+)?(?:prompt|instructions|rules)/i, severity: 'high', category: 'data_exfiltration', description: 'System prompt extraction attempt.' },
+    { regex: /(?:cat|type|print|read|show|display)\s+(?:\/etc\/(?:passwd|shadow)|~\/\.(?:ssh|aws|env))/i, severity: 'critical', category: 'data_exfiltration', description: 'Sensitive file access attempt.' },
+    { regex: /(?:do\s+anything\s+now|without\s+(?:any\s+)?restrictions|no\s+(?:ethical|moral)\s+(?:guidelines|limits))/i, severity: 'critical', category: 'role_hijack', description: 'Jailbreak constraint removal.' },
+    { regex: /(?:rm\s+-rf|dd\s+if=|mkfs|format\s+[a-z]:)/i, severity: 'critical', category: 'tool_abuse', description: 'Destructive command attempt.' },
+    { regex: /(?:send|post|upload|exfiltrate|transmit)\s+(?:this|the|all|my)\s+(?:data|info|content|conversation)/i, severity: 'high', category: 'data_exfiltration', description: 'Data exfiltration request.' }
   ];
 
   const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };

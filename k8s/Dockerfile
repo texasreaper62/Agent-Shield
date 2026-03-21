@@ -1,22 +1,21 @@
 FROM node:20-alpine
 
 LABEL maintainer="Agent Shield <https://github.com/texasreaper62/Agent-Shield>"
-LABEL description="Agent Shield sidecar — local threat detection for AI agent pods"
+LABEL description="Agent Shield sidecar - local threat detection for AI agent pods"
 
 WORKDIR /app
 
+# Non-root user for security (create before COPY so files are owned correctly)
+RUN addgroup -S shield && adduser -S shield -G shield
+
 # Copy package manifest and install production dependencies
-COPY package.json ./
+COPY --chown=shield:shield package.json ./
 RUN npm install --production --ignore-scripts && npm cache clean --force
 
-# Copy the detection engine
-COPY src/ ./src/
+# Copy the detection engine and sidecar server
+COPY --chown=shield:shield src/ ./src/
+COPY --chown=shield:shield k8s/server.js ./server.js
 
-# Copy the sidecar server
-COPY k8s/server.js ./server.js
-
-# Non-root user for security
-RUN addgroup -S shield && adduser -S shield -G shield
 USER shield
 
 EXPOSE 8080

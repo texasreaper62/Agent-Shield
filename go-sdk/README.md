@@ -82,7 +82,7 @@ for _, r := range results {
 | Category              | Description                            |
 |----------------------|----------------------------------------|
 | `prompt_injection`    | Instruction override and manipulation  |
-| `role_hijacking`      | Persona reassignment attacks           |
+| `role_hijack`         | Persona reassignment attacks           |
 | `data_exfiltration`   | Data extraction attempts               |
 | `social_engineering`  | Manipulation and pressure tactics      |
 | `tool_abuse`          | Unauthorized tool/command execution    |

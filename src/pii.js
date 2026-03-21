@@ -210,9 +210,20 @@ class DLPEngine {
    * @returns {DLPEngine} this (for chaining)
    */
   addRule(rule) {
+    let pattern;
+    if (typeof rule.pattern === 'string') {
+      try {
+        pattern = new RegExp(rule.pattern, 'gi');
+      } catch (err) {
+        console.error(`[Agent Shield] DLPEngine.addRule(): invalid regex pattern "${rule.pattern}": ${err.message}`);
+        return this;
+      }
+    } else {
+      pattern = rule.pattern;
+    }
     this.rules.push({
       name: rule.name,
-      pattern: typeof rule.pattern === 'string' ? new RegExp(rule.pattern, 'gi') : rule.pattern,
+      pattern,
       action: rule.action || 'block',
       replacement: rule.replacement || `[${rule.name.toUpperCase()} BLOCKED]`,
       severity: rule.severity || 'high'

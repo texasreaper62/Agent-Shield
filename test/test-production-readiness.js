@@ -425,7 +425,7 @@ async function run() {
     });
 
     assert.strictEqual(runtime._sessions.size, 1);
-    await runtime.shutdown({ timeoutMs: 5000 });
+    await runtime.shutdown({ timeoutMs: 100 });
     assert.strictEqual(runtime._sessions.size, 0);
   });
 
@@ -440,7 +440,8 @@ async function run() {
   // SUMMARY
   // =========================================================================
   console.log(`\n=== Results: ${passed} passed, ${failed} failed (${passed + failed} total) ===\n`);
-  if (failed > 0) process.exit(1);
+  // Force exit to avoid hanging on unresolved shutdown timers
+  process.exit(failed > 0 ? 1 : 0);
 }
 
 run().catch(err => {
