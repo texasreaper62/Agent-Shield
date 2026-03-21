@@ -244,9 +244,10 @@ class DelegationManager {
 
     // Check constraints
     if (token.constraints.allowedPaths && context.path) {
-      const allowed = token.constraints.allowedPaths.some(p =>
-        context.path.startsWith(p) || new RegExp(p).test(context.path)
-      );
+      const allowed = token.constraints.allowedPaths.some(p => {
+        if (context.path.startsWith(p)) return true;
+        try { return new RegExp(p).test(context.path); } catch (e) { return false; }
+      });
       if (!allowed) {
         this._audit('check_denied', token.subject, `Path ${context.path} not in allowed paths`);
         return { allowed: false, reason: 'Path not allowed by constraints' };

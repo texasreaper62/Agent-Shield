@@ -223,7 +223,7 @@ class SemanticClassifier {
     if (this._available !== null) return this._available;
 
     try {
-      const result = await this.classify('test connection');
+      const result = await this.classify('test connection check availability');
       this._available = !result.error;
     } catch (e) {
       this._available = false;

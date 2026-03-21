@@ -12,6 +12,18 @@
  */
 
 // =========================================================================
+// TEXT NORMALIZATION (pre-processing pipeline)
+// =========================================================================
+
+let _normalize = null;
+try {
+  const normalizerMod = require('./normalizer');
+  _normalize = normalizerMod.normalize;
+} catch (e) {
+  // Normalizer module not available — detection still works without it
+}
+
+// =========================================================================
 // PERFORMANCE
 // =========================================================================
 
@@ -1942,6 +1954,30 @@ const scanText = (text, options = {}) => {
   }
 
   let threats = scanTextForPatterns(text, source, timeBudgetMs, startTime);
+
+  // Run normalization pipeline and scan normalized text for additional threats
+  if (_normalize && typeof _normalize === 'function') {
+    try {
+      // Skip case_fold to preserve regex case-insensitive matching behavior
+      const normResult = _normalize(text, { skip: ['case_fold'] });
+      if (normResult.layers.length > 0 && normResult.normalized !== text) {
+        const normalizedThreats = scanTextForPatterns(normResult.normalized, source, timeBudgetMs, startTime);
+        // Add threats found only in normalized text (not already detected)
+        for (const nt of normalizedThreats) {
+          const isDuplicate = threats.some(t =>
+            t.category === nt.category && t.severity === nt.severity && t.detail === nt.detail
+          );
+          if (!isDuplicate) {
+            nt.detail = `${nt.detail} (detected after normalization: ${normResult.layers.join(', ')})`;
+            nt.normalizedDetection = true;
+            threats.push(nt);
+          }
+        }
+      }
+    } catch (e) {
+      // Normalization error should not break scanning
+    }
+  }
 
   // Filter by sensitivity
   if (sensitivity === 'low') {

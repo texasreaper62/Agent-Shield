@@ -384,7 +384,6 @@ function shieldOpenAIClient(client, options = {}) {
       }
 
       // Scan tool calls in response
-      const toolCalls = choice?.message?.tool_calls || choice?.message?.function_call ? [choice.message.function_call] : [];
       for (const tc of (choice?.message?.tool_calls || [])) {
         if (tc.function && tc.function.arguments) {
           const argsResult = shield.scanInput(tc.function.arguments);

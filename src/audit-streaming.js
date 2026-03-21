@@ -75,6 +75,7 @@ class FileTransport extends AuditTransport {
     this._buffer = [];
     this._bufferSize = 0;
     this._flushInterval = setInterval(() => this.flush(), 5000);
+    if (this._flushInterval.unref) this._flushInterval.unref();
   }
 
   async send(event) {
@@ -158,6 +159,7 @@ class SplunkTransport extends AuditTransport {
     this.batchSize = options.batchSize || 50;
     this._buffer = [];
     this._flushInterval = setInterval(() => this.flush(), options.flushIntervalMs || 5000);
+    if (this._flushInterval.unref) this._flushInterval.unref();
     this._stats = { sent: 0, errors: 0 };
 
     if (!this.url || !this.token) {
@@ -194,8 +196,13 @@ class SplunkTransport extends AuditTransport {
     } catch (e) {
       this._stats.errors += events.length;
       console.warn('[Agent Shield] SplunkTransport error:', e.message);
-      // Re-queue failed events
+      // Re-queue failed events (cap buffer to prevent unbounded growth)
       this._buffer.unshift(...events);
+      if (this._buffer.length > this.batchSize * 20) {
+        const dropped = this._buffer.length - this.batchSize * 10;
+        this._buffer.splice(0, dropped);
+        console.warn('[Agent Shield] SplunkTransport buffer overflow, dropped %d events', dropped);
+      }
     }
   }
 
@@ -253,6 +260,7 @@ class ElasticsearchTransport extends AuditTransport {
     this.batchSize = options.batchSize || 100;
     this._buffer = [];
     this._flushInterval = setInterval(() => this.flush(), options.flushIntervalMs || 5000);
+    if (this._flushInterval.unref) this._flushInterval.unref();
     this._stats = { sent: 0, errors: 0 };
 
     if (!this.url) {
@@ -291,7 +299,13 @@ class ElasticsearchTransport extends AuditTransport {
     } catch (e) {
       this._stats.errors += events.length;
       console.warn('[Agent Shield] ElasticsearchTransport error:', e.message);
+      // Re-queue failed events (cap buffer to prevent unbounded growth)
       this._buffer.unshift(...events);
+      if (this._buffer.length > this.batchSize * 20) {
+        const dropped = this._buffer.length - this.batchSize * 10;
+        this._buffer.splice(0, dropped);
+        console.warn('[Agent Shield] ElasticsearchTransport buffer overflow, dropped %d events', dropped);
+      }
     }
   }
 

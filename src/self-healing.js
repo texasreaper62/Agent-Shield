@@ -155,9 +155,10 @@ class PatternGenerator {
     const words = text.split(/\s+/).filter(w => w.length > 2);
     if (words.length < 3) return null;
 
-    const phrase = words.slice(0, Math.min(5, words.length)).join('\\s+');
+    const escapedWords = words.slice(0, Math.min(5, words.length)).map(w => this._esc(w));
+    const phrase = escapedWords.join('\\s+');
     return {
-      regex: new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+      regex: new RegExp(phrase, 'i'),
       severity: 'medium',
       category: options.category || 'unknown',
       description: `Auto-healed: detects n-gram pattern from bypassing attack.`,

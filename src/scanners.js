@@ -228,7 +228,8 @@ class PromptLinter {
           });
         }
       } catch (e) {
-        // Skip rules that error
+        // Skip rules that error during check
+        console.warn('[Agent Shield] Lint rule "%s" threw an error: %s', rule.id, e.message);
       }
     }
 

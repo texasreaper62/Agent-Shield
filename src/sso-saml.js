@@ -550,10 +550,10 @@ class OIDCHandler {
       // HMAC signature verification
       const hashAlg = alg.replace('HS', 'sha');
       const expectedSig = crypto.createHmac(hashAlg, options.secret).update(signingInput).digest('base64url');
-      signatureVerified = crypto.timingSafeEqual(
-        Buffer.from(signature, 'utf-8'),
-        Buffer.from(expectedSig, 'utf-8')
-      );
+      const sigBuf = Buffer.from(signature, 'utf-8');
+      const expectedBuf = Buffer.from(expectedSig, 'utf-8');
+      // timingSafeEqual throws if lengths differ, so check length first
+      signatureVerified = sigBuf.length === expectedBuf.length && crypto.timingSafeEqual(sigBuf, expectedBuf);
       if (!signatureVerified) {
         errors.push('JWT HMAC signature verification failed — token may be forged');
       }

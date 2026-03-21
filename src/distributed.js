@@ -97,7 +97,8 @@ class MemoryAdapter extends DistributedAdapter {
   }
 
   async get(key) {
-    return this._store.get(key) || null;
+    const value = this._store.get(key);
+    return value !== undefined ? value : null;
   }
 
   async del(key) {

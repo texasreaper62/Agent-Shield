@@ -251,12 +251,12 @@ class SnippetGenerator {
 
   static nodeSnippet(config) {
     const lines = [];
-    lines.push(`const { AgentShield } = require('agent-shield');`);
+    lines.push(`const { AgentShield } = require('agentshield-sdk');`);
 
-    if (config.modules?.includes('pii')) lines.push(`const { PIIRedactor } = require('agent-shield/src/pii');`);
-    if (config.modules?.includes('circuitBreaker')) lines.push(`const { CircuitBreaker } = require('agent-shield/src/circuit-breaker');`);
-    if (config.modules?.includes('canary')) lines.push(`const { CanaryTokens } = require('agent-shield/src/canary');`);
-    if (config.modules?.includes('toolGuard')) lines.push(`const { PermissionBoundary, ToolSequenceAnalyzer } = require('agent-shield/src/tool-guard');`);
+    if (config.modules?.includes('pii')) lines.push(`const { PIIRedactor } = require('agentshield-sdk/src/pii');`);
+    if (config.modules?.includes('circuitBreaker')) lines.push(`const { CircuitBreaker } = require('agentshield-sdk/src/circuit-breaker');`);
+    if (config.modules?.includes('canary')) lines.push(`const { CanaryTokens } = require('agentshield-sdk/src/canary');`);
+    if (config.modules?.includes('toolGuard')) lines.push(`const { PermissionBoundary, ToolSequenceAnalyzer } = require('agentshield-sdk/src/tool-guard');`);
 
     lines.push('');
     lines.push(`const shield = new AgentShield({`);
@@ -286,7 +286,7 @@ class SnippetGenerator {
   }
 
   static expressSnippet(config) {
-    return `const { expressMiddleware } = require('agent-shield/src/middleware');
+    return `const { expressMiddleware } = require('agentshield-sdk/src/middleware');
 
 app.use('/api/agent', expressMiddleware({
   sensitivity: '${config.sensitivity || 'high'}',
@@ -296,7 +296,7 @@ app.use('/api/agent', expressMiddleware({
   }
 
   static langchainSnippet(config) {
-    return `const { ShieldCallbackHandler } = require('agent-shield/src/integrations');
+    return `const { ShieldCallbackHandler } = require('agentshield-sdk/src/integrations');
 
 const shieldHandler = new ShieldCallbackHandler({
   sensitivity: '${config.sensitivity || 'high'}',
@@ -313,7 +313,7 @@ const chain = new LLMChain({
 
   static anthropicSnippet(config) {
     return `const Anthropic = require('@anthropic-ai/sdk');
-const { shieldAnthropicClient } = require('agent-shield/src/integrations');
+const { shieldAnthropicClient } = require('agentshield-sdk/src/integrations');
 
 const client = shieldAnthropicClient(new Anthropic(), {
   sensitivity: '${config.sensitivity || 'high'}',
@@ -331,7 +331,7 @@ const msg = await client.messages.create({
 
   static openaiSnippet(config) {
     return `const OpenAI = require('openai');
-const { shieldOpenAIClient } = require('agent-shield/src/integrations');
+const { shieldOpenAIClient } = require('agentshield-sdk/src/integrations');
 
 const client = shieldOpenAIClient(new OpenAI(), {
   sensitivity: '${config.sensitivity || 'high'}',
@@ -347,7 +347,7 @@ const completion = await client.chat.completions.create({
   }
 
   static vercelSnippet(config) {
-    return `const { shieldVercelAI } = require('agent-shield/src/integrations');
+    return `const { shieldVercelAI } = require('agentshield-sdk/src/integrations');
 
 const shieldMiddleware = shieldVercelAI({
   sensitivity: '${config.sensitivity || 'high'}',

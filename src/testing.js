@@ -309,7 +309,8 @@ class AgentContract {
           });
         }
       } catch (e) {
-        // Skip rules that error
+        // Log and skip rules that error during validation
+        console.warn('[Agent Shield] Contract rule "%s" threw an error: %s', rule.name, e.message);
       }
     }
 
@@ -480,6 +481,17 @@ class BreakglassProtocol {
    */
   getAuditLog() {
     return this.auditLog;
+  }
+
+  /**
+   * Destroy the breakglass protocol, clearing any pending timers.
+   */
+  destroy() {
+    if (this._timer) {
+      clearTimeout(this._timer);
+      this._timer = null;
+    }
+    this.active = false;
   }
 
   /**

@@ -505,7 +505,7 @@ class ThreadedWorkerScanner {
     }
 
     return new Promise((resolve, reject) => {
-      const id = ++this._completedJobs + this._errorCount + this._queue.length;
+      const id = this._completedJobs + this._errorCount + this._queue.length + 1;
       const job = { id, text, options, resolve, reject, timer: null };
 
       job.timer = setTimeout(() => {

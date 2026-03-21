@@ -174,6 +174,7 @@ class GracefulScanner {
       if (elapsed > this.timeoutMs) {
         this.stats.timeouts++;
         if (this.onTimeout) this.onTimeout({ elapsed, text: text.substring(0, 100) });
+        // Note: _fallback increments stats.fallbacks
         return this._fallback('timeout', elapsed);
       }
 
@@ -181,7 +182,6 @@ class GracefulScanner {
       return result;
     } catch (error) {
       this.stats.errors++;
-      this.stats.fallbacks++;
       if (this.onError) this.onError({ error: error.message, text: text.substring(0, 100) });
       return this._fallback('error', 0, error.message);
     }
