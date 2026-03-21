@@ -21,7 +21,7 @@ const { scanText } = require('./detector-core');
 class SamplingScanner {
   constructor(options = {}) {
     this.sampleRate = options.sampleRate !== undefined ? options.sampleRate : 0.1; // 10% default
-    this.scanFn = options.scanFn || ((text) => scanText(text, options.sensitivity || 'high'));
+    this.scanFn = options.scanFn || ((text) => scanText(text, { sensitivity: options.sensitivity || 'high' }));
     this.stats = { total: 0, sampled: 0, threats: 0, extrapolatedThreats: 0 };
   }
 
@@ -72,8 +72,8 @@ class SamplingScanner {
 
 class ShadowComparison {
   constructor(options = {}) {
-    this.primaryScanFn = options.primary || ((text) => scanText(text, 'high'));
-    this.candidateScanFn = options.candidate || ((text) => scanText(text, 'high'));
+    this.primaryScanFn = options.primary || ((text) => scanText(text, { sensitivity: 'high' }));
+    this.candidateScanFn = options.candidate || ((text) => scanText(text, { sensitivity: 'high' }));
     this.results = [];
     this.maxResults = options.maxResults || 5000;
   }
@@ -152,7 +152,7 @@ class ShadowComparison {
 
 class GracefulScanner {
   constructor(options = {}) {
-    this.scanFn = options.scanFn || ((text) => scanText(text, options.sensitivity || 'high'));
+    this.scanFn = options.scanFn || ((text) => scanText(text, { sensitivity: options.sensitivity || 'high' }));
     this.fallbackPolicy = options.fallbackPolicy || 'allow'; // 'allow' or 'block'
     this.timeoutMs = options.timeoutMs || 100;
     this.onError = options.onError || null;
@@ -322,8 +322,9 @@ class ThreatReplay {
 // =========================================================================
 
 class AttackAttributionChain {
-  constructor() {
+  constructor(options = {}) {
     this.conversations = new Map();
+    this.maxConversations = options.maxConversations || 10000;
   }
 
   /**
@@ -337,6 +338,12 @@ class AttackAttributionChain {
         firstThreatAt: null,
         killChain: []
       });
+    }
+
+    // Evict oldest conversation if at capacity
+    if (this.conversations.size > this.maxConversations) {
+      const oldestKey = this.conversations.keys().next().value;
+      this.conversations.delete(oldestKey);
     }
 
     const conv = this.conversations.get(conversationId);
@@ -445,7 +452,7 @@ class DiffReporter {
    */
   compare(indexA, indexB) {
     const a = this.snapshots[indexA];
-    const b = this.snapshots[indexB || this.snapshots.length - 1];
+    const b = this.snapshots[indexB !== undefined ? indexB : this.snapshots.length - 1];
     if (!a || !b) return null;
 
     const diff = {};

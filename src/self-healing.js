@@ -212,6 +212,10 @@ class SelfHealingEngine {
       metadata,
       timestamp: Date.now()
     });
+    // Prevent unbounded growth
+    if (this._falseNegatives.length > this.maxPatterns * 2) {
+      this._falseNegatives = this._falseNegatives.slice(-this.maxPatterns);
+    }
 
     // Generate patterns
     const patterns = this._generator.generateVariants(attackText, {

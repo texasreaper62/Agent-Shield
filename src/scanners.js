@@ -54,7 +54,7 @@ class RAGScanner {
     }
 
     // Also run the general scanner
-    const generalResult = scanText(text, this.sensitivity);
+    const generalResult = scanText(text, { sensitivity: this.sensitivity });
     for (const t of generalResult.threats) {
       threats.push({ ...t, category: 'rag_indirect_injection', source: metadata.source || 'unknown' });
     }

@@ -98,7 +98,7 @@ const wrapAgent = (agentFn, config = {}) => {
 
   return async (input, ...rest) => {
     // Scan input
-    const inputText = typeof input === 'string' ? input : JSON.stringify(input);
+    const inputText = typeof input === 'string' ? input : (input != null ? JSON.stringify(input) : '');
     const inputResult = shield.scanInput(inputText, { source: 'agent_input' });
 
     if (inputResult.blocked) {
@@ -114,7 +114,7 @@ const wrapAgent = (agentFn, config = {}) => {
     const output = await agentFn(input, ...rest);
 
     // Scan output
-    const outputText = typeof output === 'string' ? output : JSON.stringify(output);
+    const outputText = typeof output === 'string' ? output : (output != null ? JSON.stringify(output) : '');
     const outputResult = shield.scanOutput(outputText, { source: 'agent_output' });
 
     if (outputResult.blocked) {

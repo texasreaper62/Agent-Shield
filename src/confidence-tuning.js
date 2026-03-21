@@ -31,8 +31,8 @@ class ConfidenceTuner {
    */
   constructor(options = {}) {
     this.dataDir = options.dataDir || null;
-    this.defaultThreshold = options.defaultThreshold || 50;
-    this.learningRate = options.learningRate || 0.05;
+    this.defaultThreshold = options.defaultThreshold !== undefined ? options.defaultThreshold : 50;
+    this.learningRate = options.learningRate !== undefined ? options.learningRate : 0.05;
     this.minSamples = options.minSamples || 10;
     this.maxFeedback = options.maxFeedback || 10000;
 

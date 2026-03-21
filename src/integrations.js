@@ -85,7 +85,7 @@ class ShieldCallbackHandler {
     const text = typeof output === 'string' ? output : JSON.stringify(output);
     if (!text) return;
 
-    const result = this.shield.scanInput(text);
+    const result = this.shield.scanOutput(text);
     if (result.threats.length > 0 && this.onThreat) {
       try { this.onThreat({ phase: 'tool_output', threats: result.threats, text }); } catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
     }

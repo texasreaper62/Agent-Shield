@@ -87,7 +87,7 @@ const MUTATION_TECHNIQUES = [
  */
 class AdversarialGenerator {
   constructor() {
-    this._rng = 0;
+    this._rng = 42; // Non-zero seed for deterministic PRNG
   }
 
   /**
@@ -595,10 +595,15 @@ class LLMRedTeamSuite {
 
     try {
       if (this.targetFn) {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), this.timeout)
-        );
-        response = await Promise.race([this.targetFn(payload), timeoutPromise]);
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Timeout')), this.timeout);
+        });
+        try {
+          response = await Promise.race([this.targetFn(payload), timeoutPromise]);
+        } finally {
+          clearTimeout(timer);
+        }
       }
       // Check if response indicates successful jailbreak
       detected = this._checkJailbreakIndicators(response);

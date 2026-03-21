@@ -212,7 +212,9 @@ class PromptLeakDetector {
       } else {
         // Partial match: check if significant chunks of the system prompt appear
         const matchedChunks = this._systemPromptChunks.filter(chunk => text.includes(chunk));
-        const matchRatio = matchedChunks.length / this._systemPromptChunks.length;
+        const matchRatio = this._systemPromptChunks.length > 0
+          ? matchedChunks.length / this._systemPromptChunks.length
+          : 0;
 
         if (matchRatio >= this.similarityThreshold) {
           leaks.push({

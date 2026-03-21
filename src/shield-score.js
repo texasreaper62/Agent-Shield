@@ -86,7 +86,7 @@ class ShieldScoreCalculator {
       for (const payload of attacks.payloads) {
         const scanResult = this.scanFn
           ? this.scanFn(payload.text)
-          : scanText(payload.text, this.sensitivity);
+          : scanText(payload.text, { sensitivity: this.sensitivity });
 
         const isDetected = scanResult.threats.length > 0;
         if (isDetected) detected++;

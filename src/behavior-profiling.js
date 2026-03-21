@@ -129,6 +129,10 @@ class BehaviorProfile {
         observation: this._totalObservations,
         anomalies
       });
+      // Prevent unbounded growth of anomaly history
+      if (this._anomalies.length > this.windowSize * 5) {
+        this._anomalies = this._anomalies.slice(-this.windowSize * 2);
+      }
     }
 
     return { anomalies, isLearning };

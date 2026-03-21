@@ -129,7 +129,7 @@ class EmbeddingSimilarityDetector {
    * @param {boolean} [options.enabled=true] - Enable/disable similarity detection.
    */
   constructor(options = {}) {
-    this.similarityThreshold = options.similarityThreshold || 0.45;
+    this.similarityThreshold = options.similarityThreshold !== undefined ? options.similarityThreshold : 0.45;
     this.topK = options.topK || 3;
     this.enabled = options.enabled !== false;
 

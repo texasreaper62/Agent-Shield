@@ -117,12 +117,15 @@ class FileTransport extends AuditTransport {
 
   /** @private */
   _rotate() {
+    // Delete the oldest rotated file if it exists
+    const oldest = `${this.filePath}.${this.maxFiles}`;
+    if (fs.existsSync(oldest)) fs.unlinkSync(oldest);
+
     for (let i = this.maxFiles - 1; i >= 1; i--) {
       const from = `${this.filePath}.${i}`;
       const to = `${this.filePath}.${i + 1}`;
       if (fs.existsSync(from)) {
-        if (i + 1 > this.maxFiles) fs.unlinkSync(from);
-        else fs.renameSync(from, to);
+        fs.renameSync(from, to);
       }
     }
     if (fs.existsSync(this.filePath)) {

@@ -880,6 +880,10 @@ class SSOManager {
       event,
       details
     });
+    // Prevent unbounded memory growth
+    if (this.auditEntries.length > 10000) {
+      this.auditEntries = this.auditEntries.slice(-5000);
+    }
   }
 }
 

@@ -233,7 +233,9 @@ class DifferentialPrivacy {
     // Use crypto for proper randomness instead of Math.random()
     const bytes = crypto.randomBytes(4);
     const u = (bytes.readUInt32BE(0) / 0xFFFFFFFF) - 0.5;
-    return -scale * Math.sign(u) * Math.log(1 - 2 * Math.abs(u));
+    // Clamp to avoid Math.log(0) which produces -Infinity
+    const absU = Math.min(Math.abs(u), 0.4999999);
+    return -scale * Math.sign(u) * Math.log(1 - 2 * absU);
   }
 }
 

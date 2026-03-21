@@ -88,7 +88,7 @@ class SemanticClassifier {
     this.model = options.model || 'llama3.2';
     this.timeoutMs = options.timeoutMs || 10000;
     this.apiKey = options.apiKey || null;
-    this.confidenceThreshold = options.confidenceThreshold || 0.7;
+    this.confidenceThreshold = options.confidenceThreshold !== undefined ? options.confidenceThreshold : 0.7;
     this.enabled = options.enabled !== false;
 
     if (this.mode === 'ollama') {

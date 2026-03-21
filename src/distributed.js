@@ -194,6 +194,9 @@ class RedisAdapter extends DistributedAdapter {
 
   async subscribe(channel, handler) {
     const subscriber = this.client.duplicate();
+    // Track subscriber for cleanup
+    if (!this._subscribers) this._subscribers = [];
+    this._subscribers.push(subscriber);
     await subscriber.subscribe(this.prefix + channel);
     subscriber.on('message', (ch, msg) => {
       try {

@@ -99,7 +99,12 @@ class MessageSigner {
     const signatureInput = `${from}:${timestamp}:${nonce}:${JSON.stringify(payload)}`;
     const expected = crypto.createHmac(this.algorithm, secret).update(signatureInput).digest('hex');
 
-    if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+        this._logVerification(from, false, 'invalid_signature');
+        return { valid: false, reason: 'Invalid signature' };
+      }
+    } catch (e) {
       this._logVerification(from, false, 'invalid_signature');
       return { valid: false, reason: 'Invalid signature' };
     }
