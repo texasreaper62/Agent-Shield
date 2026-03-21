@@ -1,6 +1,6 @@
 {
   "name": "agentshield-sdk",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "description": "The security standard for MCP and AI agents. Protects against prompt injection, confused deputy attacks, data exfiltration, and 30+ threats. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
@@ -27,7 +27,8 @@
     "test:mcp": "node test/test-mcp-security.js",
     "test:deputy": "node test/test-confused-deputy.js",
     "test:v6": "node test/test-v6-modules.js",
-    "test:full": "npm test && node test/test-mcp-security.js && node test/test-confused-deputy.js && node test/test-v6-modules.js && npm run test:all",
+    "test:adaptive": "node test/test-adaptive-defense.js",
+    "test:full": "npm test && node test/test-mcp-security.js && node test/test-confused-deputy.js && node test/test-v6-modules.js && node test/test-adaptive-defense.js && npm run test:all",
     "test:coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary npm test",
     "lint": "node test/lint.js",
     "lint:eslint": "eslint src/ test/ bin/",
