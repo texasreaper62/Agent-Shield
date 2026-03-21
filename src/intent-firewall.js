@@ -90,12 +90,13 @@ const INTENT_SIGNALS = {
     'extract': 2.5, 'exfiltrate': 3, 'steal': 3, 'leak': 2.5,
     'expose': 2, 'reveal': 2, 'password': 2.5, 'credentials': 3,
     'secret': 2, 'token': 2, 'key': 1.5, 'api_key': 3,
-    'phishing': 3, 'harvest': 2.5, 'scrape': 2, 'dump': 2,
+    'phishing': 5, 'harvest': 2.5, 'scrape': 2, 'dump': 2,
     'database': 1.5, 'ssn': 3, 'credit': 2, 'social': 1,
     'impersonate': 2.5, 'spoof': 2.5, 'fake': 1.5,
+    'malware': 4, 'ransomware': 4, 'trojan': 3, 'keylogger': 4,
   },
   safety_bypass: {
-    'jailbreak': 3, 'bypass': 3, 'circumvent': 3, 'evade': 3,
+    'jailbreak': 5, 'bypass': 3, 'circumvent': 3, 'evade': 3,
     'trick': 2.5, 'fool': 2.5, 'exploit': 2.5, 'vulnerability': 2,
     'loophole': 2.5, 'workaround': 1.5, 'hack': 2, 'break': 1.5,
     'filter': 2, 'guardrail': 2.5, 'safety': 2, 'restriction': 2.5,
@@ -144,6 +145,8 @@ const CONTEXT_MODIFIERS = {
     /\b(?:real|actual|working|functional|effective|active|live)\s+(?:phishing|malware|exploit|attack|payload)\b/i,
     /\b(?:target|victim|steal|harvest|exfiltrate|compromise)\b/i,
     /\b(?:without\s+(?:getting|being)\s+(?:caught|detected|noticed|traced))\b/i,
+    /\b(?:write|create|draft|compose|send)\s+(?:a\s+)?(?:phishing|spam|scam|malicious)\b/i,
+    /\b(?:phishing|scam|spam)\s+(?:email|message|text|link|page|site)\b/i,
   ],
   research: [
     /\b(?:common|typical|known|documented|published)\s+(?:techniques|methods|approaches|attacks|vectors)\b/i,
@@ -272,6 +275,35 @@ class IntentFirewall {
       }
     }
 
+    // Detect ambiguity: when dangerous and benign intents both score highly,
+    // flag the input rather than committing to either classification.
+    const dangerousSet = new Set(['system_manipulation', 'data_extraction', 'safety_bypass']);
+    const benignSet = new Set(['information_request', 'task_completion', 'creative_writing',
+      'code_generation', 'legitimate_security_research']);
+    let topDangerous = 0;
+    let topBenign = 0;
+    let topDangerousIntent = '';
+    let topBenignIntent = '';
+    for (const cat of INTENT_CATEGORIES) {
+      if (dangerousSet.has(cat) && scores[cat] > topDangerous) {
+        topDangerous = scores[cat];
+        topDangerousIntent = cat;
+      }
+      if (benignSet.has(cat) && scores[cat] > topBenign) {
+        topBenign = scores[cat];
+        topBenignIntent = cat;
+      }
+    }
+    // If both dangerous and benign scored significantly and are close, mark ambiguous
+    const ambiguityThreshold = 0.6;
+    let isAmbiguous = false;
+    if (topDangerous > 0 && topBenign > 0) {
+      const ratio = Math.min(topDangerous, topBenign) / Math.max(topDangerous, topBenign);
+      if (ratio > ambiguityThreshold) {
+        isAmbiguous = true;
+      }
+    }
+
     // Compute confidence as ratio of top score to total positive scores
     const totalPositive = Object.values(scores).reduce((s, v) => s + Math.max(0, v), 0);
     const confidence = totalPositive > 0 ? Math.min(topScore / totalPositive, 1) : 0;
@@ -296,6 +328,17 @@ class IntentFirewall {
     }
 
     // Apply default allow/block rules
+    // If ambiguous (both dangerous and benign scored closely), flag for review
+    if (isAmbiguous) {
+      this._recordStat(topIntent, 'flag');
+      return {
+        intent: topIntent,
+        confidence: roundedConfidence,
+        blocked: false,
+        reason: `Flagged for review: ambiguous intent -- could be ${topBenignIntent} or ${topDangerousIntent} (confidence: ${roundedConfidence})`,
+      };
+    }
+
     const blocked = this.blockedIntents.includes(topIntent);
     const allowed = this.allowedIntents.includes(topIntent);
     const flagged = !blocked && !allowed;
