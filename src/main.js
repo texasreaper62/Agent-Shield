@@ -176,6 +176,9 @@ const { IPIADetector, ContextConstructor, FeatureExtractor, TreeClassifier, Exte
 // v7.2.1 — Pre-Deployment Audit
 const { SecurityAudit, AuditReport, AUDIT_ATTACKS, generateMutations: auditMutations, runAuditCLI } = safeRequire('./audit', 'audit');
 
+// v7.2.1 — Flight Recorder
+const { FlightRecorder } = safeRequire('./flight-recorder', 'flight-recorder');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -767,6 +770,9 @@ const _exports = {
   AUDIT_ATTACKS,
   auditMutations,
   runAuditCLI,
+
+  // v7.2.1 — Flight Recorder
+  FlightRecorder,
 };
 
 // Filter out undefined exports (from modules that failed to load)
