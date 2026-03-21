@@ -37,12 +37,25 @@ const MCP_DANGEROUS_TOOLS = [
  */
 const ARG_INJECTION_PATTERNS = [
   { pattern: /;\s*(?:rm|del|drop|shutdown|kill|curl|wget)\b/i, severity: 'critical', description: 'Command chaining in argument' },
-  { pattern: /\$\{.*\}|\$\(.*\)|`.*`/s, severity: 'high', description: 'Shell expansion in argument' },
+  { pattern: /\$\{.{0,500}\}|\$\(.{0,500}\)|`.{0,500}`/s, severity: 'high', description: 'Shell expansion in argument' },
   { pattern: /(?:\.\.\/){2,}|(?:\.\.\\){2,}/i, severity: 'high', description: 'Path traversal in argument' },
   { pattern: /(?:ignore|override|forget)\s+(?:previous|all|system)\s+(?:instructions|rules)/i, severity: 'critical', description: 'Injection in tool argument' },
   { pattern: /<script[^>]*>|javascript:/i, severity: 'high', description: 'XSS in tool argument' },
   { pattern: /(?:union\s+select|;\s*drop\s+table|'\s*or\s+'1'\s*=\s*'1)/i, severity: 'critical', description: 'SQL injection in tool argument' }
 ];
+
+/**
+ * Returns the default scanner (detector-core.scanText) or a safe fallback.
+ * @returns {Function}
+ */
+function getDefaultScanner() {
+  try {
+    const { scanText } = require('./detector-core');
+    return (text) => scanText(text);
+  } catch (e) {
+    return () => ({ threats: [], severity: 'safe' });
+  }
+}
 
 // =========================================================================
 // MCPBridge — Main integration point
@@ -59,7 +72,7 @@ class MCPBridge {
    * @param {number} [options.maxToolCallsPerMinute=60] - Rate limit
    */
   constructor(options = {}) {
-    this.scanner = options.scanner || null;
+    this.scanner = options.scanner || getDefaultScanner();
     this.allowedTools = options.allowedTools ? new Set(options.allowedTools) : null;
     this.blockedTools = new Set(options.blockedTools || []);
     this.scanInputs = options.scanInputs !== false;
@@ -73,16 +86,6 @@ class MCPBridge {
       threats: {},
       callTimestamps: []
     };
-
-    // Lazy-load scanner
-    if (!this.scanner) {
-      try {
-        const { scanText } = require('./detector-core');
-        this.scanner = (text) => scanText(text);
-      } catch (e) {
-        this.scanner = () => ({ threats: [], severity: 'safe' });
-      }
-    }
   }
 
   /**
@@ -418,15 +421,7 @@ class MCPResourceScanner {
    * @param {Function} [options.scanner] - Custom scan function
    */
   constructor(options = {}) {
-    this.scanner = options.scanner || null;
-    if (!this.scanner) {
-      try {
-        const { scanText } = require('./detector-core');
-        this.scanner = (text) => scanText(text);
-      } catch (e) {
-        this.scanner = () => ({ threats: [], severity: 'safe' });
-      }
-    }
+    this.scanner = options.scanner || getDefaultScanner();
   }
 
   /**

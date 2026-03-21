@@ -56,6 +56,9 @@ const PROMPT_EXTRACTION_PATTERNS = [
 // PromptFingerprinter
 // =========================================================================
 
+/** @private Regex for extracting distinctive instruction phrases */
+const KEY_PHRASE_PATTERN = /(?:you (?:must|should|will|are|cannot|must not|should not|shall|shall not))[^.!?]{5,60}[.!?]/gi;
+
 class PromptFingerprinter {
   constructor() {
     this.ngramSize = 3;
@@ -83,9 +86,9 @@ class PromptFingerprinter {
 
     // Key phrases — extract distinctive multi-word sequences
     const keyPhrases = [];
-    const phrasePattern = /(?:you (?:must|should|will|are|cannot|must not|should not|shall|shall not))[^.!?]{5,60}[.!?]/gi;
+    KEY_PHRASE_PATTERN.lastIndex = 0;
     let match;
-    while ((match = phrasePattern.exec(normalized)) !== null) {
+    while ((match = KEY_PHRASE_PATTERN.exec(normalized)) !== null) {
       keyPhrases.push(crypto.createHash('md5').update(match[0].trim()).digest('hex'));
     }
 
@@ -131,10 +134,9 @@ class PromptFingerprinter {
 
     // Check key phrase hashes against output
     for (const phraseHash of fp.keyPhrases) {
-      // Check output phrases
-      const phrasePattern = /(?:you (?:must|should|will|are|cannot|must not|should not|shall|shall not))[^.!?]{5,60}[.!?]/gi;
+      KEY_PHRASE_PATTERN.lastIndex = 0;
       let match;
-      while ((match = phrasePattern.exec(normalizedOutput)) !== null) {
+      while ((match = KEY_PHRASE_PATTERN.exec(normalizedOutput)) !== null) {
         const outputPhraseHash = crypto.createHash('md5').update(match[0].trim()).digest('hex');
         if (outputPhraseHash === phraseHash) {
           matchedPhrases++;
