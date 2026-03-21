@@ -220,6 +220,7 @@ class EphemeralTokenManager {
    * @returns {{ tokenId: string, token: string, expiresAt: number, scopes: string[] }}
    */
   issueToken(authCtx, scopes = []) {
+    if (!authCtx.verify()) throw new Error('Context integrity check failed — possible tampering');
     if (authCtx.isExpired()) throw new Error('Cannot issue token for expired context');
 
     // Scopes can only narrow, never widen
@@ -452,11 +453,13 @@ class IntentValidator {
         }
       }
 
-      // Intent check
+      // Intent check — uses word-boundary matching to prevent substring spoofing
       if (policy.allowedIntents.length > 0 && authCtx.intent) {
-        const intentAllowed = policy.allowedIntents.some(i =>
-          authCtx.intent.toLowerCase().includes(i.toLowerCase())
-        );
+        const intentWords = authCtx.intent.toLowerCase().split(/[\s_-]+/);
+        const intentAllowed = policy.allowedIntents.some(i => {
+          const allowedWords = i.toLowerCase().split(/[\s_-]+/);
+          return allowedWords.every(w => intentWords.includes(w));
+        });
         if (!intentAllowed) {
           violations.push({ type: 'intent', message: `Intent "${authCtx.intent}" not allowed for tool "${toolName}"`, tool: toolName });
         }

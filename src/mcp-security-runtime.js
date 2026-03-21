@@ -117,6 +117,7 @@ class MCPSecurityRuntime {
     this._enableBehavior = options.enableBehaviorMonitoring !== false;
     this._enableStateMachine = options.enableStateMachine !== false;
     this._maxSessionsPerUser = options.maxSessionsPerUser || 10;
+    this._maxDelegationDepth = options.maxDelegationDepth || 5;
     this._sessionTtlMs = options.sessionTtlMs || 3600000;
 
     // Core components
@@ -381,8 +382,7 @@ class MCPSecurityRuntime {
         const observation = profile.record({
           responseTimeMs: elapsed,
           toolsCalled: [toolName],
-          threatScore: threats.length > 0 ? threats.reduce((s, t) => s + (t.severity === 'critical' ? 1 : t.severity === 'high' ? 0.7 : 0.3), 0) : 0,
-          toolCallCount: session.toolCallCount
+          threatScore: threats.length > 0 ? threats.reduce((s, t) => s + (t.severity === 'critical' ? 1 : t.severity === 'high' ? 0.7 : 0.3), 0) : 0
         });
         if (observation.anomalies && observation.anomalies.length > 0) {
           anomalies.push(...observation.anomalies);
@@ -554,6 +554,11 @@ class MCPSecurityRuntime {
     const parentSession = this._sessions.get(sessionId);
     if (!parentSession) {
       throw new Error(`${LOG_PREFIX} Cannot delegate: invalid session`);
+    }
+
+    // Enforce delegation depth limit
+    if ((parentSession.authCtx.delegationDepth || 0) >= this._maxDelegationDepth) {
+      throw new Error(`${LOG_PREFIX} Cannot delegate: max delegation depth (${this._maxDelegationDepth}) exceeded`);
     }
 
     // Enforce per-user session limit for delegated sessions too

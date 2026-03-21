@@ -256,6 +256,13 @@ class AgentThreatIntelligence {
     let skipped = 0;
 
     for (const entry of corpus.patterns) {
+      // Validate entry structure
+      if (!entry.patternId || !entry.category || !entry.pattern ||
+          typeof entry.confidence !== 'number' || typeof entry.hitCount !== 'number') {
+        skipped++;
+        continue;
+      }
+
       const existing = this._patterns.get(entry.patternId);
       if (existing) {
         // Merge — take higher confidence and combined hit count
@@ -738,6 +745,9 @@ class CrossOrgAgentTrust {
    * @param {number} [trustLevel=5] - How much we trust them (1-10)
    */
   trustOrganization(orgId, publicKey, trustLevel = 5) {
+    if (!publicKey || typeof publicKey !== 'string') {
+      throw new Error(`${LOG_PREFIX} trustOrganization requires a non-empty publicKey`);
+    }
     this._trustedOrgs.set(orgId, {
       publicKey,
       trustLevel: Math.min(10, Math.max(1, trustLevel)),
@@ -806,6 +816,18 @@ class CrossOrgAgentTrust {
     for (const certId of expiredIds) {
       this._certificates.delete(certId);
       this._revokedCerts.delete(certId);
+    }
+    // LRU fallback: if still over capacity, evict oldest valid certificate
+    if (this._certificates.size > this._maxCertificates) {
+      let oldestId = null;
+      let oldestTime = Infinity;
+      for (const [certId, cert] of this._certificates) {
+        if (cert.issuedAt < oldestTime) {
+          oldestTime = cert.issuedAt;
+          oldestId = certId;
+        }
+      }
+      if (oldestId) this._certificates.delete(oldestId);
     }
   }
 }
