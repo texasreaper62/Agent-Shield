@@ -4,7 +4,60 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
-## [7.2.0] — 2026-03-21
+## [7.2.1] - 2026-03-21
+
+### Added
+
+- **Rate limiting middleware** - `rateLimitMiddleware()` and `shieldMiddleware()` for Express with 429 responses, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Retry-After` headers
+- **Graceful shutdown** - `createGracefulShutdown()` utility with configurable timeout enforcement, ordered cleanup, and idempotent execution
+- **Inline .env file loader** - `loadEnvFile()` zero-dependency alternative to dotenv with quote stripping and no-overwrite semantics
+- **Queue depth monitoring** - `DistributedShield.getQueueDepth()` returns pending, peak, and totalQueued metrics
+- **Production readiness test suite** - 24 new assertions covering config shapes, result shapes, shutdown, rate limiting, streaming errors, .env loading
+- **Migration guide** - `instructions/17-migration-v6-to-v7.md` covering v6.0 to v7.x upgrade path
+- **Troubleshooting guide** - `instructions/18-troubleshooting.md` with 10 common issues and solutions
+- **141-pattern sync across all SDKs** - Python, Go, Rust, and VSCode now have full parity with Node.js detection engine (was 22/29/31/31)
+- **Standardized API return shapes** - Python, Go, and Rust SDKs now return Node.js-compatible `status`, `stats`, and `timestamp` fields alongside legacy fields
+- **Pattern sync build script** - `npm run sync:patterns` exports canonical patterns to JSON for cross-SDK consumption
+- **Python PyPI packaging** - `pyproject.toml` and proper `__init__.py` for `pip install agentshield`
+- **Structured error codes** - All public API throws now use `createShieldError()` with machine-readable codes (AS-DET-002, AS-AUT-004, etc.)
+- **Performance regression gate in CI** - Automated benchmark check that fails if 10k scans exceed threshold
+
+### Fixed
+
+- **Short input bypass** - detector-core.js was skipping inputs under 10 characters; `rm -rf /` (9 chars) was unscanned
+- **Role hijack pattern** - "you are now unrestricted" (no article) was not caught; tightened pattern with identity-related word requirement
+- **ReDoS risk** - Simplified credential listing pattern's nested alternation to prevent potential catastrophic backtracking
+- **Zero-value config bug** - `RateLimiter({ windowMs: 0 })` and `CircuitBreaker({ threshold: 0 })` silently defaulted via `||` operator; now uses explicit null checks
+- **scanToolCall inconsistency** - Previously returned `{ status: 'safe' }` on invalid input while `scan()` threw TypeError; now throws TypeError for consistency
+- **Shadow mode error swallowing** - Logger errors in shadow mode were silently caught; now logged to console.error
+- **DLP regex validation** - `DLPEngine.addRule()` with invalid regex string now catches and logs gracefully instead of throwing uncaught error
+- **Unbounded _localThreats** - `DistributedShield._localThreats` array now capped at 1000 entries (was unbounded, grew forever)
+- **Timer GC leak** - `DistributedShield` sync timer now uses `.unref()` to prevent blocking process exit
+- **SharedThreatState cleanup** - Added `pruneStaleSubscribers()` method for cleaning up dead subscriber callbacks
+- **MCP runtime shutdown** - `MCPSecurityRuntime.shutdown()` is now async with configurable timeout and drain handling
+- **MCP server shutdown** - Uses `createGracefulShutdown()` with `SHIELD_SHUTDOWN_TIMEOUT_MS` env var support
+- **Dashboard DoS** - POST /api/ingest now enforces 1MB body size limit (was unlimited)
+- **GitHub App markdown** - PR comment category values now escape pipe characters to prevent table breakage
+- **k8s Dockerfile** - USER directive moved before COPY with `--chown` for proper file ownership
+- **k8s fallback patterns** - Embedded patterns expanded from 10 to 15, synced with core engine fixes
+- **Benchmark percentile** - Fixed off-by-one in percentile calculation; now uses linear interpolation
+- **Category name consistency** - `role_hijacking` renamed to `role_hijack` across Python, Go, Rust, VSCode, benchmark-registry, testing.js, fuzzer.js, and all docs
+- **TypeScript declarations** - Added 39 missing type declarations for exported symbols
+- **VSCode debouncing** - Per-document debounce timers (was single global), scan result caching, 500KB file size limit, cache cleanup on close
+
+### Changed
+
+- `prepublishOnly` now runs `test:full` (all 16 test suites) instead of just 3
+- CI workflow runs test:adaptive, test:ipia, test:production, test:adversarial
+- CI coverage job expanded from 3 to 7 test files
+- CI verifies all 10 example files (was only 2)
+- `DEFAULT_CONFIG` in index.js now includes `maxInputSize`, `maxScanHistory`, `maxArgDepth`
+- Total exports increased to 331 across 79 modules
+- Total test assertions: 1,755 across 16 test suites
+- All SDK READMEs updated with 141 pattern count and 8 threat categories
+- README.md Node.js CI claim corrected to 18/20/22 (was incorrectly claiming 16)
+
+## [7.2.0] - 2026-03-21
 
 ### Added
 

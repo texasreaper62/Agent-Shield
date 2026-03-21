@@ -12,6 +12,7 @@
 
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
+const { createShieldError } = require('./errors');
 
 // =========================================================================
 // ADAPTER INTERFACE
@@ -163,7 +164,7 @@ class RedisAdapter extends DistributedAdapter {
     this.prefix = options.prefix || 'agent-shield:';
 
     if (!this.client) {
-      throw new Error('RedisAdapter requires a Redis client instance. Pass { client: redisClient }.');
+      throw createShieldError('AS-NET-003', { reason: 'RedisAdapter requires a Redis client instance. Pass { client: redisClient }.' });
     }
   }
 

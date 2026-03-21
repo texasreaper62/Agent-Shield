@@ -21,12 +21,15 @@ const ERROR_CODES = {
   'AS-DET-003': { message: 'Pattern compilation failed', severity: 'high' },
   'AS-DET-004': { message: 'Scan timeout exceeded', severity: 'medium' },
   'AS-DET-005': { message: 'Input exceeds maximum length', severity: 'medium' },
+  'AS-DET-006': { message: 'Invalid tool name type', severity: 'high' },
+  'AS-DET-007': { message: 'Invalid batch input type', severity: 'high' },
 
   // Configuration
   'AS-CFG-001': { message: 'Invalid configuration object', severity: 'critical' },
   'AS-CFG-002': { message: 'Unknown configuration key', severity: 'low' },
   'AS-CFG-003': { message: 'Invalid threshold value — must be 0-1', severity: 'high' },
   'AS-CFG-004': { message: 'Preset not found', severity: 'medium' },
+  'AS-CFG-005': { message: 'Invalid regex pattern in DLP rule', severity: 'high' },
 
   // Plugin
   'AS-PLG-001': { message: 'Plugin failed to load', severity: 'high' },
@@ -37,6 +40,7 @@ const ERROR_CODES = {
   'AS-INT-001': { message: 'Framework adapter not found', severity: 'high' },
   'AS-INT-002': { message: 'Middleware setup failed', severity: 'critical' },
   'AS-INT-003': { message: 'Hook registration failed', severity: 'medium' },
+  'AS-INT-004': { message: 'Tool call blocked by shield', severity: 'high' },
 
   // Policy
   'AS-POL-001': { message: 'Policy parse error', severity: 'critical' },
@@ -46,11 +50,16 @@ const ERROR_CODES = {
   // Network/Distributed
   'AS-NET-001': { message: 'Distributed sync failed', severity: 'high' },
   'AS-NET-002': { message: 'Peer node unreachable', severity: 'medium' },
+  'AS-NET-003': { message: 'Redis client instance required', severity: 'critical' },
 
   // Auth
   'AS-AUT-001': { message: 'RBAC permission denied', severity: 'high' },
   'AS-AUT-002': { message: 'Tenant not found', severity: 'high' },
   'AS-AUT-003': { message: 'SSO token validation failed', severity: 'critical' },
+  'AS-AUT-004': { message: 'Session creation requires userId and agentId', severity: 'high' },
+  'AS-AUT-005': { message: 'Max sessions exceeded', severity: 'high' },
+  'AS-AUT-006': { message: 'Invalid session for delegation', severity: 'high' },
+  'AS-AUT-007': { message: 'Max delegation depth exceeded', severity: 'high' },
 };
 
 /**

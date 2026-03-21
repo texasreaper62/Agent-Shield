@@ -8,6 +8,8 @@
  * - Content Policies: Block agents from generating certain content categories.
  */
 
+const { createShieldError } = require('./errors');
+
 // =========================================================================
 // PII PATTERNS
 // =========================================================================
@@ -215,7 +217,8 @@ class DLPEngine {
       try {
         pattern = new RegExp(rule.pattern, 'gi');
       } catch (err) {
-        console.error(`[Agent Shield] DLPEngine.addRule(): invalid regex pattern "${rule.pattern}": ${err.message}`);
+        const shieldErr = createShieldError('AS-CFG-005', { pattern: rule.pattern, reason: err.message });
+        console.error(`${shieldErr.message}`);
         return this;
       }
     } else {

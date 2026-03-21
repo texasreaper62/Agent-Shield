@@ -3,16 +3,19 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
-name = "agent-shield"
-version = "1.0.0"
-description = "Security SDK for AI agents. Protects against prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats."
+name = "agentshield"
+version = "7.2.1"
+description = "Security SDK for AI agents. Detects prompt injection, data exfiltration, and 141 threat patterns. Zero dependencies, runs locally."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
 dependencies = []
+authors = [
+    {name = "Agent Shield team"},
+]
 keywords = ["ai", "security", "prompt-injection", "agent", "llm", "langchain", "llamaindex"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -21,11 +24,15 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security",
 ]
 
+[project.urls]
+Homepage = "https://github.com/texasreaper62/Agent-Shield"
+
 [project.scripts]
-agent-shield = "agent_shield.cli:main"
+agentshield = "agent_shield.cli:main"
 
 [tool.setuptools.packages.find]
 exclude = ["tests", "tests.*"]

@@ -9,6 +9,7 @@
 
 const { AgentShield } = require('./index');
 const { RateLimiter } = require('./circuit-breaker');
+const { createShieldError } = require('./errors');
 
 /**
  * Creates an Express/Connect-style middleware that scans request bodies
@@ -164,9 +165,11 @@ const shieldTools = (tools, config = {}) => {
       const result = shield.scanToolCall(name, args);
 
       if (result.blocked) {
-        const error = new Error(
-          `[Agent Shield] Tool call "${name}" blocked: ${result.threats.map(t => t.description).join('; ')}`
-        );
+        const error = createShieldError('AS-INT-004', {
+          toolName: name,
+          threats: result.threats.map(t => t.description)
+        });
+        error.message = `[Agent Shield AS-INT-004] Tool call "${name}" blocked: ${result.threats.map(t => t.description).join('; ')}`;
         error.agentShield = result;
         throw error;
       }
