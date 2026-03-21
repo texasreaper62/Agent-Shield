@@ -1955,19 +1955,18 @@ const scanText = (text, options = {}) => {
 
   let threats = scanTextForPatterns(text, source, timeBudgetMs, startTime);
 
-  // Run normalization pipeline and scan normalized text for additional threats
-  if (_normalize && typeof _normalize === 'function') {
+  // Run normalization pipeline only when initial scan found no threats
+  // (avoids double-scan overhead on already-detected inputs)
+  if (threats.length === 0 && _normalize && typeof _normalize === 'function') {
     try {
-      // Skip case_fold to preserve regex case-insensitive matching behavior
       const normResult = _normalize(text, { skip: ['case_fold'] });
       if (normResult.layers.length > 0 && normResult.normalized !== text) {
         const normalizedThreats = scanTextForPatterns(normResult.normalized, source, timeBudgetMs, startTime);
-        // Add threats found only in normalized text (not already detected)
+        const seen = new Set(threats.map(t => `${t.category}|${t.severity}`));
         for (const nt of normalizedThreats) {
-          const isDuplicate = threats.some(t =>
-            t.category === nt.category && t.severity === nt.severity && t.detail === nt.detail
-          );
-          if (!isDuplicate) {
+          const key = `${nt.category}|${nt.severity}`;
+          if (!seen.has(key)) {
+            seen.add(key);
             nt.detail = `${nt.detail} (detected after normalization: ${normResult.layers.join(', ')})`;
             nt.normalizedDetection = true;
             threats.push(nt);

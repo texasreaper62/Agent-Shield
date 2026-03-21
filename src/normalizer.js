@@ -291,6 +291,10 @@ function unicodeCanon(text) {
  * @returns {{ text: string, applied: boolean }}
  */
 function homoglyphDecode(text) {
+  // Fast path: skip if text is pure ASCII (no homoglyphs possible)
+  if (!/[^\x00-\x7F]/.test(text)) {
+    return { text, applied: false };
+  }
   let changed = false;
   let result = '';
   for (let i = 0; i < text.length; i++) {

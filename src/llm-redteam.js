@@ -8,6 +8,9 @@
  * payload generation, and comprehensive reporting.
  */
 
+/** Default seed for xorshift32 PRNG — must be non-zero. */
+const DEFAULT_PRNG_SEED = 42;
+
 // =========================================================================
 // JAILBREAK TEMPLATES
 // =========================================================================
@@ -87,7 +90,7 @@ const MUTATION_TECHNIQUES = [
  */
 class AdversarialGenerator {
   constructor() {
-    this._rng = 42; // Non-zero seed for deterministic PRNG
+    this._rng = DEFAULT_PRNG_SEED;
   }
 
   /**
