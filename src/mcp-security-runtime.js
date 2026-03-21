@@ -26,6 +26,7 @@ const crypto = require('crypto');
 const { MCPBridge, MCPSessionGuard, MCPResourceScanner, MCPToolPolicy } = require('./mcp-bridge');
 const { AuthorizationContext, ConfusedDeputyGuard } = require('./confused-deputy');
 const { BehaviorProfile } = require('./behavior-profiling');
+const { LearningLoop, ContractRegistry, ComplianceAttestor } = require('./adaptive-defense');
 
 const LOG_PREFIX = '[Agent Shield]';
 
@@ -142,6 +143,19 @@ class MCPSecurityRuntime {
     this._userSessions = new Map();    // userId → Set<sessionId>
     this._behaviorProfiles = new Map(); // userId → BehaviorProfile
 
+    // Adaptive defense systems
+    this._learningLoop = new LearningLoop({
+      minHitsToPromote: options.minHitsToPromote || 3,
+      maxLearnedPatterns: options.maxLearnedPatterns || 500,
+      onPatternLearned: options.onPatternLearned || null
+    });
+    this._contracts = new ContractRegistry();
+    this._attestor = new ComplianceAttestor({
+      frameworks: options.complianceFrameworks,
+      driftThreshold: options.complianceDriftThreshold || 0.9,
+      onComplianceDrift: options.onComplianceDrift || null
+    });
+
     // Callbacks
     this._onThreat = options.onThreat || null;
     this._onBlock = options.onBlock || null;
@@ -159,7 +173,9 @@ class MCPSecurityRuntime {
       threatsDetected: 0,
       authFailures: 0,
       behaviorAnomalies: 0,
-      stateViolations: 0
+      stateViolations: 0,
+      patternsLearned: 0,
+      contractViolations: 0
     };
 
     // Cleanup expired sessions periodically
@@ -357,11 +373,44 @@ class MCPSecurityRuntime {
     // 6. Threat scanning (injection, exfiltration, etc.)
     const scanResult = this._bridge.wrapToolCall(toolName, args);
     const threats = scanResult.threats || [];
-    if (!scanResult.allowed) {
+
+    // 6a. Check against learned patterns (self-learning loop)
+    const learnedCheck = this._learningLoop.check(typeof args === 'string' ? args : JSON.stringify(args || {}));
+    if (learnedCheck.matches.length > 0) {
+      for (const match of learnedCheck.matches) {
+        threats.push({
+          category: match.category,
+          severity: 'high',
+          confidence: match.confidence,
+          description: `Learned pattern match: ${match.patternId}`,
+          source: 'learning_loop'
+        });
+      }
+    }
+
+    if (!scanResult.allowed || learnedCheck.matches.length > 0) {
       this.stats.toolCallsBlocked++;
       this.stats.threatsDetected += threats.length;
-      this._audit('threat_detected', { sessionId, toolName, threats });
+
+      // LEARNING LOOP: Feed blocked attack into the learning system
+      for (const threat of threats) {
+        this._learningLoop.ingest({
+          text: typeof args === 'string' ? args : JSON.stringify(args || {}),
+          category: threat.category || 'unknown',
+          threats,
+          toolName,
+          sessionId
+        });
+      }
+      this.stats.patternsLearned = this._learningLoop.getActivePatterns().length;
+
+      this._audit('threat_detected', { sessionId, toolName, threats, learnedMatches: learnedCheck.matches.length });
       if (this._onThreat) this._onThreat({ sessionId, toolName, threats });
+
+      // Update compliance signals
+      this._attestor.updateSignal('threat_scanning_active', true);
+      this._attestor.updateSignal('blocking_enabled', true);
+
       return {
         allowed: false,
         threats,
@@ -372,7 +421,31 @@ class MCPSecurityRuntime {
       };
     }
 
-    // 7. Behavioral anomaly detection
+    // 7. Agent contract enforcement
+    const contractResult = this._contracts.enforce(session.authCtx.agentId, {
+      type: 'tool_call',
+      toolName,
+      args,
+      intent: session.authCtx.intent,
+      delegationDepth: session.authCtx.delegationDepth
+    });
+    if (!contractResult.allowed) {
+      this.stats.contractViolations++;
+      this._audit('contract_violation', {
+        sessionId, toolName, agentId: session.authCtx.agentId,
+        violations: contractResult.violations
+      });
+      return {
+        allowed: false,
+        threats: [],
+        violations: contractResult.violations,
+        anomalies: [],
+        token: null,
+        reason: 'Contract violation: ' + contractResult.violations.map(v => v.message).join('; ')
+      };
+    }
+
+    // 8. Behavioral anomaly detection
     const anomalies = [];
     if (this._enableBehavior) {
       const profile = this._behaviorProfiles.get(session.authCtx.userId);
@@ -395,7 +468,19 @@ class MCPSecurityRuntime {
       }
     }
 
-    // 8. Record success and return
+    // 9. Update compliance attestation signals
+    this._attestor.updateSignals({
+      injection_scans_active: true,
+      tool_authorization_active: this._enforceAuth,
+      rate_limiting_active: true,
+      threat_scanning_active: true,
+      behavior_monitoring_active: this._enableBehavior,
+      blocking_enabled: true,
+      audit_trail_active: true,
+      contract_enforcement_active: contractResult.hasContract
+    });
+
+    // 10. Record success and return
     this._audit('tool_allowed', {
       sessionId, toolName, userId: session.authCtx.userId,
       threats: threats.length, anomalies: anomalies.length
@@ -442,6 +527,61 @@ class MCPSecurityRuntime {
    */
   secureResource(uri, content, mimeType) {
     return this._resourceScanner.scanResource(uri, content, mimeType);
+  }
+
+  // =======================================================================
+  // Adaptive Defense — Learning, Contracts, Compliance
+  // =======================================================================
+
+  /**
+   * Registers a behavioral contract for an agent.
+   * The contract is verified on every tool call automatically.
+   * @param {import('./adaptive-defense').AgentContract} contract
+   */
+  registerContract(contract) {
+    this._contracts.register(contract);
+    this._attestor.updateSignal('contract_enforcement_active', true);
+  }
+
+  /**
+   * Returns the learning loop for direct access.
+   * @returns {import('./adaptive-defense').LearningLoop}
+   */
+  getLearningLoop() {
+    return this._learningLoop;
+  }
+
+  /**
+   * Returns a real-time compliance attestation.
+   * @returns {object}
+   */
+  attest() {
+    return this._attestor.attest();
+  }
+
+  /**
+   * Generates a signed compliance proof that can be verified externally.
+   * @param {string} signingKey
+   * @returns {{ attestation: object, signature: string }}
+   */
+  generateComplianceProof(signingKey) {
+    return this._attestor.generateProof(signingKey || this._signingKey);
+  }
+
+  /**
+   * Returns contract compliance rates for all registered agents.
+   * @returns {object}
+   */
+  getContractCompliance() {
+    return this._contracts.getComplianceReport();
+  }
+
+  /**
+   * Returns compliance trend direction.
+   * @returns {'improving' | 'stable' | 'degrading' | 'unknown'}
+   */
+  getComplianceTrend() {
+    return this._attestor.getTrend();
   }
 
   // =======================================================================
@@ -639,6 +779,10 @@ class MCPSecurityRuntime {
       sessions,
       behaviorProfiles: behaviorSummaries,
       guard: this._guard.getStats(),
+      learningLoop: this._learningLoop.getReport(),
+      contracts: this._contracts.getComplianceReport(),
+      compliance: this._attestor.getCurrentState(),
+      complianceTrend: this._attestor.getTrend(),
       recentAudit: this._auditLog.slice(-50)
     };
   }
