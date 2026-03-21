@@ -99,15 +99,31 @@ type Threat struct {
 	Description string `json:"description"`
 }
 
+// ScanStats holds severity breakdown and timing, matching the Node.js SDK shape.
+type ScanStats struct {
+	TotalThreats int     `json:"totalThreats"`
+	Critical     int     `json:"critical"`
+	High         int     `json:"high"`
+	Medium       int     `json:"medium"`
+	Low          int     `json:"low"`
+	ScanTimeMs   float64 `json:"scanTimeMs"`
+}
+
 // ScanResult holds the outcome of scanning a text input.
 type ScanResult struct {
-	// Safe is true when no threats were detected.
-	Safe bool `json:"safe"`
+	// Status is the overall threat level: "safe", "caution", "warning", or "danger".
+	Status string `json:"status"`
 	// Threats contains all detected threats.
 	Threats []Threat `json:"threats"`
-	// Severity is the highest severity level found (empty string if safe).
+	// Stats holds the severity breakdown and timing.
+	Stats ScanStats `json:"stats"`
+	// Timestamp is the Unix epoch in milliseconds when the scan completed.
+	Timestamp int64 `json:"timestamp"`
+	// Safe is true when no threats were detected (kept for backward compatibility).
+	Safe bool `json:"safe"`
+	// Severity is the highest severity level found (kept for backward compatibility).
 	Severity string `json:"severity"`
-	// ScanTimeUs is the scan duration in microseconds.
+	// ScanTimeUs is the scan duration in microseconds (kept for backward compatibility).
 	ScanTimeUs int64 `json:"scan_time_us"`
 	// InputLength is the length of the scanned input in bytes.
 	InputLength int `json:"input_length"`
@@ -180,6 +196,8 @@ func (s *Shield) Scan(text string) *ScanResult {
 
 	if text == "" {
 		result.ScanTimeUs = time.Since(start).Microseconds()
+		result.Status = "safe"
+		result.Timestamp = time.Now().UnixMilli()
 		return result
 	}
 
@@ -230,7 +248,37 @@ func (s *Shield) Scan(text string) *ScanResult {
 		}
 	}
 
-	result.ScanTimeUs = time.Since(start).Microseconds()
+	elapsed := time.Since(start)
+	result.ScanTimeUs = elapsed.Microseconds()
+
+	// Populate Node.js-compatible fields
+	for _, t := range result.Threats {
+		switch t.Severity {
+		case SeverityCritical:
+			result.Stats.Critical++
+		case SeverityHigh:
+			result.Stats.High++
+		case SeverityMedium:
+			result.Stats.Medium++
+		case SeverityLow:
+			result.Stats.Low++
+		}
+	}
+	result.Stats.TotalThreats = len(result.Threats)
+	result.Stats.ScanTimeMs = float64(elapsed.Microseconds()) / 1000.0
+
+	if result.Stats.Critical > 0 {
+		result.Status = "danger"
+	} else if result.Stats.High > 0 {
+		result.Status = "warning"
+	} else if result.Stats.Medium > 0 {
+		result.Status = "caution"
+	} else {
+		result.Status = "safe"
+	}
+
+	result.Timestamp = time.Now().UnixMilli()
+
 	return result
 }
 

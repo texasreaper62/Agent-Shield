@@ -1317,8 +1317,11 @@ def scan_text(
     """
     if not text or not isinstance(text, str):
         return {
-            'safe': True,
+            'status': 'safe',
             'threats': [],
+            'stats': {'totalThreats': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'scanTimeMs': 0},
+            'timestamp': int(time.time() * 1000),
+            'safe': True,
             'severity': 'safe',
             'scan_time_ms': 0,
             'input_length': 0,
@@ -1363,9 +1366,38 @@ def scan_text(
     else:
         severity = max(threats, key=lambda t: SEVERITY_ORDER.get(t['severity'], 0))['severity']
 
+    # Build stats breakdown matching Node.js SDK shape
+    stats: dict[str, Any] = {
+        'totalThreats': len(threats),
+        'critical': 0,
+        'high': 0,
+        'medium': 0,
+        'low': 0,
+        'scanTimeMs': scan_time_ms,
+    }
+    for t in threats:
+        sev = t['severity']
+        if sev in stats:
+            stats[sev] += 1
+
+    # Derive status label matching Node.js SDK
+    if stats['critical'] > 0:
+        status = 'danger'
+    elif stats['high'] > 0:
+        status = 'warning'
+    elif stats['medium'] > 0:
+        status = 'caution'
+    else:
+        status = 'safe'
+
     result: dict[str, Any] = {
-        'safe': len(threats) == 0,
+        # Node.js-compatible fields
+        'status': status,
         'threats': threats,
+        'stats': stats,
+        'timestamp': int(time.time() * 1000),
+        # Legacy fields (kept for backward compatibility)
+        'safe': len(threats) == 0,
         'severity': severity,
         'scan_time_ms': scan_time_ms,
         'input_length': len(text),
