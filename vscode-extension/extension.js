@@ -1148,11 +1148,20 @@ function scanSelection(editor, diagnostics) {
 // EXTENSION LIFECYCLE
 // =========================================================================
 
-/** @type {NodeJS.Timeout|null} */
-let debounceTimer = null;
+/** @type {Map<string, NodeJS.Timeout>} Per-document debounce timers. */
+const debounceTimers = new Map();
+
+/** @type {Map<string, { version: number, diagnostics: any[] }>} Scan result cache per document URI. */
+const scanCache = new Map();
 
 /** @type {boolean} */
 let inlineScanEnabled = true;
+
+/** Debounce delay in milliseconds. */
+const DEBOUNCE_MS = 500;
+
+/** Maximum file size in characters to scan inline. Files larger than this are skipped. */
+const MAX_INLINE_SCAN_SIZE = 500000;
 
 /**
  * Activate the Agent Shield extension.
@@ -1208,22 +1217,47 @@ function activate(context) {
     }
   });
 
-  // --- Real-time scanning on text change (debounced) ---
+  // --- Real-time scanning on text change (per-document debounce + cache) ---
   const changeListener = vscode.workspace.onDidChangeTextDocument((event) => {
     if (!inlineScanEnabled) return;
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-    debounceTimer = setTimeout(() => {
+    const uri = event.document.uri.toString();
+
+    // Clear any pending debounce for this specific document
+    const existing = debounceTimers.get(uri);
+    if (existing) clearTimeout(existing);
+
+    debounceTimers.set(uri, setTimeout(() => {
+      debounceTimers.delete(uri);
+
+      // Skip files that are too large for inline scanning
+      if (event.document.getText().length > MAX_INLINE_SCAN_SIZE) return;
+
+      // Skip if document version hasn't changed since last scan (cache hit)
+      const cached = scanCache.get(uri);
+      if (cached && cached.version === event.document.version) return;
+
       scanDocument(event.document, diagnostics);
-      debounceTimer = null;
-    }, 500);
+      scanCache.set(uri, { version: event.document.version, diagnostics: diagnostics.get(event.document.uri) || [] });
+    }, DEBOUNCE_MS));
   });
 
   // --- Scan on document open ---
   const openListener = vscode.workspace.onDidOpenTextDocument((document) => {
     if (!inlineScanEnabled) return;
+    if (document.getText().length > MAX_INLINE_SCAN_SIZE) return;
     scanDocument(document, diagnostics);
+    scanCache.set(document.uri.toString(), { version: document.version, diagnostics: diagnostics.get(document.uri) || [] });
+  });
+
+  // --- Clean up cache when document is closed ---
+  const closeListener = vscode.workspace.onDidCloseTextDocument((document) => {
+    const uri = document.uri.toString();
+    scanCache.delete(uri);
+    const timer = debounceTimers.get(uri);
+    if (timer) {
+      clearTimeout(timer);
+      debounceTimers.delete(uri);
+    }
   });
 
   // --- Scan already-open documents ---
@@ -1233,17 +1267,18 @@ function activate(context) {
     });
   }
 
-  context.subscriptions.push(scanFileCmd, scanSelCmd, toggleCmd, changeListener, openListener);
+  context.subscriptions.push(scanFileCmd, scanSelCmd, toggleCmd, changeListener, openListener, closeListener);
 }
 
 /**
  * Deactivate the Agent Shield extension. Cleanup resources.
  */
 function deactivate() {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
+  for (const timer of debounceTimers.values()) {
+    clearTimeout(timer);
   }
+  debounceTimers.clear();
+  scanCache.clear();
   console.log('[Agent Shield] Extension deactivated.');
 }
 
