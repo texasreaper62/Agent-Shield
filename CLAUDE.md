@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
+## Push & Release Workflow
+
+The codebase lives in two GitHub repos. After making changes here, the user merges and pushes from their **Windows machine**. Always provide these CMD commands when work is ready to push:
+
+**Remotes (on user's Windows machine):**
+- `origin` = `https://github.com/texasreaper62/Claude.git` (source repo)
+- `agent-shield` = `https://github.com/texasreaper62/Agent-Shield.git` (public repo)
+
+**Standard push flow — give these commands to the user:**
+```cmd
+cd C:\Users\Cstep\OneDrive\Documents\GitHub\Claude
+git fetch origin claude/catch-up-branch-zdbWI
+git checkout main
+git merge origin/claude/catch-up-branch-zdbWI -m "Merge <description>"
+git push agent-shield main
+git push origin main
+```
+
+**npm publish (after version bump):**
+```cmd
+npm version <version> --allow-same-version
+npm publish --//registry.npmjs.org/:_authToken=<token>
+```
+
+**Key rules:**
+- Always push to **both** `agent-shield main` AND `origin main`
+- The catch-up branch (`claude/catch-up-branch-zdbWI`) is where Claude Code develops
+- User merges catch-up → main locally, then pushes to both remotes
+- Always update CHANGELOG.md before a version release
+- Don't fabricate PR descriptions about work we haven't done — only describe actual changes
+
 ## Project Overview
 
 Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, prompt extraction, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
