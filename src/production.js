@@ -44,7 +44,9 @@ class SamplingScanner {
     }
 
     // Extrapolate
-    this.stats.extrapolatedThreats = Math.round(this.stats.threats / this.sampleRate);
+    this.stats.extrapolatedThreats = this.sampleRate > 0
+      ? Math.round(this.stats.threats / this.sampleRate)
+      : 0;
 
     return { sampled: true, ...result };
   }
@@ -431,8 +433,9 @@ class AttackAttributionChain {
 // =========================================================================
 
 class DiffReporter {
-  constructor() {
+  constructor(options = {}) {
     this.snapshots = [];
+    this.maxSnapshots = options.maxSnapshots || 1000;
   }
 
   /**
@@ -444,6 +447,9 @@ class DiffReporter {
       timestamp: new Date().toISOString(),
       stats: JSON.parse(JSON.stringify(stats))
     });
+    while (this.snapshots.length > this.maxSnapshots) {
+      this.snapshots.shift();
+    }
     return this.snapshots.length - 1;
   }
 

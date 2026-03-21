@@ -130,7 +130,7 @@ class ConfidenceTuner {
 
     const suppressed = scanResult.threats.length - filtered.length;
 
-    const stats = { totalThreats: filtered.length, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: scanResult.stats.scanTimeMs };
+    const stats = { totalThreats: filtered.length, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: (scanResult.stats && scanResult.stats.scanTimeMs) || 0 };
     for (const t of filtered) {
       stats[t.severity]++;
     }
