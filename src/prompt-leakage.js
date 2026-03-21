@@ -48,7 +48,7 @@ const PROMPT_EXTRACTION_PATTERNS = [
   { regex: /(?:does|is)\s+(?:your|the)\s+(?:system\s+)?(?:prompt|instructions?)\s+(?:contain|mention|include|say|reference)/i, severity: 'medium', category: 'prompt_extraction', technique: 'multistep', description: 'Probing prompt contents' },
 
   // Jailbreak-style extraction
-  { regex: /(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules).*(?:output|print|show|reveal|repeat)\s+(?:your|the)\s+(?:system|original)/i, severity: 'critical', category: 'prompt_extraction', technique: 'jailbreak', description: 'Override + extraction combo' },
+  { regex: /(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules).{0,200}(?:output|print|show|reveal|repeat)\s+(?:your|the)\s+(?:system|original)/i, severity: 'critical', category: 'prompt_extraction', technique: 'jailbreak', description: 'Override + extraction combo' },
   { regex: /\[system\].*(?:output|reveal|print|show)\s+(?:your|the|all)\s+(?:instructions|prompt|rules)/i, severity: 'critical', category: 'prompt_extraction', technique: 'jailbreak', description: 'Fake system tag extraction' }
 ];
 
@@ -128,7 +128,6 @@ class PromptFingerprinter {
     let matchedPhrases = 0;
 
     const normalizedOutput = output.toLowerCase().replace(/\s+/g, ' ').trim();
-    const outputWords = normalizedOutput.split(' ');
 
     // Check key phrase hashes against output
     for (const phraseHash of fp.keyPhrases) {

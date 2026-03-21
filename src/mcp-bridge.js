@@ -38,7 +38,7 @@ const MCP_DANGEROUS_TOOLS = [
 const ARG_INJECTION_PATTERNS = [
   { pattern: /;\s*(?:rm|del|drop|shutdown|kill|curl|wget)\b/i, severity: 'critical', description: 'Command chaining in argument' },
   { pattern: /\$\{.*\}|\$\(.*\)|`.*`/s, severity: 'high', description: 'Shell expansion in argument' },
-  { pattern: /(?:\.\.\/){2,}|\.\.\\(?:\.\.\\)/i, severity: 'high', description: 'Path traversal in argument' },
+  { pattern: /(?:\.\.\/){2,}|(?:\.\.\\){2,}/i, severity: 'high', description: 'Path traversal in argument' },
   { pattern: /(?:ignore|override|forget)\s+(?:previous|all|system)\s+(?:instructions|rules)/i, severity: 'critical', description: 'Injection in tool argument' },
   { pattern: /<script[^>]*>|javascript:/i, severity: 'high', description: 'XSS in tool argument' },
   { pattern: /(?:union\s+select|;\s*drop\s+table|'\s*or\s+'1'\s*=\s*'1)/i, severity: 'critical', description: 'SQL injection in tool argument' }
@@ -351,17 +351,18 @@ class MCPSessionGuard {
    * @returns {{ allowed: boolean, reason: string|null }}
    */
   trackToolCall(toolName, args = {}) {
-    this.callCount++;
-    this.toolUsage[toolName] = (this.toolUsage[toolName] || 0) + 1;
-    this.tokenCount += JSON.stringify(args).length;
-
-    if (this.callCount > this.maxToolCalls) {
-      return { allowed: false, reason: `Session tool call limit exceeded (${this.maxToolCalls})` };
-    }
-
+    // Validate before mutating state
     if (this.allowedTools && !this.allowedTools.has(toolName)) {
       return { allowed: false, reason: `Tool "${toolName}" not allowed in this session` };
     }
+
+    if (this.callCount >= this.maxToolCalls) {
+      return { allowed: false, reason: `Session tool call limit exceeded (${this.maxToolCalls})` };
+    }
+
+    this.callCount++;
+    this.toolUsage[toolName] = (this.toolUsage[toolName] || 0) + 1;
+    this.tokenCount += JSON.stringify(args).length;
 
     return { allowed: true, reason: null };
   }
