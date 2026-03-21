@@ -551,6 +551,26 @@ class StreamScanner extends EventEmitter {
     const iterable = _eventEmitterToAsyncIterable(emitter);
     return this.wrap(iterable);
   }
+
+  /**
+   * Wrap a Promise that resolves to a stream/async iterable.
+   * Safely handles rejection before and during iteration.
+   *
+   * @param {Promise<AsyncIterable>} streamPromise - A Promise resolving to an async iterable.
+   * @param {object} [options] - Options passed to wrap().
+   * @returns {AsyncGenerator} Yields chunks with scanning applied.
+   */
+  async *wrapPromise(streamPromise, options = {}) {
+    let stream;
+    try {
+      stream = await streamPromise;
+    } catch (err) {
+      this._streamError = err;
+      this.finalize();
+      throw err;
+    }
+    yield* this.wrap(stream, options);
+  }
 }
 
 // =========================================================================
@@ -782,10 +802,20 @@ async function scanAsyncIterator(iterator, options = {}) {
   const scanner = new StreamScanner(scannerOpts);
   const wrapped = scanner.wrap(iterator, { extractText });
 
-  // Consume the wrapped iterator fully
-  // eslint-disable-next-line no-unused-vars
-  for await (const _chunk of wrapped) {
-    // consumed — side effect is the scanning
+  try {
+    // Consume the wrapped iterator fully
+    // eslint-disable-next-line no-unused-vars
+    for await (const _chunk of wrapped) {
+      // consumed - side effect is the scanning
+    }
+  } catch (err) {
+    // Ensure finalization on error and attach the error to result
+    scanner._streamError = scanner._streamError || err;
+    if (!scanner._ended) {
+      scanner.finalize();
+    }
+    // Re-throw so callers know the stream failed
+    throw err;
   }
 
   return {

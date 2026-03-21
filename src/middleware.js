@@ -8,6 +8,7 @@
  */
 
 const { AgentShield } = require('./index');
+const { RateLimiter } = require('./circuit-breaker');
 
 /**
  * Creates an Express/Connect-style middleware that scans request bodies
@@ -205,4 +206,98 @@ const extractTextFromBody = (body) => {
   return str.length > 20 ? str : null;
 };
 
-module.exports = { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody };
+/**
+ * Creates rate-limiting middleware that returns 429 responses when limits are exceeded.
+ * Includes backpressure headers (X-RateLimit-Remaining, X-RateLimit-Limit, Retry-After).
+ *
+ * @param {object} [options]
+ * @param {number} [options.maxRequests=100] - Max requests per window.
+ * @param {number} [options.windowMs=60000] - Window size in ms (default: 1 minute).
+ * @param {number} [options.maxThreatsPerWindow=10] - Max threats before anomaly flag.
+ * @param {Function} [options.onLimit] - Callback when limit is hit.
+ * @param {boolean} [options.includeBackpressureHeaders=true] - Add rate limit headers to all responses.
+ * @returns {Function} Express middleware function.
+ *
+ * @example
+ * const { rateLimitMiddleware } = require('agent-shield/src/middleware');
+ * app.use(rateLimitMiddleware({ maxRequests: 50, windowMs: 60000 }));
+ */
+const rateLimitMiddleware = (options = {}) => {
+  const includeHeaders = options.includeBackpressureHeaders !== false;
+  const limiter = new RateLimiter({
+    maxRequests: options.maxRequests || 100,
+    windowMs: options.windowMs || 60000,
+    maxThreatsPerWindow: options.maxThreatsPerWindow || 10,
+    onLimit: options.onLimit || null,
+    onAnomaly: options.onAnomaly || null
+  });
+
+  return (req, res, next) => {
+    const check = limiter.recordRequest();
+
+    // Always set backpressure headers so callers can see remaining capacity
+    if (includeHeaders) {
+      res.setHeader('X-RateLimit-Limit', limiter.maxRequests);
+      res.setHeader('X-RateLimit-Remaining', Math.max(0, check.remaining));
+    }
+
+    if (!check.allowed) {
+      const retryAfterSec = Math.ceil(limiter.windowMs / 1000);
+      res.setHeader('Retry-After', retryAfterSec);
+      return res.status(429).json({
+        error: 'Too Many Requests',
+        message: check.reason,
+        retryAfter: retryAfterSec
+      });
+    }
+
+    // Expose limiter on request for downstream threat recording
+    req.agentShieldRateLimiter = limiter;
+    next();
+  };
+};
+
+/**
+ * Creates a combined Express middleware that applies rate limiting, threat scanning,
+ * and backpressure headers in a single middleware call.
+ *
+ * @param {object} [config] - AgentShield + rate limiter configuration.
+ * @param {number} [config.maxRequests=100] - Rate limit: max requests per window.
+ * @param {number} [config.windowMs=60000] - Rate limit: window size in ms.
+ * @param {boolean} [config.includeBackpressureHeaders=true] - Add rate limit headers.
+ * @returns {Function} Express middleware function.
+ *
+ * @example
+ * app.use(shieldMiddleware({ blockOnThreat: true, maxRequests: 50 }));
+ */
+const shieldMiddleware = (config = {}) => {
+  const rateLimiter = rateLimitMiddleware({
+    maxRequests: config.maxRequests,
+    windowMs: config.windowMs,
+    maxThreatsPerWindow: config.maxThreatsPerWindow,
+    includeBackpressureHeaders: config.includeBackpressureHeaders,
+    onLimit: config.onLimit,
+    onAnomaly: config.onAnomaly
+  });
+  const scanner = expressMiddleware(config);
+
+  return (req, res, next) => {
+    // Rate limit first
+    rateLimiter(req, res, (err) => {
+      if (err) return next(err);
+      // Then scan
+      scanner(req, res, (scanErr) => {
+        if (scanErr) return next(scanErr);
+        // Record threats in rate limiter for anomaly detection
+        if (req.agentShield && req.agentShield.threats && req.agentShield.threats.length > 0) {
+          if (req.agentShieldRateLimiter) {
+            req.agentShieldRateLimiter.recordThreat(req.agentShield.threats.length);
+          }
+        }
+        next();
+      });
+    });
+  };
+};
+
+module.exports = { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody, rateLimitMiddleware, shieldMiddleware };

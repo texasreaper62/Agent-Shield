@@ -72,6 +72,21 @@ export declare function expressMiddleware(options?: MiddlewareOptions): (req: an
 export declare function wrapAgent(agentFn: Function, options?: ShieldOptions): Function;
 export declare function shieldTools(tools: any[], options?: ShieldOptions): any[];
 
+export interface RateLimitMiddlewareOptions {
+  maxRequests?: number;
+  windowMs?: number;
+  maxThreatsPerWindow?: number;
+  onLimit?: (info: { count: number; windowMs: number }) => void;
+  onAnomaly?: (info: { threatCount: number; windowMs: number }) => void;
+  includeBackpressureHeaders?: boolean;
+}
+
+export declare function rateLimitMiddleware(options?: RateLimitMiddlewareOptions): (req: any, res: any, next: any) => void;
+
+export interface ShieldMiddlewareOptions extends MiddlewareOptions, RateLimitMiddlewareOptions {}
+
+export declare function shieldMiddleware(options?: ShieldMiddlewareOptions): (req: any, res: any, next: any) => void;
+
 // =========================================================================
 // Circuit Breaker
 // =========================================================================
@@ -1242,6 +1257,24 @@ export declare function truncate(text: string, maxLength?: number): string;
 export declare function formatHeader(text: string): string;
 export declare function generateId(): string;
 export declare function extractTextFromBody(body: any): string;
+
+export interface GracefulShutdownOptions {
+  timeoutMs?: number;
+  cleanupFns?: Array<() => void | Promise<void>>;
+  logger?: (...args: any[]) => void;
+}
+
+export declare function createGracefulShutdown(options?: GracefulShutdownOptions): {
+  shutdown: (signal?: string) => Promise<void>;
+  onShutdown: (fn: () => void | Promise<void>) => void;
+};
+
+export interface LoadEnvResult {
+  loaded: number;
+  errors: string[];
+}
+
+export declare function loadEnvFile(options?: { path?: string; overwrite?: boolean }): LoadEnvResult;
 
 // =========================================================================
 // OpenClaw Integration

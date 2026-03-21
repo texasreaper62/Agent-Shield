@@ -232,6 +232,11 @@ class DistributedShield {
     this._syncTimer = null;
     this._started = false;
 
+    // Queue depth monitoring
+    this._pendingOps = 0;
+    this._peakQueueDepth = 0;
+    this._totalOpsQueued = 0;
+
     console.log('[Agent Shield] DistributedShield initialized (instance: %s)', this.instanceId);
   }
 
@@ -276,22 +281,27 @@ class DistributedShield {
    * @returns {Promise<void>}
    */
   async reportThreat(threat) {
-    const entry = {
-      ...threat,
-      instanceId: this.instanceId,
-      timestamp: Date.now(),
-      id: crypto.randomBytes(8).toString('hex')
-    };
+    this._trackOp(1);
+    try {
+      const entry = {
+        ...threat,
+        instanceId: this.instanceId,
+        timestamp: Date.now(),
+        id: crypto.randomBytes(8).toString('hex')
+      };
 
-    // Store in shared state
-    await this.adapter.set(`threat:${entry.id}`, entry, this.threatTTLMs);
-    await this.adapter.incr('stats:totalThreats');
-    await this.adapter.incr(`stats:category:${threat.category || 'unknown'}`);
+      // Store in shared state
+      await this.adapter.set(`threat:${entry.id}`, entry, this.threatTTLMs);
+      await this.adapter.incr('stats:totalThreats');
+      await this.adapter.incr(`stats:category:${threat.category || 'unknown'}`);
 
-    // Broadcast to other instances
-    await this.adapter.publish('threats', entry);
+      // Broadcast to other instances
+      await this.adapter.publish('threats', entry);
 
-    this._localThreats.push(entry);
+      this._localThreats.push(entry);
+    } finally {
+      this._trackOp(-1);
+    }
   }
 
   /**
@@ -331,6 +341,31 @@ class DistributedShield {
       firstSeen: Date.now(),
       reportedBy: this.instanceId
     }, this.threatTTLMs);
+  }
+
+  /**
+   * Returns queue depth metrics for monitoring.
+   * @returns {{ pending: number, peak: number, totalQueued: number }}
+   */
+  getQueueDepth() {
+    return {
+      pending: this._pendingOps,
+      peak: this._peakQueueDepth,
+      totalQueued: this._totalOpsQueued
+    };
+  }
+
+  /**
+   * Track pending async operations for queue depth monitoring.
+   * @param {number} delta - +1 when starting, -1 when completing.
+   * @private
+   */
+  _trackOp(delta) {
+    this._pendingOps += delta;
+    if (delta > 0) this._totalOpsQueued++;
+    if (this._pendingOps > this._peakQueueDepth) {
+      this._peakQueueDepth = this._pendingOps;
+    }
   }
 
   /**

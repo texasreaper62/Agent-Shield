@@ -263,6 +263,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run test:ipia` — indirect prompt injection detector tests (117 assertions)
 - `npm run test:all` — full 40-feature suite (149 assertions)
 - `npm run test:fp` — false positive accuracy tests (118 samples, 99.2% accuracy)
+- `npm run test:production` — production readiness tests (24 assertions)
 - `npm run test:full` — runs all test suites together
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)

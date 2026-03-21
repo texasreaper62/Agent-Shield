@@ -812,16 +812,41 @@ class MCPSecurityRuntime {
 
   /**
    * Shuts down the runtime and cleans up resources.
+   * @param {object} [options]
+   * @param {number} [options.timeoutMs=10000] - Max time to wait for drain before forced cleanup.
+   * @returns {Promise<void>}
    */
-  shutdown() {
+  async shutdown(options = {}) {
+    const timeoutMs = options.timeoutMs || 10000;
+
     if (this._cleanupInterval) {
       clearInterval(this._cleanupInterval);
       this._cleanupInterval = null;
     }
-    const sessionIds = [...this._sessions.keys()];
-    for (const sessionId of sessionIds) {
-      this.terminateSession(sessionId);
-    }
+
+    // Drain: wait for in-flight operations with timeout
+    const drainPromise = new Promise((resolve) => {
+      const sessionIds = [...this._sessions.keys()];
+      for (const sessionId of sessionIds) {
+        try {
+          this.terminateSession(sessionId);
+        } catch (err) {
+          console.error(`${LOG_PREFIX} Error terminating session ${sessionId}: ${err.message}`);
+        }
+      }
+      resolve();
+    });
+
+    const timeoutPromise = new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        console.error(`${LOG_PREFIX} Shutdown drain timeout (${timeoutMs}ms), forcing cleanup`);
+        resolve();
+      }, timeoutMs);
+      if (timer.unref) timer.unref();
+    });
+
+    await Promise.race([drainPromise, timeoutPromise]);
+
     this._audit('runtime_shutdown', { totalProcessed: this.stats.toolCallsProcessed });
   }
 

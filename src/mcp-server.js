@@ -707,6 +707,11 @@ class MCPServer {
 // =========================================================================
 
 if (require.main === module) {
+  const { createGracefulShutdown, loadEnvFile } = require('./utils');
+
+  // Load .env file if present
+  loadEnvFile();
+
   let config = {};
 
   // Parse --config flag
@@ -726,15 +731,14 @@ if (require.main === module) {
   const server = new MCPServer(config);
   server.start();
 
-  // Graceful shutdown
-  process.on('SIGINT', () => {
-    server.stop();
-    process.exit(0);
+  // Graceful shutdown with timeout enforcement
+  const { shutdown } = createGracefulShutdown({
+    timeoutMs: parseInt(process.env.SHIELD_SHUTDOWN_TIMEOUT_MS, 10) || 10000,
+    cleanupFns: [() => server.stop()]
   });
-  process.on('SIGTERM', () => {
-    server.stop();
-    process.exit(0);
-  });
+
+  process.on('SIGINT', () => shutdown('SIGINT').then(() => process.exit(0)));
+  process.on('SIGTERM', () => shutdown('SIGTERM').then(() => process.exit(0)));
 }
 
 module.exports = { MCPServer, MCPToolHandler };

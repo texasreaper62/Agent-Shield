@@ -27,7 +27,7 @@ function safeRequire(path, label) {
 // Core (these are critical — if they fail, we still export what we can)
 const { AgentShield } = safeRequire('./index', 'core');
 const { scanText, getPatterns, SEVERITY_ORDER } = safeRequire('./detector-core', 'detector-core');
-const { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody } = safeRequire('./middleware', 'middleware');
+const { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody, rateLimitMiddleware, shieldMiddleware } = safeRequire('./middleware', 'middleware');
 
 // Protection
 const { CircuitBreaker, shadowMode, RateLimiter, STATE } = safeRequire('./circuit-breaker', 'circuit-breaker');
@@ -51,7 +51,7 @@ const { SteganographyDetector, EncodingBruteforceDetector, StructuredDataScanner
 const { OutputWatermark, DifferentialPrivacy } = safeRequire('./watermark', 'watermark');
 
 // Utilities
-const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } = safeRequire('./utils', 'utils');
+const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId, createGracefulShutdown, loadEnvFile } = safeRequire('./utils', 'utils');
 
 // Error codes & deprecation
 const { ERROR_CODES, createShieldError, deprecationWarning } = safeRequire('./errors', 'errors');
@@ -288,6 +288,8 @@ const _exports = {
   wrapAgent,
   shieldTools,
   extractTextFromBody,
+  rateLimitMiddleware,
+  shieldMiddleware,
 
   // Protection
   CircuitBreaker,
@@ -343,6 +345,8 @@ const _exports = {
   truncate,
   formatHeader,
   generateId,
+  createGracefulShutdown,
+  loadEnvFile,
 
   // Integrations
   ShieldCallbackHandler,
