@@ -113,6 +113,7 @@ const DIRECTIVE_PATTERNS = [
  */
 function tokenize(text) {
   if (!text) return [];
+  if (typeof text !== 'string') text = String(text);
   return text.toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
@@ -153,7 +154,9 @@ function cosineSim(a, b) {
     normB += vb * vb;
   }
   const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom === 0 ? 0 : dot / denom;
+  if (!isFinite(denom) || denom === 0) return 0;
+  const result = dot / denom;
+  return isFinite(result) ? result : 0;
 }
 
 /**
@@ -205,8 +208,8 @@ class ContextConstructor {
    * @returns {{ joint: string, content: string, intent: string }}
    */
   build(externalContent, userIntent) {
-    const content = (externalContent || '').slice(0, this.maxContentLength);
-    const intent = (userIntent || '').slice(0, this.maxIntentLength);
+    const content = String(externalContent || '').slice(0, this.maxContentLength);
+    const intent = String(userIntent || '').slice(0, this.maxIntentLength);
     const joint = content + this.separator + intent;
     return { joint, content, intent };
   }
@@ -450,7 +453,9 @@ class ExternalEmbedder {
       nb += b[i] * b[i];
     }
     const d = Math.sqrt(na) * Math.sqrt(nb);
-    return d === 0 ? 0 : dot / d;
+    if (!isFinite(d) || d === 0) return 0;
+    const result = dot / d;
+    return isFinite(result) ? result : 0;
   }
 
   /**
@@ -558,38 +563,8 @@ class IPIADetector {
     // Step 2: Feature extraction
     const { features, featureMap } = this._featureExtractor.extract(ctx);
 
-    // Step 3: Classification
-    const classification = this._classifier.classify(features, featureMap);
-
-    // Step 3b: Optional pattern scan for additional signal
-    // Only boost if the tree already found some evidence (confidence > 0)
-    // to avoid false positives from generic pattern matches on benign content
-    let patternResult = null;
-    if (this.usePatternScan) {
-      patternResult = scanText(externalContent);
-      if (patternResult.threats && patternResult.threats.length > 0 && classification.confidence >= 0.15) {
-        const patternBoost = Math.min(patternResult.threats.length * 0.1, 0.3);
-        classification.confidence = Math.min(classification.confidence + patternBoost, 1.0);
-        classification.isInjection = classification.confidence >= this.threshold;
-        classification.reason += '; pattern scan detected ' + patternResult.threats.length + ' threat(s)';
-      }
-    }
-
-    // Update stats
-    if (classification.isInjection) {
-      this._stats.blocked++;
-    } else {
-      this._stats.safe++;
-    }
-
-    return this._makeResult(
-      classification.isInjection,
-      classification.confidence,
-      classification.reason,
-      featureMap,
-      options,
-      patternResult
-    );
+    // Step 3+4: Classify, pattern-boost, stats, result
+    return this._classifyAndFinalize(externalContent, features, featureMap, options);
   }
 
   /**
@@ -623,18 +598,22 @@ class IPIADetector {
     const { featureMap } = this._featureExtractor.extract(ctx);
 
     // Step 2b: External embeddings (async) — override cosine features
-    const externalCosines = await this._externalEmbedder.extractCosineFeatures(ctx);
-    featureMap.cosine_intent_content = externalCosines.cosine_intent_content;
-    featureMap.cosine_joint_intent = externalCosines.cosine_joint_intent;
-    featureMap.cosine_joint_content = externalCosines.cosine_joint_content;
+    const cosines = await this._externalEmbedder.extractCosineFeatures(ctx);
+    featureMap.cosine_intent_content = cosines.cosine_intent_content;
+    featureMap.cosine_joint_intent = cosines.cosine_joint_intent;
+    featureMap.cosine_joint_content = cosines.cosine_joint_content;
 
     const features = FEATURE_NAMES.map(n => featureMap[n]);
 
-    // Step 3: Classification
+    // Step 3+4: Classify, pattern-boost, stats, result
+    return this._classifyAndFinalize(externalContent, features, featureMap, options);
+  }
+
+  /** @private Shared classification + pattern boost + stats + result formatting */
+  _classifyAndFinalize(externalContent, features, featureMap, options) {
     const classification = this._classifier.classify(features, featureMap);
 
-    // Step 3b: Optional pattern scan
-    // Only boost if tree already found meaningful evidence, to avoid false positives
+    // Optional pattern scan — only boost if tree already found meaningful evidence
     let patternResult = null;
     if (this.usePatternScan) {
       patternResult = scanText(externalContent);
@@ -780,8 +759,8 @@ function ipiaMiddleware(options = {}) {
   const detector = new IPIADetector({ threshold: options.threshold });
 
   return (req, res, next) => {
-    const content = req.body && req.body[contentField];
-    const intent = req.body && req.body[intentField];
+    const content = req && req.body && req.body[contentField];
+    const intent = req && req.body && req.body[intentField];
 
     if (!content || !intent) {
       return next();
