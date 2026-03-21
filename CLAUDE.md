@@ -12,6 +12,14 @@ Agent Shield is a security SDK for AI agents. It protects agents from prompt inj
 
 **Multi-Platform:** Available as Node.js, Python, Go, Rust, and WASM SDKs.
 
+## npm Package
+
+Published as **`agentshield-sdk`** on npm (the name `agent-shield` was taken).
+
+```bash
+npm install agentshield-sdk
+```
+
 ## Build & Development
 
 ```bash
@@ -23,6 +31,12 @@ npm test
 
 # Run full test suite (40 features)
 npm run test:all
+
+# Adaptive defense tests
+npm run test:adaptive
+
+# False positive accuracy tests
+npm run test:fp
 
 # Red team attack simulation
 npm run redteam
@@ -54,7 +68,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (302 exports, 74+ modules)
+├── src/                           # Node.js SDK (318 exports, 78 modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -82,6 +96,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── presets.js                  # Config presets, snippet generator
 │   ├── badges.js                   # Badge generator, GitHub Action reporter
 │   ├── allowlist.js                # Allowlists, feedback loop, scan cache
+│   ├── errors.js                   # Structured error codes (AS-{CATEGORY}-{NUMBER})
 │   ├── utils.js                    # Shared utilities
 │   │
 │   │  # v1.2 — Semantic Detection
@@ -92,10 +107,12 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   │
 │   │  # v2.0 — Platform & Ecosystem
 │   ├── plugin-marketplace.js       # PluginRegistry, MarketplaceClient
+│   ├── plugin-system.js            # Custom detector plugins (detect() interface)
 │   │
 │   │  # v2.1 — Enterprise & Scale
 │   ├── distributed.js              # DistributedShield (Redis/memory adapters)
 │   ├── audit-streaming.js          # AuditStreamManager (Splunk, ES transports)
+│   ├── audit-immutable.js          # SHA-256 hash-chained tamper-evident audit log
 │   ├── sso-saml.js                 # SSOManager, SAMLParser, OIDCHandler
 │   ├── model-finetuning.js         # ModelTrainer, TrainingPipeline
 │   │
@@ -109,6 +126,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   │  # v4.0 — Performance & Polyglot
 │   ├── i18n-patterns.js            # CJK, Arabic, Cyrillic, Indic patterns (32+)
 │   ├── llm-redteam.js              # JailbreakLibrary (35+ templates, 6 categories)
+│   ├── worker-scanner.js           # Async non-blocking scanner with event loop yielding
 │   │
 │   │  # v5.0 — Advanced Capabilities
 │   ├── agent-protocol.js           # SecureChannel (HMAC, replay protection)
@@ -116,6 +134,11 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── fuzzer.js                   # Coverage-guided fuzzing harness
 │   ├── model-fingerprint.js        # LLM fingerprinting, supply chain detection
 │   ├── cost-optimizer.js           # Adaptive scan tiers, latency budgeting
+│   ├── stream-scanner.js           # Token-by-token sliding window scanner for LLM streaming
+│   ├── token-analysis.js           # Shannon entropy & n-gram perplexity injection detection
+│   ├── document-scanner.js         # Text extraction & threat scanning for uploaded documents
+│   ├── response-handler.js         # Configurable threat response strategies (block/sanitize/redirect)
+│   ├── benchmark-harness.js        # Standardized framework for detection engine evaluation
 │   │
 │   │  # v6.0 — Compliance & Standards
 │   ├── owasp-2025.js               # OWASP LLM Top 10 v2025 coverage matrix
@@ -125,10 +148,23 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── prompt-leakage.js           # System prompt extraction detection (LLM07)
 │   ├── rag-vulnerability.js        # RAG/vector vulnerability scanning (LLM08)
 │   ├── confused-deputy.js          # Confused deputy prevention (Meta incident)
+│   ├── certification.js            # Certification badge and audit for compliance attestation
+│   ├── alert-tuning.js             # Alert fatigue scoring and auto-tuning
+│   ├── observability.js            # Prometheus metrics, structured JSON logging
+│   ├── otel.js                     # OpenTelemetry-compatible metrics and tracing
+│   ├── tool-output-validator.js    # Tool return value scanning for injection/exfiltration
 │   │
 │   │  # v7.0 — MCP Security Runtime
 │   ├── mcp-security-runtime.js     # Unified MCP security layer (auth+scan+behavior+audit)
-│   └── mcp-certification.js        # MCP certification, threat intel, cross-org trust
+│   ├── mcp-certification.js        # MCP certification, threat intel, cross-org trust
+│   ├── mcp-sdk-integration.js      # Drop-in security wrapper for MCP SDK servers
+│   ├── mcp-server.js               # MCP server exposing Shield over JSON-RPC 2.0
+│   │
+│   │  # v7.1 — Adaptive Defense
+│   ├── adaptive-defense.js         # Learning loops, agent contracts, compliance attestation
+│   ├── adaptive.js                 # Adaptive detection with semantic hooks, community patterns
+│   ├── ctf.js                      # Capture-the-flag challenge system for security testing
+│   └── openclaw.js                 # OpenClaw skill integration and message hook
 │
 ├── python-sdk/                    # Python SDK
 │   ├── agent_shield/              # Core package
@@ -220,18 +256,20 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run test:mcp` — MCP security runtime, certification & trust tests (112 assertions)
 - `npm run test:deputy` — confused deputy prevention tests (85 assertions)
 - `npm run test:v6` — v6.0 compliance & standards tests (122 assertions)
+- `npm run test:adaptive` — adaptive defense system tests (85 assertions)
 - `npm run test:all` — full 40-feature suite (149 assertions)
+- `npm run test:fp` — false positive accuracy tests (118 samples, 99.2% accuracy)
 - `npm run test:full` — runs all test suites together
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (23), vscode (167)
-- Total: **962 test assertions** across 13 test suites
+- Total: **1,165 test assertions** across 14 test suites
 
 ## Architecture Notes
 
 - **detector-core.js** — standalone pattern matching engine, no DOM dependencies
 - **index.js** — `AgentShield` class wrapping the detector with config, stats, blocking
-- **main.js** — unified re-export of all 302 symbols via `safeRequire()` for graceful loading
+- **main.js** — unified re-export of all 318 symbols via `safeRequire()` for graceful loading
 - **integrations.js** — framework-specific wrappers (Anthropic, OpenAI, LangChain, Vercel)
 - **middleware.js** — generic agent wrapping and Express middleware
 - **agent-protocol.js** — HMAC-signed secure channels with replay protection
@@ -239,6 +277,8 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **fuzzer.js** — coverage-guided fuzzing with xorshift32 PRNG for reproducibility
 - **model-fingerprint.js** — 16-feature stylistic analysis with cosine similarity matching
 - **cost-optimizer.js** — 4-tier adaptive scanning with latency budgets
+- **adaptive-defense.js** — autonomous learning loops with compliance attestation framework
+- **mcp-security-runtime.js** — unified MCP layer with AES-256-GCM encryption, adaptive defense integration
 
 ## Version History
 
@@ -252,3 +292,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v5.0** — Advanced: agent protocol, live dashboard, policy DSL, fuzzer, fingerprinting, cost optimizer
 - **v6.0** — Compliance: OWASP LLM Top 10 v2025, MCP Bridge, NIST AI RMF, EU AI Act, prompt leakage detector, RAG vulnerability scanner, confused deputy prevention
 - **v7.0** — MCP Security: unified runtime (auth+scan+behavior+audit), AES-256-GCM encryption, HMAC signing, MCP certification framework, cross-org agent trust CA, threat intelligence engine
+- **v7.1** — Adaptive Defense: learning loops, agent contracts, compliance attestation, CTF challenges, adaptive detection with community patterns, MCP SDK integration, OpenClaw hooks
