@@ -1,8 +1,8 @@
-"""Agent Shield — AI Agent Security SDK for Python.
+"""Agent Shield -- AI Agent Security SDK for Python.
 
 Protects AI agents from prompt injection, data exfiltration,
-tool abuse, and 30+ other AI-specific threats. All detection
-runs locally — no data ever leaves your environment.
+tool abuse, and 141 other AI-specific threats. All detection
+runs locally -- no data ever leaves your environment.
 """
 from __future__ import annotations
 
@@ -17,4 +17,4 @@ __all__ = [
     'INJECTION_PATTERNS',
 ]
 
-__version__ = '1.0.0'
+__version__ = '7.2.1'

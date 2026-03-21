@@ -33,6 +33,7 @@
  */
 
 const { scanText, getPatterns, SEVERITY_ORDER } = require('./detector-core');
+const { createShieldError } = require('./errors');
 
 /**
  * Default configuration for AgentShield.
@@ -120,7 +121,7 @@ class AgentShield {
    */
   scan(text, options = {}) {
     if (typeof text !== 'string') {
-      throw new TypeError(`[Agent Shield] scan() expects a string, got ${typeof text}`);
+      throw createShieldError('AS-DET-002', { method: 'scan', received: typeof text });
     }
     if (text.length > this.config.maxInputSize) {
       console.warn('[Agent Shield] Input exceeds configured maxInputSize - consider scanning in chunks');
@@ -210,7 +211,7 @@ class AgentShield {
    */
   scanInput(text, options = {}) {
     if (typeof text !== 'string') {
-      throw new TypeError(`[Agent Shield] scanInput() expects a string, got ${typeof text}`);
+      throw createShieldError('AS-DET-002', { method: 'scanInput', received: typeof text });
     }
     return this._scanWithBlocking(text, 'user_input', 'INPUT', options);
   }
@@ -228,7 +229,7 @@ class AgentShield {
    */
   scanOutput(text, options = {}) {
     if (typeof text !== 'string') {
-      throw new TypeError(`[Agent Shield] scanOutput() expects a string, got ${typeof text}`);
+      throw createShieldError('AS-DET-002', { method: 'scanOutput', received: typeof text });
     }
     return this._scanWithBlocking(text, 'agent_output', 'OUTPUT', options);
   }
@@ -244,7 +245,7 @@ class AgentShield {
    */
   scanToolCall(toolName, args = {}, options = {}) {
     if (typeof toolName !== 'string') {
-      throw new TypeError(`[Agent Shield] scanToolCall() expects toolName to be a string, got ${typeof toolName}`);
+      throw createShieldError('AS-DET-006', { method: 'scanToolCall', received: typeof toolName });
     }
     if (!toolName) {
       return { status: 'safe', toolName: '', threats: [], warnings: ['Empty tool name'], blocked: false, isDangerousTool: false, timestamp: Date.now() };
@@ -329,7 +330,7 @@ class AgentShield {
    */
   scanBatch(items) {
     if (!Array.isArray(items)) {
-      throw new TypeError(`[Agent Shield] scanBatch() expects an array, got ${typeof items}`);
+      throw createShieldError('AS-DET-007', { method: 'scanBatch', received: typeof items });
     }
     const results = items.map(item =>
       this.scan(item.text, { source: item.source || 'batch' })

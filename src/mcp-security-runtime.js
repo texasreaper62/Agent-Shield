@@ -23,6 +23,7 @@
  */
 
 const crypto = require('crypto');
+const { createShieldError } = require('./errors');
 const { MCPBridge, MCPSessionGuard, MCPResourceScanner, MCPToolPolicy } = require('./mcp-bridge');
 const { AuthorizationContext, ConfusedDeputyGuard } = require('./confused-deputy');
 const { BehaviorProfile } = require('./behavior-profiling');
@@ -199,14 +200,14 @@ class MCPSecurityRuntime {
    */
   createSession(params) {
     if (!params.userId || !params.agentId) {
-      throw new Error(`${LOG_PREFIX} createSession requires userId and agentId`);
+      throw createShieldError('AS-AUT-004', { reason: 'createSession requires userId and agentId' });
     }
 
     // Enforce per-user session limit
     const userSessions = this._userSessions.get(params.userId) || new Set();
     if (userSessions.size >= this._maxSessionsPerUser) {
       this._audit('session_denied', { userId: params.userId, reason: 'max_sessions_exceeded' });
-      throw new Error(`${LOG_PREFIX} Max sessions (${this._maxSessionsPerUser}) exceeded for user`);
+      throw createShieldError('AS-AUT-005', { userId: params.userId, maxSessions: this._maxSessionsPerUser });
     }
 
     const sessionId = crypto.randomUUID();
@@ -693,18 +694,18 @@ class MCPSecurityRuntime {
   delegateSession(sessionId, delegateAgentId, delegateScopes) {
     const parentSession = this._sessions.get(sessionId);
     if (!parentSession) {
-      throw new Error(`${LOG_PREFIX} Cannot delegate: invalid session`);
+      throw createShieldError('AS-AUT-006', { sessionId, reason: 'Cannot delegate: invalid session' });
     }
 
     // Enforce delegation depth limit
     if ((parentSession.authCtx.delegationDepth || 0) >= this._maxDelegationDepth) {
-      throw new Error(`${LOG_PREFIX} Cannot delegate: max delegation depth (${this._maxDelegationDepth}) exceeded`);
+      throw createShieldError('AS-AUT-007', { maxDepth: this._maxDelegationDepth, reason: 'Cannot delegate: max delegation depth exceeded' });
     }
 
     // Enforce per-user session limit for delegated sessions too
     const userSessions = this._userSessions.get(parentSession.authCtx.userId) || new Set();
     if (userSessions.size >= this._maxSessionsPerUser) {
-      throw new Error(`${LOG_PREFIX} Cannot delegate: max sessions (${this._maxSessionsPerUser}) exceeded for user`);
+      throw createShieldError('AS-AUT-005', { userId: parentSession.authCtx.userId, maxSessions: this._maxSessionsPerUser, reason: 'Cannot delegate: max sessions exceeded for user' });
     }
 
     const childCtx = parentSession.authCtx.delegate(delegateAgentId, delegateScopes);

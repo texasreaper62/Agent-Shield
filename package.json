@@ -1,6 +1,6 @@
 {
   "name": "agentshield-sdk",
-  "version": "7.2.0",
+  "version": "7.2.1",
   "description": "The security standard for MCP and AI agents. Protects against prompt injection, confused deputy attacks, data exfiltration, and 30+ threats. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
@@ -54,6 +54,7 @@
     "benchmark:generate": "node scripts/generate-dataset.js",
     "benchmark:baseline": "node scripts/run-benchmark.js --save-baseline",
     "benchmark:regression": "node scripts/run-benchmark.js --check-regression",
+    "sync:patterns": "node scripts/sync-patterns.js",
     "prepublishOnly": "npm run test:full"
   },
   "keywords": [
