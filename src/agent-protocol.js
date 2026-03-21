@@ -369,41 +369,41 @@ class SecureChannel {
   }
 
   /**
-   * Simplified AES-256-like XOR cipher (encrypt).
+   * AES-256-GCM authenticated encryption.
    * @param {string} data - Plaintext data (UTF-8)
    * @param {string} secret - Secret key
-   * @returns {string} Base64-encoded encrypted data
+   * @returns {string} Base64-encoded JSON envelope { iv, encrypted, authTag }
    * @private
    */
   _encrypt(data, secret) {
-    const keyHash = crypto.createHash('sha256').update(secret).digest();
-    const input = Buffer.from(data, 'utf8');
-    const output = Buffer.alloc(input.length);
-
-    for (let i = 0; i < input.length; i++) {
-      output[i] = input[i] ^ keyHash[i % keyHash.length];
-    }
-
-    return output.toString('base64');
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const iv = crypto.randomBytes(12); // 96-bit IV for GCM
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return Buffer.from(JSON.stringify({
+      iv: iv.toString('base64'),
+      ct: encrypted.toString('base64'),
+      at: authTag.toString('base64')
+    })).toString('base64');
   }
 
   /**
-   * Simplified AES-256-like XOR cipher (decrypt). Inverse of _encrypt.
-   * @param {string} data - Base64-encoded encrypted data
+   * AES-256-GCM authenticated decryption.
+   * @param {string} data - Base64-encoded JSON envelope from _encrypt
    * @param {string} secret - Secret key
    * @returns {string} Decrypted plaintext (UTF-8)
    * @private
    */
   _decrypt(data, secret) {
-    const keyHash = crypto.createHash('sha256').update(secret).digest();
-    const input = Buffer.from(data, 'base64');
-    const output = Buffer.alloc(input.length);
-
-    for (let i = 0; i < input.length; i++) {
-      output[i] = input[i] ^ keyHash[i % keyHash.length];
-    }
-
-    return output.toString('utf8');
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const envelope = JSON.parse(Buffer.from(data, 'base64').toString('utf8'));
+    const iv = Buffer.from(envelope.iv, 'base64');
+    const encrypted = Buffer.from(envelope.ct, 'base64');
+    const authTag = Buffer.from(envelope.at, 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
   }
 
   /**

@@ -20,6 +20,9 @@
 
 const crypto = require('crypto');
 
+/** Default HMAC key — callers should override via params.signingKey for production use. */
+const DEFAULT_SIGNING_KEY = 'agent-shield-default-signing-key';
+
 // =========================================================================
 // Authorization Context — binds user identity to agent actions
 // =========================================================================
@@ -27,6 +30,7 @@ const crypto = require('crypto');
 /**
  * Immutable authorization context that flows through delegation chains.
  * Ensures every tool call traces back to the originating user + permissions.
+ * Uses HMAC-SHA256 signing to prevent context forgery.
  */
 class AuthorizationContext {
   /**
@@ -38,6 +42,7 @@ class AuthorizationContext {
    * @param {string} [params.intent] - Declared intent for this session
    * @param {number} [params.ttlMs=300000] - Context TTL (default 5 min)
    * @param {string} [params.parentContextId] - Parent context for delegation
+   * @param {string} [params.signingKey] - HMAC key for tamper-proof signatures
    */
   constructor(params) {
     if (!params.userId) throw new Error('AuthorizationContext requires userId');
@@ -53,8 +58,9 @@ class AuthorizationContext {
     this.expiresAt = this.createdAt + (params.ttlMs !== null && params.ttlMs !== undefined ? params.ttlMs : 300000);
     this.parentContextId = params.parentContextId || null;
     this.delegationDepth = 0;
+    this._signingKey = params.signingKey || DEFAULT_SIGNING_KEY;
 
-    // Sign the context to detect tampering
+    // Sign the context with HMAC to prevent forgery
     this._signature = this._sign();
   }
 
@@ -94,22 +100,38 @@ class AuthorizationContext {
       scopes: narrowedScopes,
       intent: this.intent,
       ttlMs: Math.max(0, this.expiresAt - Date.now()),
-      parentContextId: this.contextId
+      parentContextId: this.contextId,
+      signingKey: this._signingKey
     });
     child.delegationDepth = this.delegationDepth + 1;
     child._signature = child._sign();
     return child;
   }
 
-  /** Verifies context has not been tampered with. */
+  /**
+   * Verifies context has not been tampered with using timing-safe comparison.
+   * @returns {boolean}
+   */
   verify() {
-    return this._signature === this._sign();
+    const expected = this._sign();
+    try {
+      return crypto.timingSafeEqual(
+        Buffer.from(this._signature, 'hex'),
+        Buffer.from(expected, 'hex')
+      );
+    } catch {
+      return false;
+    }
   }
 
-  /** @private */
+  /**
+   * HMAC-SHA256 signature over all critical context fields.
+   * @returns {string} Hex-encoded HMAC
+   * @private
+   */
   _sign() {
-    const data = `${this.contextId}:${this.userId}:${this.agentId}:${this.roles.join(',')}:${this.scopes.join(',')}:${this.expiresAt}`;
-    return crypto.createHash('sha256').update(data).digest('hex');
+    const data = `${this.contextId}:${this.userId}:${this.agentId}:${this.roles.join(',')}:${this.scopes.join(',')}:${this.expiresAt}:${this.parentContextId || ''}`;
+    return crypto.createHmac('sha256', this._signingKey).update(data).digest('hex');
   }
 }
 
@@ -132,10 +154,43 @@ class EphemeralTokenManager {
     this.tokenTtlMs = options.tokenTtlMs || 900000;
     this.maxTokensPerUser = options.maxTokensPerUser || 10;
     this.rotationWindowMs = options.rotationWindowMs || 60000;
+    this._signingKey = options.signingKey || DEFAULT_SIGNING_KEY;
     this.tokens = new Map();
     this.userTokens = new Map();
     this.revokedTokens = new Set();
     this.stats = { issued: 0, rotated: 0, revoked: 0, expired: 0, validated: 0 };
+    this._cleanupInterval = null;
+  }
+
+  /**
+   * Starts automatic cleanup of expired tokens.
+   * @param {number} [intervalMs=60000] - Cleanup interval (default 60s)
+   */
+  startCleanup(intervalMs = 60000) {
+    this.stopCleanup();
+    this._cleanupInterval = setInterval(() => this._purgeExpired(), intervalMs);
+    if (this._cleanupInterval.unref) this._cleanupInterval.unref();
+  }
+
+  /** Stops automatic cleanup. */
+  stopCleanup() {
+    if (this._cleanupInterval) {
+      clearInterval(this._cleanupInterval);
+      this._cleanupInterval = null;
+    }
+  }
+
+  /** @private */
+  _purgeExpired() {
+    let purged = 0;
+    for (const [tokenId, tokenData] of this.tokens) {
+      if (this._isTokenExpired(tokenData)) {
+        this.tokens.delete(tokenId);
+        purged++;
+        this.stats.expired++;
+      }
+    }
+    return purged;
   }
 
   /**
@@ -275,7 +330,7 @@ class EphemeralTokenManager {
   /** @private */
   _encodeToken(tokenData) {
     const payload = `${tokenData.tokenId}:${tokenData.userId}:${tokenData.scopes.join(',')}:${tokenData.expiresAt}`;
-    return crypto.createHash('sha256').update(payload).digest('hex');
+    return crypto.createHmac('sha256', this._signingKey).update(payload).digest('hex');
   }
 }
 

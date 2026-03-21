@@ -56,6 +56,12 @@ const { getGrade, getGradeLabel, makeBar, truncate, formatHeader, generateId } =
 // Error codes & deprecation
 const { ERROR_CODES, createShieldError, deprecationWarning } = safeRequire('./errors', 'errors');
 
+// v7.0 — MCP Security Runtime
+const { MCPSecurityRuntime, MCPSessionStateMachine, SESSION_STATES } = safeRequire('./mcp-security-runtime', 'mcp-security-runtime');
+
+// v7.0 — MCP Certification & Trust
+const { AgentThreatIntelligence, MCPCertification, CrossOrgAgentTrust, THREAT_CATEGORIES: CERT_THREAT_CATEGORIES, CERTIFICATION_REQUIREMENTS, CERTIFICATION_LEVELS } = safeRequire('./mcp-certification', 'mcp-certification');
+
 // v5.1 — Stream scanning
 const { StreamScanner, createStreamWrapper, scanAsyncIterator, StreamBuffer } = safeRequire('./stream-scanner', 'stream-scanner');
 
@@ -703,6 +709,19 @@ const _exports = {
   EphemeralTokenManager,
   IntentValidator,
   ConfusedDeputyGuard,
+
+  // v7.0 — MCP Security Runtime
+  MCPSecurityRuntime,
+  MCPSessionStateMachine,
+  SESSION_STATES,
+
+  // v7.0 — MCP Certification & Trust
+  AgentThreatIntelligence,
+  MCPCertification,
+  CrossOrgAgentTrust,
+  THREAT_CATEGORIES: CERT_THREAT_CATEGORIES,
+  CERTIFICATION_REQUIREMENTS,
+  CERTIFICATION_LEVELS,
 };
 
 // Filter out undefined exports (from modules that failed to load)
