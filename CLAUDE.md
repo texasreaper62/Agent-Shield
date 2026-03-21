@@ -68,7 +68,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (331 exports, 79 modules)
+├── src/                           # Node.js SDK (390 exports, 93 modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -169,6 +169,22 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   │  # v7.2 — IPIA Detection
 │   └── ipia-detector.js            # Indirect prompt injection detector (joint-context pipeline)
 │
+│  # v7.3 - CORTEX Autonomous Defense
+│   ├── attack-genome.js            # Attack genome sequencing (intent/technique/evasion/target)
+│   ├── evolution-simulator.js      # Adversarial evolution with mutation engine
+│   ├── intent-firewall.js          # Intent classification (same words, different action)
+│   ├── herd-immunity.js            # Cross-agent pattern sharing, immune memory
+│   ├── threat-intel-federation.js  # Federated threat intel with differential privacy
+│   ├── behavioral-dna.js           # Per-agent behavioral baselines, anomaly detection
+│   ├── audit.js                    # Pre-deployment security audit (617+ attacks)
+│   ├── flight-recorder.js          # Forensic conversation replay, auto-fix patterns
+│   ├── supply-chain.js             # Tool chain validation, response scanning
+│   ├── report-generator.js         # Lighthouse-style HTML security report
+│   ├── soc-dashboard.js            # Enterprise SOC with Slack/PagerDuty/Teams
+│   ├── attack-replay.js            # Record, replay, compare defense improvements
+│   ├── compliance-authority.js     # HMAC-signed compliance certificates
+│   └── real-attack-datasets.js     # HackAPrompt/TensorTrust/research corpus
+│
 ├── python-sdk/                    # Python SDK
 │   ├── agent_shield/              # Core package
 │   │   ├── __init__.py
@@ -268,13 +284,13 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (32), vscode (607)
-- Total: **1,755 test assertions** across 16 test suites
+- Total: **2,220 test assertions** across 16 test suites + Python + VSCode
 
 ## Architecture Notes
 
 - **detector-core.js** — standalone pattern matching engine, no DOM dependencies
 - **index.js** — `AgentShield` class wrapping the detector with config, stats, blocking
-- **main.js** — unified re-export of all 331 symbols via `safeRequire()` for graceful loading
+- **main.js** — unified re-export of all 390 symbols via `safeRequire()` for graceful loading
 - **integrations.js** — framework-specific wrappers (Anthropic, OpenAI, LangChain, Vercel)
 - **middleware.js** — generic agent wrapping and Express middleware
 - **agent-protocol.js** — HMAC-signed secure channels with replay protection
@@ -300,3 +316,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v7.0** — MCP Security: unified runtime (auth+scan+behavior+audit), AES-256-GCM encryption, HMAC signing, MCP certification framework, cross-org agent trust CA, threat intelligence engine
 - **v7.1** — Adaptive Defense: learning loops, agent contracts, compliance attestation, CTF challenges, adaptive detection with community patterns, MCP SDK integration, OpenClaw hooks
 - **v7.2** — IPIA Detection: joint-context embedding pipeline, TF-IDF + decision tree classifier, pluggable embedding backends, batch RAG scanning, Express middleware
+- **v7.3** — CORTEX Autonomous Defense: attack genome sequencing, adversarial evolution simulator, intent firewall, herd immunity, federated threat intel, behavioral DNA, pre-deployment audit, flight recorder, supply chain verification, SOC dashboard, compliance certification authority

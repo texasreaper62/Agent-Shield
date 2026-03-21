@@ -95,9 +95,30 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] 117 test assertions — all pipeline stages, false positive resistance, async/external embedder, middleware, edge cases
 - [x] 20-cycle bug hunt — 5 bugs found and fixed (type coercion, NaN guards, null safety)
 
+## v7.3 - CORTEX Autonomous Defense (Complete)
+
+- [x] Attack Genome Sequencing - decompose attacks into intent/technique/evasion/target genome, detect unseen variants
+- [x] Adversarial Evolution Simulator - GAN-style mutation engine, auto-hardening across generations
+- [x] Intent Firewall - classify user INTENT not just content, context-aware allow/block decisions
+- [x] Cross-Agent Herd Immunity - attack on one agent protects all others via shared patterns
+- [x] Federated Threat Intelligence - CrowdStrike model with differential privacy, consensus-based promotion
+- [x] Agent Behavioral DNA - per-agent behavioral baselines with anomaly detection
+- [x] Pre-Deployment Security Audit - 617+ attacks with mutation engine in under 100ms
+- [x] Agent Flight Recorder - forensic conversation replay with auto-fix pattern generation
+- [x] Supply Chain Verification - tool chain validation, response scanning, domain allowlists
+- [x] Visual HTML Security Report - Lighthouse-style SVG report with gauges and charts
+- [x] Enterprise SOC Dashboard - real-time event aggregation, Slack/PagerDuty/Teams alerting
+- [x] Attack Replay Platform - record, replay, compare defense improvements over time
+- [x] Compliance Certification Authority - HMAC-signed certificates for OWASP/NIST/EU AI Act/SOC 2
+- [x] Real Attack Dataset Testing - HackAPrompt, TensorTrust, and security research corpus (48 samples)
+- [x] 141-pattern sync across all SDKs (Python, Go, Rust, VSCode)
+- [x] Standardized API return shapes across all SDKs
+- [x] 28 quality hardening fixes (detection engine, memory, CI, types, docs)
+- [x] Web Playground, competitive benchmark page, Claude/MCP demos
+
 ## Ongoing
 
-- [ ] CVE-style threat IDs — publish an open threat taxonomy for AI agent attacks
+- [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
 - [x] Certification program — "Agent Shield Certified" badge for MCP servers (implemented in v7.0)
 - [ ] Community CTF events — regular public competitions using the CTF engine
 - [ ] Research partnerships — collaborate with academic labs on novel attack/defense research
