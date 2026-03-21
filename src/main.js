@@ -203,6 +203,9 @@ const { AttackGenome, GenomeDatabase, detectByGenome, INTENT_PATTERNS: GENOME_IN
 // v7.4 — Intent Firewall (loaded when available)
 const { IntentFirewall, ContextAnalyzer: IntentContextAnalyzer, IntentRules, intentDemo, INTENT_CATEGORIES, INTENT_SIGNALS, CONTEXT_MODIFIERS } = safeRequire('./intent-firewall', 'intent-firewall');
 
+// v7.4 — Real Attack Dataset Testing
+const { DatasetRunner, HACKAPROMPT_SAMPLES, TENSORTRUST_SAMPLES, RESEARCH_SAMPLES, BENIGN_SAMPLES } = safeRequire('./real-attack-datasets', 'real-attack-datasets');
+
 // v7.4 — Federated Threat Intelligence
 const { ThreatIntelFederation, createFederationMesh } = safeRequire('./threat-intel-federation', 'threat-intel-federation');
 
@@ -210,7 +213,7 @@ const { ThreatIntelFederation, createFederationMesh } = safeRequire('./threat-in
 const { BehavioralDNA, AgentProfiler, extractFeatures: extractBehavioralFeatures, DEFAULT_NUMERIC_FEATURES, DEFAULT_CATEGORICAL_FEATURES } = safeRequire('./behavioral-dna', 'behavioral-dna');
 
 // v7.4 — Compliance Certification Authority (loaded when available)
-const { ComplianceCertificateAuthority, ComplianceReport: ComplianceCertReport, ComplianceScheduler } = safeRequire('./compliance-authority', 'compliance-authority');
+const { ComplianceCertificateAuthority, ComplianceReport: ComplianceCertReport, ComplianceScheduler, AUTHORITY_FRAMEWORKS, CAPABILITY_MAP: CA_CAPABILITY_MAP, CERTIFICATE_LEVELS: CA_CERTIFICATE_LEVELS } = safeRequire('./compliance-authority', 'compliance-authority');
 
 // --- v1.2 Modules ---
 
@@ -858,6 +861,13 @@ const _exports = {
   INTENT_SIGNALS,
   CONTEXT_MODIFIERS,
 
+  // v7.4 — Real Attack Datasets
+  DatasetRunner,
+  HACKAPROMPT_SAMPLES,
+  TENSORTRUST_SAMPLES,
+  RESEARCH_SAMPLES,
+  BENIGN_SAMPLES,
+
   // v7.4 — Federated Threat Intelligence
   ThreatIntelFederation,
   createFederationMesh,
@@ -869,10 +879,13 @@ const _exports = {
   DEFAULT_NUMERIC_FEATURES,
   DEFAULT_CATEGORICAL_FEATURES,
 
-  // v7.4 — Compliance Certification Authority
+  // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
   ComplianceCertReport,
   ComplianceScheduler,
+  AUTHORITY_FRAMEWORKS,
+  CA_CAPABILITY_MAP,
+  CA_CERTIFICATE_LEVELS,
 };
 
 // Filter out undefined exports (from modules that failed to load)
