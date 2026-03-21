@@ -218,7 +218,7 @@ class DLPEngine {
         pattern = new RegExp(rule.pattern, 'gi');
       } catch (err) {
         const shieldErr = createShieldError('AS-CFG-005', { pattern: rule.pattern, reason: err.message });
-        console.error(`${shieldErr.message}`);
+        console.error(`[Agent Shield] ${shieldErr.message}`);
         return this;
       }
     } else {
