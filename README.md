@@ -1,12 +1,12 @@
 # Agent Shield
 
-[![npm version](https://img.shields.io/badge/npm-v7.0.0-blue)](https://www.npmjs.com/package/agent-shield)
+[![npm version](https://img.shields.io/badge/npm-v7.2.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
-[![tests](https://img.shields.io/badge/tests-962%20passing-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-1282%20passing-brightgreen)](#testing)
 
 **The security standard for MCP and AI agents.** Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
 
@@ -21,6 +21,38 @@ Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WA
 <p align="center">
   <b>Try it yourself:</b> <code>npx agent-shield demo</code>
 </p>
+
+## v7.2 — Indirect Prompt Injection Detection
+
+**Stop attacks hidden in RAG chunks, tool outputs, emails, and documents.** The IPIA detector implements the joint-context embedding + classifier pipeline to catch injections that bypass pattern matching.
+
+```javascript
+const { IPIADetector } = require('agentshield-sdk');
+
+const detector = new IPIADetector({ threshold: 0.5 });
+
+// Scan RAG chunks before feeding to your LLM
+const result = detector.scan(
+  retrievedChunk,   // External content (RAG, tool output, email, etc.)
+  userQuery         // The user's original intent
+);
+
+if (result.isInjection) {
+  console.log('Blocked IPIA:', result.reason, '(confidence:', result.confidence + ')');
+}
+
+// Batch scan all RAG results at once
+const batch = detector.scanBatch(allChunks, userQuery);
+const safeChunks = allChunks.filter((_, i) => !batch.results[i].isInjection);
+
+// Pluggable embeddings for power users (MiniLM, OpenAI, etc.)
+const detector2 = new IPIADetector({
+  embeddingBackend: { embed: async (text) => myModel.encode(text) }
+});
+const result2 = await detector2.scanAsync(chunk, query);
+```
+
+---
 
 ## v7.0 — MCP Security Runtime
 
@@ -122,8 +154,8 @@ const shield = new AgentShield({ blockOnThreat: true });
 const result = shield.scanInput(userMessage); // { blocked: true, threats: [...] }
 ```
 
-- 310+ exports across 77+ modules
-- 962 test assertions across 13 test suites, 100% pass rate
+- 327+ exports across 79 modules
+- 1,282 test assertions across 15 test suites, 100% pass rate
 - 100% red team detection rate (A+ grade)
 - Shield Score: 100/100 — fortress-grade protection
 - AES-256-GCM encryption, HMAC-SHA256 signing throughout
@@ -144,7 +176,7 @@ const result = shield.scanInput(userMessage); // { blocked: true, threats: [...]
 
 **Node.js:**
 ```bash
-npm install agent-shield
+npm install agentshield-sdk
 ```
 
 **Python:**
@@ -305,7 +337,7 @@ grpc.NewServer(grpc.UnaryInterceptor(shield.GRPCInterceptor(s)))
 | **Obfuscation** | Unicode homoglyphs, zero-width chars, Base64, hex, ROT13, leetspeak, reversed text |
 | **Multi-Language** | CJK (Chinese/Japanese/Korean), Arabic, Cyrillic, Hindi, + 7 European languages |
 | **PII Leakage** | SSNs, emails, phone numbers, credit cards auto-redacted |
-| **Indirect Injection** | Image alt-text attacks, multi-turn escalation, multimodal vectors |
+| **Indirect Injection** | RAG chunk poisoning, tool output injection, email/document payloads, image alt-text attacks, multi-turn escalation |
 | **AI Phishing** | Fake AI login, voice cloning, deepfake tools, QR phishing, MFA harvesting |
 | **Jailbreaks** | 35+ templates across 6 categories: role play, encoding bypass, context manipulation, authority exploitation |
 
@@ -313,7 +345,7 @@ grpc.NewServer(grpc.UnaryInterceptor(shield.GRPCInterceptor(s)))
 
 | Platform | Location | Description |
 |----------|----------|-------------|
-| **Node.js** | `src/` | Core SDK — 302 exports, zero dependencies |
+| **Node.js** | `src/` | Core SDK — 327 exports, zero dependencies |
 | **Python** | `python-sdk/` | Full detection, Flask/FastAPI middleware, LangChain/LlamaIndex wrappers, CLI |
 | **Go** | `go-sdk/` | Full detection engine, HTTP/gRPC middleware, CLI, zero external deps |
 | **Rust** | `rust-core/` | High-performance `RegexSet` O(n) engine, WASM/NAPI/PyO3 targets |
@@ -869,6 +901,7 @@ npx agent-shield dashboard                          # Security dashboard
 ```bash
 npm test                 # Core + module tests (248 assertions)
 npm run test:all         # Full 40-feature suite (149 assertions)
+npm run test:ipia        # IPIA detector tests (117 assertions)
 node test/test-v6-modules.js  # v6.0 compliance & standards (122 assertions)
 node test/test-confused-deputy.js  # Confused deputy prevention (85 assertions)
 npm run redteam          # Attack simulation (100% detection)
@@ -885,13 +918,13 @@ node vscode-extension/test/extension.test.js  # VS Code (167 tests)
 cd python-sdk && python -m unittest tests/test_detector.py  # Python (23 tests)
 ```
 
-Total: **850 test assertions** across 11 test suites.
+Total: **1,282 test assertions** across 15 test suites.
 
 ## Project Structure
 
 ```
 /
-├── src/                        # Node.js SDK (302 exports)
+├── src/                        # Node.js SDK (327 exports)
 │   ├── index.js                # AgentShield class — main entry point
 │   ├── main.js                 # Unified re-export of all modules
 │   ├── detector-core.js        # Core detection engine (patterns, scanning)
@@ -937,6 +970,7 @@ Total: **850 test assertions** across 11 test suites.
 │   ├── compliance.js            # SOC2/HIPAA/GDPR reporting, audit trail
 │   ├── enterprise.js            # Multi-tenant, RBAC, debug mode
 │   ├── redteam.js               # Attack simulator, payload fuzzer
+│   ├── ipia-detector.js         # v7.2 — Indirect prompt injection detector (IPIA pipeline)
 │   └── ...                      # + 25 more modules
 ├── python-sdk/                 # Python SDK
 │   ├── agent_shield/           # Core package (detector, shield, middleware, CLI)

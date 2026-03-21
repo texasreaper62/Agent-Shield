@@ -2086,3 +2086,72 @@ export declare class ConfusedDeputyGuard {
   getStats(): any;
   getAuditLog(limit?: number): any[];
 }
+
+// =========================================================================
+// v7.2 — IPIA Detector
+// =========================================================================
+
+export interface IPIAResult {
+  isInjection: boolean;
+  confidence: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  reason: string;
+  features: Record<string, number>;
+  source: string;
+  metadata: any | null;
+  patternScan: any | null;
+  timestamp: number;
+}
+
+export interface EmbeddingBackend {
+  embed(text: string): Promise<number[]>;
+  similarity?(a: number[], b: number[]): number;
+}
+
+export interface IPIADetectorOptions {
+  threshold?: number;
+  separator?: string;
+  embeddingBackend?: EmbeddingBackend;
+  usePatternScan?: boolean;
+  maxContentLength?: number;
+  maxIntentLength?: number;
+  enabled?: boolean;
+}
+
+export declare class IPIADetector {
+  threshold: number;
+  enabled: boolean;
+  constructor(options?: IPIADetectorOptions);
+  scan(externalContent: string, userIntent: string, options?: { source?: string; metadata?: any }): IPIAResult;
+  scanAsync(externalContent: string, userIntent: string, options?: { source?: string; metadata?: any }): Promise<IPIAResult>;
+  scanBatch(contentItems: string[], userIntent: string, options?: { source?: string; metadata?: any }): { results: IPIAResult[]; summary: { total: number; blocked: number; safe: number; maxConfidence: number } };
+  getStats(): { total: number; blocked: number; safe: number; blockRate: string };
+  setThreshold(threshold: number): void;
+}
+
+export declare class ContextConstructor {
+  constructor(options?: { separator?: string; maxContentLength?: number; maxIntentLength?: number });
+  build(externalContent: string, userIntent: string): { joint: string; content: string; intent: string };
+}
+
+export declare class FeatureExtractor {
+  extract(ctx: { joint: string; content: string; intent: string }): { features: number[]; featureMap: Record<string, number> };
+}
+
+export declare class TreeClassifier {
+  threshold: number;
+  constructor(options?: { threshold?: number });
+  classify(features: number[], featureMap: Record<string, number>): { isInjection: boolean; confidence: number; reason: string };
+}
+
+export declare class ExternalEmbedder {
+  constructor(backend: EmbeddingBackend);
+  static defaultSimilarity(a: number[], b: number[]): number;
+  extractCosineFeatures(ctx: { joint: string; content: string; intent: string }): Promise<{ cosine_intent_content: number; cosine_joint_intent: number; cosine_joint_content: number }>;
+}
+
+export declare function createIPIAScanner(options?: IPIADetectorOptions): (content: string, intent: string, options?: any) => IPIAResult;
+export declare function ipiaMiddleware(options?: { contentField?: string; intentField?: string; action?: 'block' | 'flag' | 'log'; threshold?: number }): (req: any, res: any, next: any) => void;
+
+export declare const IPIA_FEATURE_NAMES: string[];
+export declare const IPIA_INJECTION_LEXICON: Record<string, number>;

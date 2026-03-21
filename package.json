@@ -1,6 +1,6 @@
 {
   "name": "agentshield-sdk",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "The security standard for MCP and AI agents. Protects against prompt injection, confused deputy attacks, data exfiltration, and 30+ threats. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",

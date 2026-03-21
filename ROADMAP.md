@@ -83,6 +83,18 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Intent word-boundary matching — prevents intent spoofing via substring injection
 - [x] Token integrity verification — context integrity checked before token issuance to prevent forgery
 
+## v7.2 — IPIA Detection (Complete)
+
+- [x] Indirect Prompt Injection Attack detector — `IPIADetector` implementing the joint-context embedding + classifier pipeline from "Benchmarking and Defending Against Indirect Prompt Injection Attacks on LLMs" (2024)
+- [x] 4-step pipeline — `ContextConstructor` (joint context J = [C || SEP || U]), `FeatureExtractor` (10-feature TF-IDF + statistical vector), `TreeClassifier` (hand-tuned decision tree, O(1) inference), response formatting with severity grades
+- [x] Pluggable embedding backends — `ExternalEmbedder` with async `scanAsync()` for MiniLM, OpenAI, or custom embedding models
+- [x] Batch RAG scanning — `scanBatch()` for scanning multiple retrieved chunks against a single user intent
+- [x] IPIA Express middleware — `ipiaMiddleware()` with block/flag/log actions for HTTP endpoints
+- [x] `createIPIAScanner()` — factory function for quick RAG pipeline integration
+- [x] False positive tuning — reduced weights for common AI terms, pattern-boost gating at 0.15 confidence floor
+- [x] 117 test assertions — all pipeline stages, false positive resistance, async/external embedder, middleware, edge cases
+- [x] 20-cycle bug hunt — 5 bugs found and fixed (type coercion, NaN guards, null safety)
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs — publish an open threat taxonomy for AI agent attacks

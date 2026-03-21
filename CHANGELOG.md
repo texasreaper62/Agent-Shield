@@ -4,6 +4,34 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [7.2.0] — 2026-03-21
+
+### Added
+
+- **Indirect Prompt Injection Attack (IPIA) Detector** — `IPIADetector` implementing the joint-context embedding + classifier pipeline from "Benchmarking and Defending Against Indirect Prompt Injection Attacks on LLMs" (2024). 4-step pipeline: context construction → feature extraction → classification → response (`src/ipia-detector.js`)
+- **ContextConstructor** — builds joint context `J = [C || SEP || U]` from external content and user intent with configurable separator and length limits
+- **FeatureExtractor** — computes 10-feature vector: 3 cosine similarities (intent/content/joint TF-IDF), Shannon entropy, injection lexicon density, imperative verb density, directive pattern score, vocabulary overlap, content length ratio
+- **TreeClassifier** — hand-tuned decision tree classifier with O(1) inference, zero dependencies, configurable threshold
+- **ExternalEmbedder** — pluggable embedding backend for power users (MiniLM, OpenAI, etc.) with async `scanAsync()` support
+- **Batch RAG scanning** — `scanBatch()` scans multiple retrieved chunks against a single user intent
+- **IPIA Express middleware** — `ipiaMiddleware()` with block/flag/log actions for HTTP endpoints
+- **`createIPIAScanner()`** — factory function for quick RAG pipeline integration
+- **117 new test assertions** — covering all pipeline stages, false positive resistance, async/external embedder, middleware, edge cases
+
+### Changed
+
+- Total exports increased from 318 to 327 across 79 modules
+- Test suite expanded to 1,282 assertions across 15 test suites (117 IPIA tests)
+- `test:full` script now includes IPIA detector tests
+
+### Fixed
+
+- `tokenize()` crashed on non-string input (number, object, boolean) — now coerces via `String()`
+- `ContextConstructor.build()` crashed on non-string arguments — now coerces via `String()`
+- `cosineSim()` returned `NaN` on `Infinity` input vectors — now returns 0 for non-finite values
+- `ExternalEmbedder.defaultSimilarity()` same `NaN` issue — fixed with `isFinite()` guard
+- `ipiaMiddleware` crashed on `null` request object — added null guard
+
 ## [7.0.0] — 2026-03-21
 
 ### Added
