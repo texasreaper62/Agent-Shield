@@ -45,12 +45,16 @@ const STOP_WORDS = new Set([
  */
 function stem(word) {
   if (word.length <= 3) return word;
+  // Handle -ies -> -y (e.g. itineraries -> itinerary, cities -> city)
+  if (word.endsWith('ies') && word.length > 4) {
+    return word.slice(0, -3) + 'y';
+  }
   // Order matters: try longest suffixes first
   const suffixes = [
     'ational', 'tional', 'encies', 'ances', 'ments', 'ating',
-    'ation', 'ness', 'ment', 'ings', 'ible', 'able', 'ence',
-    'ance', 'ious', 'eous', 'less', 'ting', 'ally', 'ful',
-    'ing', 'ies', 'ely', 'ers', 'ion', 'ous', 'ive',
+    'ation', 'aries', 'ness', 'ment', 'ings', 'ible', 'able',
+    'ence', 'ance', 'ious', 'eous', 'less', 'ting', 'ally', 'ful',
+    'ing', 'ary', 'ely', 'ers', 'ion', 'ous', 'ive',
     'ed', 'ly', 'es', 'er', 'al', 'ty',
     's'
   ];

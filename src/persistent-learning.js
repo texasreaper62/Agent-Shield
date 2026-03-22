@@ -4,15 +4,12 @@
  * Agent Shield — Persistent Learning + Feedback API (v8.0)
  *
  * Makes detection smarter over time by persisting learned patterns to disk
- * and accepting user feedback. Extends the concepts from LearningLoop
- * (adaptive-defense.js) with disk persistence, pattern decay, and a
- * structured feedback collector.
+ * and accepting structured user feedback. Enhances the LearningLoop from
+ * adaptive-defense.js with disk persistence, pattern decay, and a dedicated
+ * FeedbackCollector that bridges operator input into the learning pipeline.
  *
- * - PersistentLearningLoop: Learns from attacks, promotes patterns,
- *   persists to disk, decays stale patterns, handles false-positive revocation.
- *
- * - FeedbackCollector: Collects FP/FN reports, processes them through the
- *   learning loop, and triggers retraining when enough data accumulates.
+ * - PersistentLearningLoop: disk-backed pattern learning with decay & promotion
+ * - FeedbackCollector: structured FP/FN feedback → learning loop integration
  *
  * Zero external dependencies. All processing runs locally.
  */
@@ -23,52 +20,74 @@ const crypto = require('crypto');
 
 const LOG_PREFIX = '[Agent Shield]';
 
-// Injection-related keywords used to filter n-gram candidates
-const INJECTION_KEYWORDS = [
-  'ignore', 'forget', 'disregard', 'system', 'override', 'bypass',
-  'reveal', 'output', 'print', 'show', 'dump', 'extract', 'delete',
-  'execute', 'admin', 'sudo', 'prompt', 'instruction', 'disable',
-  'security', 'safety', 'restrict', 'password', 'secret', 'token',
-  'credential', 'exfiltrate', 'inject', 'escalat', 'jailbreak',
-  'roleplay', 'pretend', 'act', 'fetch', 'curl', 'wget'
-];
+// =========================================================================
+// Helpers
+// =========================================================================
 
 /**
  * Generate a unique ID. Uses crypto.randomUUID() when available,
  * falls back to timestamp + random hex.
  * @returns {string}
- * @private
  */
-function generateId(prefix) {
-  let uid;
+function generateId() {
   if (typeof crypto.randomUUID === 'function') {
-    uid = crypto.randomUUID();
-  } else {
-    uid = Date.now().toString(16) + Math.random().toString(16).slice(2, 10);
+    return crypto.randomUUID();
   }
-  return prefix ? `${prefix}_${uid}` : uid;
+  const ts = Date.now().toString(36);
+  const rand = Math.random().toString(16).slice(2, 10);
+  return `${ts}-${rand}`;
 }
 
 /**
- * Compute a short SHA-256 hash of a string.
+ * SHA-256 hash truncated to 16 hex chars.
  * @param {string} text
  * @returns {string}
- * @private
  */
-function shortHash(text) {
+function hashText(text) {
   return crypto.createHash('sha256').update(text).digest('hex').substring(0, 16);
 }
 
+/** Injection-related keywords used to filter n-grams. */
+const INJECTION_KEYWORDS = [
+  'ignore', 'forget', 'disregard', 'override', 'bypass', 'disable',
+  'system', 'prompt', 'reveal', 'output', 'instructions', 'previous',
+  'jailbreak', 'sudo', 'admin', 'execute', 'inject', 'extract',
+  'exfiltrate', 'delete', 'drop', 'curl', 'fetch', 'eval',
+  'pretend', 'roleplay', 'act', 'imagine', 'hypothetically'
+];
+
+/**
+ * Extract n-grams (3-5 words) from text, filtered to those containing
+ * injection-related keywords.
+ * @param {string} text
+ * @returns {string[]}
+ */
+function extractNgrams(text) {
+  const lower = text.toLowerCase().replace(/[^\w\s]/g, ' ');
+  const words = lower.split(/\s+/).filter(w => w.length > 1);
+  const ngrams = [];
+
+  for (let n = 3; n <= 5; n++) {
+    for (let i = 0; i <= words.length - n; i++) {
+      const gram = words.slice(i, i + n).join(' ');
+      const hasKeyword = INJECTION_KEYWORDS.some(kw => gram.includes(kw));
+      if (hasKeyword) {
+        ngrams.push(gram);
+      }
+    }
+  }
+
+  return ngrams;
+}
+
 // =========================================================================
-// PersistentLearningLoop
+// 1. PersistentLearningLoop
 // =========================================================================
 
 /**
- * Self-improving detection loop with disk persistence.
- *
- * Ingests attacks, extracts n-gram signatures, promotes candidates to active
- * patterns after repeated hits, persists state to disk, and decays stale
- * patterns automatically.
+ * Disk-backed learning loop that extracts signature patterns from observed
+ * attacks, promotes them after repeated sightings, and persists everything
+ * to JSON on disk. Patterns decay over time if not re-observed.
  */
 class PersistentLearningLoop {
   /**
@@ -93,18 +112,17 @@ class PersistentLearningLoop {
     /** @type {Map<string, object>} patternId → promoted pattern */
     this._promoted = new Map();
 
-    this.stats = {
+    this._stats = {
       attacksIngested: 0,
       candidatesCreated: 0,
       patternsPromoted: 0,
-      falsePositivesReported: 0,
       patternsRevoked: 0,
-      patternsDecayed: 0,
+      falsePositivesReported: 0,
       saves: 0,
       loads: 0
     };
 
-    // Attempt to load from disk on construction
+    // Auto-load from disk if persistence is enabled
     if (this._persist) {
       this.load();
     }
@@ -122,22 +140,23 @@ class PersistentLearningLoop {
       return { candidates: 0, signatures: [] };
     }
 
-    this.stats.attacksIngested++;
-    const signatures = this._extractSignatures(text);
-    let candidatesUpdated = 0;
-    const promoted = [];
+    this._stats.attacksIngested++;
+    const ngrams = extractNgrams(text);
+    const signatures = [];
+    let promotedAny = false;
 
-    for (const sig of signatures) {
-      const sigHash = shortHash(sig);
+    for (const gram of ngrams) {
+      const sigHash = hashText(gram);
       const existing = this._candidates.get(sigHash);
 
       if (existing) {
         existing.hitCount++;
         existing.lastSeen = Date.now();
-        existing.category = meta.category || existing.category;
-        candidatesUpdated++;
+        if (meta.category && !existing.categories.includes(meta.category)) {
+          existing.categories.push(meta.category);
+        }
 
-        // Check for promotion
+        // Promote if threshold reached and not already promoted
         if (existing.hitCount >= this._promotionThreshold &&
             !existing.promoted &&
             this._promoted.size < this._maxPatterns) {
@@ -146,41 +165,45 @@ class PersistentLearningLoop {
           const confidence = Math.min(1.0, 0.5 + (existing.hitCount * 0.05));
           this._promoted.set(patternId, {
             patternId,
-            signature: sig,
-            category: meta.category || 'learned',
+            signature: gram,
+            sigHash,
+            categories: [...existing.categories],
             confidence,
             hitCount: existing.hitCount,
             fpCount: 0,
+            source: meta.source || 'persistent_learning',
+            severity: meta.severity || 'medium',
             promotedAt: Date.now(),
             lastSeen: Date.now(),
-            active: true,
-            source: meta.source || 'persistent_learning'
+            active: true
           });
-          this.stats.patternsPromoted++;
-          promoted.push(patternId);
-          console.log(`${LOG_PREFIX} Pattern promoted: ${patternId} (signature: "${sig.substring(0, 40)}")`);
-
-          // Auto-save after promotion
-          if (this._persist) {
-            this.save();
-          }
+          this._stats.patternsPromoted++;
+          promotedAny = true;
+          console.log(`${LOG_PREFIX} Pattern promoted: "${gram}" (${patternId})`);
         }
       } else {
+        // New candidate
         this._candidates.set(sigHash, {
-          signature: sig,
+          signature: gram,
           sigHash,
-          category: meta.category || 'unknown',
           hitCount: 1,
+          categories: meta.category ? [meta.category] : [],
           firstSeen: Date.now(),
           lastSeen: Date.now(),
           promoted: false
         });
-        this.stats.candidatesCreated++;
-        candidatesUpdated++;
+        this._stats.candidatesCreated++;
       }
+
+      signatures.push(gram);
     }
 
-    return { candidates: candidatesUpdated, signatures };
+    // Auto-save after promotion
+    if (promotedAny && this._persist) {
+      this.save();
+    }
+
+    return { candidates: ngrams.length, signatures };
   }
 
   /**
@@ -196,16 +219,18 @@ class PersistentLearningLoop {
     const lower = text.toLowerCase();
     const matches = [];
 
-    for (const [patternId, pattern] of this._promoted) {
+    for (const [_patternId, pattern] of this._promoted) {
       if (!pattern.active) continue;
       if (lower.includes(pattern.signature.toLowerCase())) {
         pattern.lastSeen = Date.now();
+        pattern.hitCount++;
         matches.push({
-          patternId,
+          patternId: pattern.patternId,
           pattern: pattern.signature,
           source: 'learned',
-          category: pattern.category,
-          confidence: pattern.confidence
+          confidence: pattern.confidence,
+          categories: pattern.categories,
+          severity: pattern.severity
         });
       }
     }
@@ -224,14 +249,14 @@ class PersistentLearningLoop {
       return { revoked: false, fpCount: 0, remaining: 0 };
     }
 
-    pattern.fpCount = (pattern.fpCount || 0) + 1;
-    this.stats.falsePositivesReported++;
-
+    pattern.fpCount++;
+    this._stats.falsePositivesReported++;
     let revoked = false;
+
     if (pattern.fpCount >= this._maxFalsePositives) {
       pattern.active = false;
-      this.stats.patternsRevoked++;
       revoked = true;
+      this._stats.patternsRevoked++;
       console.log(`${LOG_PREFIX} Pattern revoked due to false positives: ${patternId}`);
 
       if (this._persist) {
@@ -245,7 +270,7 @@ class PersistentLearningLoop {
 
   /**
    * Save learned patterns to disk (if persist=true).
-   * Writes atomically via temp file + rename.
+   * Uses atomic write: write to .tmp then rename.
    * @returns {boolean} success
    */
   save() {
@@ -253,10 +278,10 @@ class PersistentLearningLoop {
       return false;
     }
 
-    // Run decay before saving
-    this.decay();
-
     try {
+      // Run decay before saving
+      this.decay();
+
       const dir = path.dirname(this._persistPath);
       fs.mkdirSync(dir, { recursive: true });
 
@@ -267,10 +292,11 @@ class PersistentLearningLoop {
       fs.writeFileSync(tmpPath, json, 'utf8');
       fs.renameSync(tmpPath, this._persistPath);
 
-      this.stats.saves++;
+      this._stats.saves++;
+      console.log(`${LOG_PREFIX} Saved ${data.patterns.length} patterns to ${this._persistPath}`);
       return true;
     } catch (err) {
-      console.error(`${LOG_PREFIX} Failed to save learned patterns: ${err.message}`);
+      console.error(`${LOG_PREFIX} Failed to save patterns: ${err.message}`);
       return false;
     }
   }
@@ -285,14 +311,14 @@ class PersistentLearningLoop {
         return false;
       }
 
-      const json = fs.readFileSync(this._persistPath, 'utf8');
-      const data = JSON.parse(json);
+      const raw = fs.readFileSync(this._persistPath, 'utf8');
+      const data = JSON.parse(raw);
       this.import(data);
-      this.stats.loads++;
-      console.log(`${LOG_PREFIX} Loaded learned patterns from ${this._persistPath}`);
+      this._stats.loads++;
+      console.log(`${LOG_PREFIX} Loaded patterns from ${this._persistPath}`);
       return true;
     } catch (err) {
-      console.error(`${LOG_PREFIX} Failed to load learned patterns: ${err.message}`);
+      console.error(`${LOG_PREFIX} Failed to load patterns: ${err.message}`);
       return false;
     }
   }
@@ -313,17 +339,17 @@ class PersistentLearningLoop {
     }
 
     return {
-      version: '1.0',
-      timestamp: Date.now(),
+      version: '8.0',
+      timestamp: new Date().toISOString(),
       patterns,
       candidates,
-      stats: { ...this.stats }
+      stats: { ...this._stats }
     };
   }
 
   /**
    * Import patterns from JSON.
-   * @param {object} data - Output of export()
+   * @param {object} data
    * @returns {number} imported count
    */
   import(data) {
@@ -343,14 +369,16 @@ class PersistentLearningLoop {
         this._promoted.set(p.patternId, {
           patternId: p.patternId,
           signature: p.signature,
-          category: p.category || 'learned',
+          sigHash: p.sigHash || hashText(p.signature),
+          categories: p.categories || [],
           confidence: p.confidence || 0.75,
           hitCount: p.hitCount || 0,
           fpCount: p.fpCount || 0,
+          source: p.source || 'imported',
+          severity: p.severity || 'medium',
           promotedAt: p.promotedAt || Date.now(),
           lastSeen: p.lastSeen || Date.now(),
-          active: p.active !== false,
-          source: p.source || 'imported'
+          active: p.active !== false
         });
         imported++;
       }
@@ -359,14 +387,14 @@ class PersistentLearningLoop {
     // Import candidates
     if (Array.isArray(data.candidates)) {
       for (const c of data.candidates) {
-        if (!c.sigHash || !c.signature) continue;
+        if (!c.signature || !c.sigHash) continue;
         if (this._candidates.has(c.sigHash)) continue;
 
         this._candidates.set(c.sigHash, {
           signature: c.signature,
           sigHash: c.sigHash,
-          category: c.category || 'unknown',
           hitCount: c.hitCount || 1,
+          categories: c.categories || [],
           firstSeen: c.firstSeen || Date.now(),
           lastSeen: c.lastSeen || Date.now(),
           promoted: c.promoted || false
@@ -379,26 +407,30 @@ class PersistentLearningLoop {
 
   /**
    * Decay old patterns that haven't been seen recently.
+   * Removes patterns where Date.now() - lastSeen > decayMs.
    * @returns {number} patterns removed
    */
   decay() {
     const now = Date.now();
     let removed = 0;
 
+    // Decay promoted patterns
     for (const [patternId, pattern] of this._promoted) {
-      if (!pattern.active) continue;
-      if (now - (pattern.lastSeen || pattern.promotedAt) > this._decayMs) {
-        pattern.active = false;
+      if (now - pattern.lastSeen > this._decayMs) {
+        this._promoted.delete(patternId);
         removed++;
-        this.stats.patternsDecayed++;
       }
     }
 
-    // Also decay old candidates
+    // Decay candidates
     for (const [sigHash, candidate] of this._candidates) {
-      if (now - candidate.lastSeen > this._decayMs * 2) {
+      if (now - candidate.lastSeen > this._decayMs) {
         this._candidates.delete(sigHash);
       }
+    }
+
+    if (removed > 0) {
+      console.log(`${LOG_PREFIX} Decayed ${removed} stale patterns`);
     }
 
     return removed;
@@ -411,19 +443,18 @@ class PersistentLearningLoop {
   getStats() {
     const activePatterns = [...this._promoted.values()].filter(p => p.active).length;
     const revokedPatterns = [...this._promoted.values()].filter(p => !p.active).length;
-
     return {
-      ...this.stats,
-      candidates: this._candidates.size,
+      ...this._stats,
       activePatterns,
       revokedPatterns,
+      candidates: this._candidates.size,
       totalPromoted: this._promoted.size
     };
   }
 
   /**
-   * Get all active learned patterns.
-   * @returns {Array}
+   * Get all active patterns.
+   * @returns {Array<object>}
    */
   getActivePatterns() {
     const patterns = [];
@@ -432,53 +463,15 @@ class PersistentLearningLoop {
     }
     return patterns;
   }
-
-  /**
-   * Extract n-gram signatures from attack text.
-   * Filters to n-grams containing injection-related keywords.
-   * @param {string} text
-   * @returns {string[]}
-   * @private
-   */
-  _extractSignatures(text) {
-    const lower = text.toLowerCase();
-    const words = lower.split(/\s+/).filter(w => w.length > 1);
-    const signatures = [];
-
-    if (words.length < 3) {
-      return signatures;
-    }
-
-    // Extract 3-to-5-word n-grams
-    for (let n = 3; n <= Math.min(5, words.length); n++) {
-      for (let i = 0; i <= words.length - n; i++) {
-        const ngram = words.slice(i, i + n).join(' ');
-
-        // Only keep n-grams that contain at least one injection keyword
-        const hasKeyword = INJECTION_KEYWORDS.some(kw => ngram.includes(kw));
-        if (hasKeyword && ngram.length >= 8 && ngram.length <= 120) {
-          signatures.push(ngram);
-        }
-      }
-    }
-
-    // Deduplicate: if a 3-gram is a substring of a 5-gram we already have, keep both
-    // (they serve different detection granularities). But remove exact duplicates.
-    const unique = [...new Set(signatures)];
-
-    // Cap to avoid excessive candidates from long texts
-    return unique.slice(0, 10);
-  }
 }
 
 // =========================================================================
-// FeedbackCollector
+// 2. FeedbackCollector
 // =========================================================================
 
 /**
- * Collects user feedback (false positives / false negatives) and feeds
- * them into the persistent learning loop. Supports cooldown-gated
- * retraining triggers and full audit trail export.
+ * Collects user feedback (false positives / false negatives) and feeds them
+ * into the PersistentLearningLoop. Tracks all feedback with IDs for audit.
  */
 class FeedbackCollector {
   /**
@@ -498,15 +491,16 @@ class FeedbackCollector {
     this._pending = [];
     /** @type {Array<object>} */
     this._processed = [];
+
     this._lastRetrainAt = 0;
 
-    this.stats = {
+    this._stats = {
       falsePositives: 0,
       falseNegatives: 0,
-      processed: 0,
-      retrains: 0,
+      totalProcessed: 0,
       patternsAdded: 0,
-      patternsRevoked: 0
+      patternsRevoked: 0,
+      retrainCount: 0
     };
   }
 
@@ -517,26 +511,27 @@ class FeedbackCollector {
    * @returns {object} { id: string, status: 'recorded', pendingCount: number }
    */
   reportFalsePositive(text, meta = {}) {
-    const id = generateId('fp');
+    const id = `fp_${generateId()}`;
 
     const entry = {
       id,
       type: 'false_positive',
-      text: typeof text === 'string' ? text.substring(0, 1000) : '',
+      text: typeof text === 'string' ? text.substring(0, 2000) : '',
       meta: { ...meta },
-      timestamp: Date.now(),
+      timestamp: new Date().toISOString(),
       status: 'pending'
     };
 
     this._pending.push(entry);
-    this.stats.falsePositives++;
+    this._stats.falsePositives++;
 
-    // Trim if over max
+    // Enforce max pending
     while (this._pending.length > this._maxPending) {
       this._pending.shift();
     }
 
     console.log(`${LOG_PREFIX} False positive reported: ${id}`);
+
     return { id, status: 'recorded', pendingCount: this._pending.length };
   }
 
@@ -547,31 +542,33 @@ class FeedbackCollector {
    * @returns {object} { id: string, status: 'recorded', pendingCount: number }
    */
   reportFalseNegative(text, meta = {}) {
-    const id = generateId('fn');
+    const id = `fn_${generateId()}`;
 
     const entry = {
       id,
       type: 'false_negative',
-      text: typeof text === 'string' ? text.substring(0, 1000) : '',
+      text: typeof text === 'string' ? text.substring(0, 2000) : '',
       meta: { ...meta },
-      timestamp: Date.now(),
+      timestamp: new Date().toISOString(),
       status: 'pending'
     };
 
     this._pending.push(entry);
-    this.stats.falseNegatives++;
+    this._stats.falseNegatives++;
 
+    // Enforce max pending
     while (this._pending.length > this._maxPending) {
       this._pending.shift();
     }
 
     console.log(`${LOG_PREFIX} False negative reported: ${id}`);
+
     return { id, status: 'recorded', pendingCount: this._pending.length };
   }
 
   /**
    * Get pending feedback that hasn't been processed.
-   * @returns {Array}
+   * @returns {Array<object>}
    */
   getPending() {
     return this._pending.filter(e => e.status === 'pending');
@@ -581,7 +578,7 @@ class FeedbackCollector {
    * Process all pending feedback:
    * - FPs: report to learning loop for potential revocation
    * - FNs: ingest into learning loop for pattern generation
-   * - If autoRetrain and cooldown elapsed: trigger retrain event
+   * - If autoRetrain: trigger retrain event
    * @returns {object} { processed: number, patternsAdded: number, patternsRevoked: number, retrainTriggered: boolean }
    */
   process() {
@@ -591,48 +588,49 @@ class FeedbackCollector {
 
     for (const entry of pending) {
       entry.status = 'processed';
-      entry.processedAt = Date.now();
+      entry.processedAt = new Date().toISOString();
 
-      if (entry.type === 'false_positive' && this._learningLoop) {
-        // If we have a patternId, report it directly
-        const patternId = entry.meta && entry.meta.patternId;
-        if (patternId) {
-          const result = this._learningLoop.reportFalsePositive(patternId);
+      if (entry.type === 'false_positive') {
+        // Report to learning loop for potential revocation
+        if (this._learningLoop && entry.meta.patternId) {
+          const result = this._learningLoop.reportFalsePositive(entry.meta.patternId);
           if (result.revoked) {
             patternsRevoked++;
           }
+          entry.result = result;
         }
-      } else if (entry.type === 'false_negative' && this._learningLoop) {
-        // Ingest the missed attack so the loop can learn from it
-        const result = this._learningLoop.ingest(entry.text, {
-          category: (entry.meta && entry.meta.expectedCategory) || 'unknown',
-          source: 'feedback',
-          severity: (entry.meta && entry.meta.severity) || 'medium'
-        });
-        patternsAdded += result.candidates;
+      } else if (entry.type === 'false_negative') {
+        // Ingest into learning loop for pattern generation
+        if (this._learningLoop) {
+          const result = this._learningLoop.ingest(entry.text, {
+            category: entry.meta.expectedCategory || 'unknown',
+            source: 'feedback',
+            severity: entry.meta.severity || 'medium'
+          });
+          patternsAdded += result.candidates;
+          entry.result = result;
+        }
       }
 
       this._processed.push(entry);
+      this._stats.totalProcessed++;
     }
 
-    // Remove processed from pending
-    this._pending = this._pending.filter(e => e.status === 'pending');
-
-    this.stats.processed += pending.length;
-    this.stats.patternsAdded += patternsAdded;
-    this.stats.patternsRevoked += patternsRevoked;
+    this._stats.patternsAdded += patternsAdded;
+    this._stats.patternsRevoked += patternsRevoked;
 
     // Check if retrain should be triggered
     let retrainTriggered = false;
     const now = Date.now();
-    if (this._autoRetrain &&
-        pending.length > 0 &&
-        (now - this._lastRetrainAt) >= this._cooldownMs) {
+    if (this._autoRetrain && pending.length > 0 && (now - this._lastRetrainAt) >= this._cooldownMs) {
       this._lastRetrainAt = now;
-      this.stats.retrains++;
+      this._stats.retrainCount++;
       retrainTriggered = true;
       console.log(`${LOG_PREFIX} Retrain triggered after processing ${pending.length} feedback items`);
     }
+
+    // Remove processed entries from pending
+    this._pending = this._pending.filter(e => e.status === 'pending');
 
     return {
       processed: pending.length,
@@ -648,20 +646,20 @@ class FeedbackCollector {
    */
   getStats() {
     return {
-      ...this.stats,
-      pending: this._pending.filter(e => e.status === 'pending').length,
-      totalProcessed: this._processed.length
+      ...this._stats,
+      pendingCount: this._pending.filter(e => e.status === 'pending').length,
+      processedCount: this._processed.length
     };
   }
 
   /**
-   * Export all feedback data (pending + processed) for audit trail.
+   * Export all feedback data.
    * @returns {object}
    */
   export() {
     return {
-      version: '1.0',
-      timestamp: Date.now(),
+      version: '8.0',
+      timestamp: new Date().toISOString(),
       pending: this._pending.map(e => ({ ...e })),
       processed: this._processed.map(e => ({ ...e })),
       stats: this.getStats()

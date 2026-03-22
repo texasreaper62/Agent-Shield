@@ -218,6 +218,9 @@ const { BehavioralDNA, AgentProfiler, extractFeatures: extractBehavioralFeatures
 // v7.4 — Compliance Certification Authority (loaded when available)
 const { ComplianceCertificateAuthority, ComplianceReport: ComplianceCertReport, ComplianceScheduler, AUTHORITY_FRAMEWORKS, CAPABILITY_MAP: CA_CAPABILITY_MAP, CERTIFICATE_LEVELS: CA_CERTIFICATE_LEVELS } = safeRequire('./compliance-authority', 'compliance-authority');
 
+// v8.0 — Persistent Learning + Feedback API
+const { PersistentLearningLoop, FeedbackCollector } = safeRequire('./persistent-learning', 'persistent-learning');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
