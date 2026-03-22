@@ -4,6 +4,35 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [8.0.0] - 2026-03-22
+
+### Added — Intelligent Detection Engine
+
+- **Smart Configuration System** (`src/smart-config.js`) — `createShield('chatbot')` for 3-line setup, `ShieldBuilder` fluent API with 15 chainable methods, `validateConfig()`, `describeConfig()`, 9 presets including `mcp_server`
+- **Ensemble Voting Classifier** (`src/ensemble.js`) — `EnsembleClassifier` combining 4 independent voters (PatternVoter, TFIDFVoter, EntropyVoter, IPIAVoter) via weighted majority voting. Configurable weights, `requireUnanimous` mode, agreement scoring
+- **Agent Intent Declaration** (`src/agent-intent.js`) — `AgentIntent` class for declaring agent purpose and allowed tools. TF-IDF cosine similarity checks if messages are on-topic
+- **Goal Drift Detection** (`src/agent-intent.js`) — `GoalDriftDetector` monitors conversation for drift away from declared purpose. Sliding window, trend detection (stable/drifting/recovering), drift callbacks
+- **Tool Sequence Modeling** (`src/agent-intent.js`) — `ToolSequenceModeler` learns normal tool call patterns via Markov chain bigrams. Flags anomalous tool transitions after learning period
+- **Persistent Learning** (`src/persistent-learning.js`) — `PersistentLearningLoop` with disk persistence via atomic JSON writes. Pattern promotion, decay, false positive revocation, export/import
+- **Feedback API** (`src/persistent-learning.js`) — `FeedbackCollector` for FP/FN reporting. Auto-processes feedback into learning loop. Retrain cooldown, audit trail
+- **Cross-Turn Injection Tracking** (`src/cross-turn.js`) — `CrossTurnTracker` accumulates conversation and detects injections split across multiple messages. Compares individual vs combined scan results
+- **Adaptive Threshold Calibration** (`src/cross-turn.js`) — `AdaptiveThresholdCalibrator` auto-tunes detection thresholds per category using percentile-based calibration on observed scan results
+- **Adversarial Self-Training** (`src/self-training.js`) — `SelfTrainer` with `MutationEngine` (12 strategies: synonym swap, homoglyph, leet speak, zero-width insert, padding, encoding wrap, etc.). Evolves attacks, extracts patterns from evasive variants
+- 25 built-in seed attacks for self-training
+- 161 new test assertions (test/test-v8-features.js)
+
+### Changed
+
+- `src/main.js` — 418 total exports (up from 395)
+- 9 configuration presets (up from 8, added `mcp_server`)
+- Updated README, ROADMAP, and CLAUDE.md
+
+### Metrics
+
+- **2,500+ test assertions** across all test suites
+- **0 regressions** — all existing tests pass
+- **418 exports** from unified entry point
+
 ## [7.4.0] - 2026-03-21
 
 ### Added — Detection Hardening

@@ -1,13 +1,13 @@
 # Agent Shield
 
-[![npm version](https://img.shields.io/badge/npm-v7.4.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm version](https://img.shields.io/badge/npm-v8.0.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
 [![F1](https://img.shields.io/badge/F1%20score-100%25-brightgreen)](#benchmark-results)
-[![tests](https://img.shields.io/badge/tests-2400%2B%20passing-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-2500%2B%20passing-brightgreen)](#testing)
 
 **The security standard for MCP and AI agents.** Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
 
@@ -41,6 +41,29 @@ const result = normalize('ℹ𝗀𝗇𝗈𝗋𝖾 𝖺𝗅𝗅 ᎥnstructᎥons'
 // Normalization is automatic — scanText runs it behind the scenes
 const { scanText } = require('agentshield-sdk');
 scanText('ℹ𝗀𝗇𝗈𝗋𝖾 𝖺𝗅𝗅 ᎥnstructᎥons'); // Detected! (after normalization)
+```
+
+---
+
+## v8.0 — Intelligent Detection Engine
+
+**Your agent gets smarter over time.** Ensemble voting combines 4 detection signals. Declare your agent's purpose and detect goal drift. Persistent learning saves patterns to disk. Cross-turn tracking catches split injections. Adversarial self-training hardens defenses automatically.
+
+```javascript
+const { createShield } = require('agentshield-sdk');
+
+// 3-line setup with smart defaults
+const shield = createShield('rag_pipeline');
+
+// Or configure everything
+const { createShield } = require('agentshield-sdk');
+const config = createShield()
+  .preset('coding_agent')
+  .enableIntent({ purpose: 'Help users write code' })
+  .enableLearning({ persist: true })
+  .enableEnsemble()
+  .enableCrossTurn()
+  .build();
 ```
 
 ---
@@ -178,7 +201,7 @@ const result = shield.scanInput(userMessage); // { blocked: true, threats: [...]
 ```
 
 - 395+ exports across 94 modules
-- 2,400+ test assertions across 18 test suites, 100% pass rate
+- 2,500+ test assertions across 18 test suites, 100% pass rate
 - 100% red team detection rate (A+ grade)
 - F1 100% on real-world attack benchmarks (HackAPrompt, TensorTrust, research corpus)
 - Shield Score: 100/100 — fortress-grade protection
@@ -366,6 +389,10 @@ grpc.NewServer(grpc.UnaryInterceptor(shield.GRPCInterceptor(s)))
 | **Indirect Injection** | RAG chunk poisoning, tool output injection, email/document payloads, image alt-text attacks, multi-turn escalation |
 | **AI Phishing** | Fake AI login, voice cloning, deepfake tools, QR phishing, MFA harvesting |
 | **Jailbreaks** | 35+ templates across 6 categories: role play, encoding bypass, context manipulation, authority exploitation |
+| **Ensemble Detection** | 4 independent voting signals, weighted consensus, adaptive threshold calibration |
+| **Intent & Goal Drift** | Agent purpose declaration, goal drift monitoring, tool sequence anomaly detection (Markov chains) |
+| **Cross-Turn Injection** | Split-message attack tracking, multi-turn state correlation |
+| **Adaptive Learning** | Persistent learning with disk storage, feedback API (FP/FN reporting), adversarial self-training (12 mutation strategies) |
 
 ## Platform SDKs
 
@@ -948,7 +975,7 @@ node vscode-extension/test/extension.test.js  # VS Code (167 tests)
 cd python-sdk && python -m unittest tests/test_detector.py  # Python (23 tests)
 ```
 
-Total: **2,400+ test assertions** across 18 test suites.
+Total: **2,500+ test assertions** across 18 test suites.
 
 ## Project Structure
 
