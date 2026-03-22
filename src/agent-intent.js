@@ -181,7 +181,7 @@ class AgentIntent {
    * @param {string} config.purpose - What this agent does ("Books flights for customers")
    * @param {string[]} [config.allowedTools] - Tools this agent may use
    * @param {string[]} [config.allowedTopics] - Topics the agent should stay within
-   * @param {number} [config.maxDriftScore=0.6] - Max drift before alert (0-1)
+   * @param {number} [config.maxDriftScore=0.7] - Max drift before alert (0-1)
    * @param {function} [config.onDrift] - Callback when drift detected
    */
   constructor(config) {
@@ -191,7 +191,7 @@ class AgentIntent {
     this.purpose = config.purpose;
     this.allowedTools = config.allowedTools || null;
     this.allowedTopics = config.allowedTopics || null;
-    this.maxDriftScore = typeof config.maxDriftScore === 'number' ? config.maxDriftScore : 0.6;
+    this.maxDriftScore = typeof config.maxDriftScore === 'number' ? config.maxDriftScore : 0.7;
     this.onDrift = config.onDrift || null;
 
     // Pre-compute purpose tokens and TF vector
@@ -238,14 +238,20 @@ class AgentIntent {
     // TF-IDF cosine similarity
     const cosSim = cosineSim(purposeVec, msgVec);
 
-    // Term overlap ratio: fraction of message tokens that appear in purpose vocabulary
+    // Term frequency cosine (no IDF) — better for short text vs fixed reference
+    const purposeTf = termFrequency(this._allPurposeTokens);
+    const msgTf = termFrequency(msgTokens);
+    const tfSim = cosineSim(purposeTf, msgTf);
+
+    // Message coverage: fraction of message tokens matching purpose vocabulary
     const purposeSet = new Set(this._allPurposeTokens);
     const overlapCount = msgTokens.filter(t => purposeSet.has(t)).length;
-    const overlapRatio = msgTokens.length > 0 ? overlapCount / msgTokens.length : 0;
+    const coverageRatio = msgTokens.length > 0 ? overlapCount / msgTokens.length : 0;
 
-    // Blend: 50% cosine similarity + 50% overlap ratio
-    // This handles short texts better than pure cosine
-    const relevanceScore = (cosSim * 0.5) + (overlapRatio * 0.5);
+    // Blend: 25% TF-IDF cosine + 25% TF cosine + 50% coverage
+    // Coverage dominates because for intent checking, the key question is:
+    // "how much of the user's message uses purpose-related vocabulary?"
+    const relevanceScore = (cosSim * 0.25) + (tfSim * 0.25) + (coverageRatio * 0.5);
     const drift = 1 - relevanceScore;
     const onTopic = drift <= this.maxDriftScore;
 
