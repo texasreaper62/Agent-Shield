@@ -127,6 +127,19 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Edge case test coverage — unicode, long inputs, empty inputs, threshold boundaries
 - [x] Normalizer tests — 73 assertions covering all 8 layers
 
+## v8.0 — Intelligent Detection Engine (Complete)
+
+- [x] Smart configuration system — `createShield()` factory, `ShieldBuilder` fluent API, 9 presets, `validateConfig()`, `describeConfig()`
+- [x] Ensemble voting classifier — 4 independent voters (pattern, TF-IDF, entropy, IPIA), weighted majority voting, agreement scoring
+- [x] Agent intent declaration — declare agent purpose, TF-IDF on-topic checking, allowed tools enforcement
+- [x] Goal drift detection — cosine similarity monitoring, sliding window, trend detection (stable/drifting/recovering)
+- [x] Tool sequence modeling — Markov chain bigram learning, anomaly detection, model export/import
+- [x] Persistent learning — disk-backed pattern learning with atomic writes, decay, promotion, false positive revocation
+- [x] Feedback API — `FeedbackCollector` for FP/FN reports, auto-retrain with cooldown, audit trail
+- [x] Cross-turn injection tracking — accumulated multi-message scanning, split injection detection
+- [x] Adaptive threshold calibration — per-category auto-tuning, percentile-based calibration, export/import
+- [x] Adversarial self-training — `MutationEngine` with 12 strategies, multi-cycle evolution, pattern extraction from evasive attacks
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks

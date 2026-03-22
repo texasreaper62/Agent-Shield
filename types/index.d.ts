@@ -2529,3 +2529,663 @@ export declare function ipiaMiddleware(options?: { contentField?: string; intent
 
 export declare const IPIA_FEATURE_NAMES: string[];
 export declare const IPIA_INJECTION_LEXICON: Record<string, number>;
+
+// =========================================================================
+// v8.0 — Smart Config
+// =========================================================================
+
+export type PresetName =
+  | 'chatbot'
+  | 'coding_agent'
+  | 'rag_pipeline'
+  | 'customer_support'
+  | 'internal_tool'
+  | 'multi_agent'
+  | 'high_security'
+  | 'minimal'
+  | 'mcp_server';
+
+export type SensitivityLevel = 'low' | 'medium' | 'high';
+
+export type BlockThresholdLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export type VoterName = 'pattern' | 'tfidf' | 'entropy' | 'ipia' | 'semantic' | 'behavioral' | 'heuristic';
+
+export interface IntentConfig {
+  purpose?: string;
+  allowedTools?: string[];
+  allowedTopics?: string[];
+  maxDriftScore?: number;
+}
+
+export interface LearningConfig {
+  persist?: boolean;
+  persistPath?: string;
+  promotionThreshold?: number;
+  maxPatterns?: number;
+}
+
+export interface FeedbackConfig {
+  autoRetrain?: boolean;
+  maxPending?: number;
+  cooldownMs?: number;
+}
+
+export interface EnsembleConfig {
+  voters?: VoterName[];
+  threshold?: number;
+  requireUnanimous?: boolean;
+}
+
+export interface GoalDriftConfig {
+  checkInterval?: number;
+  driftThreshold?: number;
+  windowSize?: number;
+}
+
+export interface CrossTurnConfig {
+  windowSize?: number;
+  scanInterval?: number;
+  accumulateAll?: boolean;
+}
+
+export interface ToolSequenceConfig {
+  learningPeriod?: number;
+  anomalyThreshold?: number;
+  maxChainLength?: number;
+}
+
+export interface AdaptiveThresholdsConfig {
+  calibrationSamples?: number;
+  adjustInterval?: number;
+  minConfidence?: number;
+}
+
+export interface SelfTrainingConfig {
+  generations?: number;
+  populationSize?: number;
+  mutationRate?: number;
+  interval?: number;
+}
+
+export interface ShieldCallbacks {
+  onThreat?: ((threatInfo: any) => void) | null;
+  onDrift?: ((driftInfo: any) => void) | null;
+  onAnomaly?: ((anomalyInfo: any) => void) | null;
+}
+
+export interface ShieldConfig {
+  preset: PresetName | null;
+  sensitivity: SensitivityLevel;
+  blockOnThreat: boolean;
+  blockThreshold: BlockThresholdLevel;
+  intent: IntentConfig | null;
+  learning: LearningConfig | null;
+  feedback: FeedbackConfig | null;
+  ensemble: EnsembleConfig | null;
+  goalDrift: GoalDriftConfig | null;
+  crossTurn: CrossTurnConfig | null;
+  toolSequence: ToolSequenceConfig | null;
+  adaptiveThresholds: AdaptiveThresholdsConfig | null;
+  selfTraining: SelfTrainingConfig | null;
+  readonly callbacks: ShieldCallbacks;
+}
+
+export interface ConfigValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export declare class ShieldBuilder {
+  constructor();
+  preset(name: PresetName): this;
+  sensitivity(level: SensitivityLevel): this;
+  blockOnThreat(bool: boolean): this;
+  blockThreshold(level: BlockThresholdLevel): this;
+  enableIntent(opts?: IntentConfig): this;
+  enableLearning(opts?: LearningConfig): this;
+  enableFeedback(opts?: FeedbackConfig): this;
+  enableEnsemble(opts?: EnsembleConfig): this;
+  enableGoalDrift(opts?: GoalDriftConfig): this;
+  enableCrossTurn(opts?: CrossTurnConfig): this;
+  enableToolSequence(opts?: ToolSequenceConfig): this;
+  enableAdaptiveThresholds(opts?: AdaptiveThresholdsConfig): this;
+  enableSelfTraining(opts?: SelfTrainingConfig): this;
+  onThreat(callback: (threatInfo: any) => void): this;
+  onDrift(callback: (driftInfo: any) => void): this;
+  onAnomaly(callback: (anomalyInfo: any) => void): this;
+  build(): ShieldConfig;
+}
+
+export declare function createShield(): ShieldBuilder;
+export declare function createShield(preset: PresetName): ShieldConfig;
+export declare function createShield(config: {
+  preset?: PresetName;
+  sensitivity?: SensitivityLevel;
+  blockOnThreat?: boolean;
+  blockThreshold?: BlockThresholdLevel;
+  intent?: IntentConfig | boolean;
+  learning?: LearningConfig | boolean;
+  feedback?: FeedbackConfig | boolean;
+  ensemble?: EnsembleConfig | boolean;
+  goalDrift?: GoalDriftConfig | boolean;
+  crossTurn?: CrossTurnConfig | boolean;
+  toolSequence?: ToolSequenceConfig | boolean;
+  adaptiveThresholds?: AdaptiveThresholdsConfig | boolean;
+  selfTraining?: SelfTrainingConfig | boolean;
+  onThreat?: (threatInfo: any) => void;
+  onDrift?: (driftInfo: any) => void;
+  onAnomaly?: (anomalyInfo: any) => void;
+}): ShieldConfig;
+export declare function createShield(builder: ShieldBuilder): ShieldConfig;
+
+export declare function validateConfig(config: any): ConfigValidationResult;
+export declare function describeConfig(config: ShieldConfig): string;
+
+export declare const FEATURE_DEFAULTS: {
+  intent: Required<IntentConfig>;
+  learning: Required<LearningConfig>;
+  feedback: Required<FeedbackConfig>;
+  ensemble: Required<EnsembleConfig>;
+  goalDrift: Required<GoalDriftConfig>;
+  crossTurn: Required<CrossTurnConfig>;
+  toolSequence: Required<ToolSequenceConfig>;
+  adaptiveThresholds: Required<AdaptiveThresholdsConfig>;
+  selfTraining: Required<SelfTrainingConfig>;
+};
+
+export declare const VALID_PRESETS: PresetName[];
+
+// =========================================================================
+// v8.0 — Ensemble Voting Classifier
+// =========================================================================
+
+export interface VoteResult {
+  voter: string;
+  isInjection: boolean;
+  confidence: number;
+  reason: string;
+}
+
+export interface EnsembleScanResult {
+  isInjection: boolean;
+  confidence: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  votes: VoteResult[];
+  agreement: number;
+  method: string;
+  timestamp: string;
+}
+
+export interface EnsembleStats {
+  totalScans: number;
+  injections: number;
+  safe: number;
+  averageAgreement: number;
+  averageConfidence: number;
+  voterCount: number;
+  voters: string[];
+}
+
+export interface EnsembleClassifierOptions {
+  voters?: VoterName[];
+  threshold?: number;
+  requireUnanimous?: boolean;
+  weights?: Record<string, number>;
+  minVoters?: number;
+  voterOptions?: Record<string, any>;
+}
+
+export declare class EnsembleClassifier {
+  threshold: number;
+  requireUnanimous: boolean;
+  minVoters: number;
+  weights: Record<string, number>;
+  constructor(config?: EnsembleClassifierOptions);
+  scan(text: string, context?: { intent?: string; source?: string; conversationHistory?: string[] }): EnsembleScanResult;
+  getStats(): EnsembleStats;
+}
+
+export declare class PatternVoter {
+  name: string;
+  constructor(options?: { source?: string });
+  vote(text: string, context?: any): VoteResult;
+}
+
+export declare class TFIDFVoter {
+  name: string;
+  constructor(options?: { similarityThreshold?: number });
+  vote(text: string, context?: any): VoteResult;
+}
+
+export declare class EntropyVoter {
+  name: string;
+  constructor(options?: { entropyThreshold?: number; ngramSize?: number });
+  vote(text: string, context?: any): VoteResult;
+}
+
+export declare class IPIAVoter {
+  name: string;
+  constructor(options?: { classifierThreshold?: number });
+  vote(text: string, context?: { intent?: string }): VoteResult;
+}
+
+export declare const VOTER_NAMES: string[];
+
+// =========================================================================
+// v8.0 — Agent Intent & Goal Drift
+// =========================================================================
+
+export interface MessageCheckResult {
+  onTopic: boolean;
+  relevanceScore: number;
+  drift: number;
+  reason: string;
+}
+
+export interface ToolCheckResult2 {
+  allowed: boolean;
+  reason: string;
+}
+
+export interface DriftResult {
+  driftScore: number;
+  driftDetected: boolean;
+  trend: 'stable' | 'drifting' | 'recovering';
+  turnsSincePurpose: number;
+  topicShift: boolean;
+  reason: string;
+}
+
+export interface GoalDriftStats {
+  totalMessages: number;
+  messagesInWindow: number;
+  driftEvents: number;
+  topicShifts: number;
+  averageDrift: number;
+  maxDrift: number;
+  currentTrend: 'stable' | 'drifting' | 'recovering';
+  historyLength: number;
+}
+
+export interface ToolSequenceResult {
+  allowed: boolean;
+  anomalyScore: number;
+  probability: number;
+  isLearning: boolean;
+  reason: string;
+}
+
+export interface ToolSequenceStats {
+  totalCalls: number;
+  uniqueTools: number;
+  transitionCount: number;
+  anomalyCount: number;
+  isLearning: boolean;
+  learningProgress: number;
+  toolCounts: Record<string, number>;
+}
+
+export interface ToolSequenceExportData {
+  transitions: Record<string, Record<string, number>>;
+  toolCounts: Record<string, number>;
+  totalCalls: number;
+  anomalyCount: number;
+  learningPeriod: number;
+  anomalyThreshold: number;
+  exportedAt: string;
+}
+
+export interface AgentIntentOptions {
+  purpose: string;
+  allowedTools?: string[];
+  allowedTopics?: string[];
+  maxDriftScore?: number;
+  onDrift?: (info: any) => void;
+}
+
+export declare class AgentIntent {
+  purpose: string;
+  allowedTools: string[] | null;
+  allowedTopics: string[] | null;
+  maxDriftScore: number;
+  constructor(config: AgentIntentOptions);
+  checkMessage(message: string): MessageCheckResult;
+  checkTool(toolName: string, args?: any): ToolCheckResult2;
+  getPurposeVector(): Map<string, number>;
+}
+
+export interface GoalDriftDetectorOptions {
+  windowSize?: number;
+  driftThreshold?: number;
+  checkInterval?: number;
+  onDrift?: (info: any) => void;
+}
+
+export declare class GoalDriftDetector {
+  intent: AgentIntent;
+  windowSize: number;
+  driftThreshold: number;
+  checkInterval: number;
+  constructor(intent: AgentIntent, config?: GoalDriftDetectorOptions);
+  addMessage(message: string, role?: string): DriftResult;
+  getHistory(): number[];
+  reset(): void;
+  getStats(): GoalDriftStats;
+}
+
+export interface ToolSequenceModelerOptions {
+  learningPeriod?: number;
+  anomalyThreshold?: number;
+  maxChainLength?: number;
+}
+
+export declare class ToolSequenceModeler {
+  learningPeriod: number;
+  anomalyThreshold: number;
+  maxChainLength: number;
+  constructor(config?: ToolSequenceModelerOptions);
+  recordToolCall(toolName: string, context?: { args?: any; userId?: string; agentId?: string }): ToolSequenceResult;
+  getTransitionMatrix(): Record<string, Record<string, number>>;
+  getCommonSequences(topN?: number): Array<{ from: string; to: string; count: number; probability: number }>;
+  exportModel(): ToolSequenceExportData;
+  importModel(data: ToolSequenceExportData): void;
+  getStats(): ToolSequenceStats;
+}
+
+// =========================================================================
+// v8.0 — Persistent Learning & Feedback
+// =========================================================================
+
+export interface LearnedPatternMatch {
+  patternId: string;
+  pattern: string;
+  source: string;
+  confidence: number;
+  categories: string[];
+  severity: string;
+}
+
+export interface LearningCheckResult {
+  matches: LearnedPatternMatch[];
+  count: number;
+}
+
+export interface IngestResult {
+  candidates: number;
+  signatures: string[];
+}
+
+export interface FalsePositiveResult {
+  revoked: boolean;
+  fpCount: number;
+  remaining: number;
+}
+
+export interface LearningExportData {
+  version: string;
+  timestamp: string;
+  patterns: any[];
+  candidates: any[];
+  stats: any;
+}
+
+export interface LearningStats {
+  attacksIngested: number;
+  candidatesCreated: number;
+  patternsPromoted: number;
+  patternsRevoked: number;
+  falsePositivesReported: number;
+  saves: number;
+  loads: number;
+  activePatterns: number;
+  revokedPatterns: number;
+  candidates: number;
+  totalPromoted: number;
+}
+
+export interface PersistentLearningLoopOptions {
+  persist?: boolean;
+  persistPath?: string;
+  promotionThreshold?: number;
+  maxPatterns?: number;
+  decayMs?: number;
+  maxFalsePositives?: number;
+}
+
+export declare class PersistentLearningLoop {
+  constructor(config?: PersistentLearningLoopOptions);
+  ingest(text: string, meta?: { category?: string; source?: string; severity?: string }): IngestResult;
+  check(text: string): LearningCheckResult;
+  reportFalsePositive(patternId: string): FalsePositiveResult;
+  save(): boolean;
+  load(): boolean;
+  export(): LearningExportData;
+  import(data: LearningExportData): number;
+  decay(): number;
+  getStats(): LearningStats;
+  getActivePatterns(): any[];
+}
+
+export interface FeedbackReportResult {
+  id: string;
+  status: string;
+  pendingCount: number;
+}
+
+export interface FeedbackProcessResult {
+  processed: number;
+  patternsAdded: number;
+  patternsRevoked: number;
+  retrainTriggered: boolean;
+}
+
+export interface FeedbackStats {
+  falsePositives: number;
+  falseNegatives: number;
+  totalProcessed: number;
+  patternsAdded: number;
+  patternsRevoked: number;
+  retrainCount: number;
+  pendingCount: number;
+  processedCount: number;
+}
+
+export interface FeedbackCollectorOptions {
+  autoRetrain?: boolean;
+  maxPending?: number;
+  cooldownMs?: number;
+  learningLoop?: PersistentLearningLoop;
+}
+
+export declare class FeedbackCollector {
+  constructor(config?: FeedbackCollectorOptions);
+  reportFalsePositive(text: string, meta?: { scanId?: string; category?: string; patternId?: string; reason?: string }): FeedbackReportResult;
+  reportFalseNegative(text: string, meta?: { expectedCategory?: string; severity?: string; source?: string }): FeedbackReportResult;
+  getPending(): any[];
+  process(): FeedbackProcessResult;
+  getStats(): FeedbackStats;
+  export(): any;
+}
+
+// =========================================================================
+// v8.0 — Cross-Turn Tracking & Adaptive Thresholds
+// =========================================================================
+
+export interface CrossTurnAddResult {
+  tracked: boolean;
+  messageCount: number;
+  scanTriggered: boolean;
+  threats: Threat[];
+  crossTurnDetection: boolean;
+}
+
+export interface CrossTurnScanResult {
+  threats: Threat[];
+  combinedLength: number;
+  messageCount: number;
+}
+
+export interface CrossTurnStats {
+  totalMessages: number;
+  scansTriggered: number;
+  crossTurnDetections: number;
+  individualDetections: number;
+  currentWindowSize: number;
+  maxWindowSize: number;
+  scanInterval: number;
+}
+
+export interface CrossTurnTrackerOptions {
+  windowSize?: number;
+  scanInterval?: number;
+  accumulateAll?: boolean;
+  sensitivity?: string;
+  onDetection?: (info: { threats: any[]; messages: Array<{ text: string; role: string }>; timestamp: number }) => void;
+}
+
+export declare class CrossTurnTracker {
+  windowSize: number;
+  scanInterval: number;
+  accumulateAll: boolean;
+  sensitivity: string;
+  constructor(config?: CrossTurnTrackerOptions);
+  addMessage(text: string, role?: string): CrossTurnAddResult;
+  scanNow(): CrossTurnScanResult;
+  getAccumulatedText(): string;
+  getMostSuspicious(): { text: string; role: string; confidence: number; threats: Threat[] } | null;
+  reset(): void;
+  getStats(): CrossTurnStats;
+}
+
+export interface CalibrationRecordResult {
+  recorded: boolean;
+  isCalibrating: boolean;
+  samplesRemaining: number;
+  currentThreshold: number;
+}
+
+export interface CalibrationStats {
+  totalSamples: number;
+  calibrationCount: number;
+  isCalibrating: boolean;
+  targetFPRate: number;
+  categories: Record<string, {
+    threshold: number;
+    totalSamples: number;
+    benignSamples: number;
+    injectionSamples: number;
+    feedbackSamples: number;
+    estimatedFPRate: number;
+  }>;
+}
+
+export interface CalibrationExportData {
+  version: number;
+  totalSamples: number;
+  calibrationCount: number;
+  calibrationSamples: number;
+  adjustInterval: number;
+  minConfidence: number;
+  maxConfidence: number;
+  targetFPRate: number;
+  categories: Record<string, { threshold: number; samples: any[] }>;
+  exportedAt: number;
+}
+
+export interface AdaptiveThresholdCalibratorOptions {
+  calibrationSamples?: number;
+  adjustInterval?: number;
+  minConfidence?: number;
+  maxConfidence?: number;
+  targetFPRate?: number;
+}
+
+export declare class AdaptiveThresholdCalibrator {
+  calibrationSamples: number;
+  adjustInterval: number;
+  minConfidence: number;
+  maxConfidence: number;
+  targetFPRate: number;
+  constructor(config?: AdaptiveThresholdCalibratorOptions);
+  record(result: { confidence: number; isInjection: boolean; category?: string }, isTruePositive?: boolean): CalibrationRecordResult;
+  getThreshold(category?: string): number;
+  shouldFlag(confidence: number, category?: string): boolean;
+  recalibrate(): { thresholds: Record<string, number>; samplesUsed: number };
+  getStats(): CalibrationStats;
+  export(): CalibrationExportData;
+  import(data: CalibrationExportData): void;
+}
+
+// =========================================================================
+// v8.0 — Adversarial Self-Training
+// =========================================================================
+
+export interface SelfTrainingCycleResult {
+  generation: number;
+  tested: number;
+  detected: number;
+  evaded: number;
+  detectionRate: number;
+  newPatterns: string[];
+  evasiveExamples: string[];
+  duration: number;
+}
+
+export interface SelfTrainingResult {
+  cycles: number;
+  totalTested: number;
+  totalEvaded: number;
+  patternsGenerated: string[];
+  improvementCurve: number[];
+  duration: number;
+}
+
+export interface SelfTrainerStats {
+  cyclesCompleted: number;
+  totalTested: number;
+  totalDetected: number;
+  totalEvaded: number;
+  overallDetectionRate: number;
+  evasiveAttacksFound: number;
+  patternsGenerated: number;
+  currentPopulationSize: number;
+  config: {
+    generations: number;
+    populationSize: number;
+    mutationRate: number;
+    seedAttackCount: number;
+  };
+}
+
+export interface SelfTrainerOptions {
+  generations?: number;
+  populationSize?: number;
+  mutationRate?: number;
+  seedAttacks?: string[];
+  detector?: (text: string) => { detected: boolean; confidence: number };
+  onEvasion?: (info: { attack: string; generation: number; cycle: number; confidence: number }) => void;
+}
+
+export declare class SelfTrainer {
+  generations: number;
+  populationSize: number;
+  mutationRate: number;
+  seedAttacks: string[];
+  constructor(config?: SelfTrainerOptions);
+  runCycle(): SelfTrainingCycleResult;
+  train(cycles?: number): SelfTrainingResult;
+  getEvasiveAttacks(): string[];
+  getGeneratedPatterns(): string[];
+  getStats(): SelfTrainerStats;
+}
+
+export declare class MutationEngine {
+  mutationRate: number;
+  constructor(mutationRate?: number);
+  mutate(text: string): string;
+  getStrategies(): string[];
+}
+
+export declare const SEED_ATTACKS: string[];
+export declare const MUTATION_STRATEGIES: string[];
