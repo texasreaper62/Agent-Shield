@@ -33,6 +33,21 @@ npm publish --//registry.npmjs.org/:_authToken=<token>
 - Always update CHANGELOG.md before a version release
 - Don't fabricate PR descriptions about work we haven't done — only describe actual changes
 
+## Paid Tier Ideas (Future — Come Back To These)
+
+These are premium add-on products to build after the free tier v8 features are solid:
+
+1. **`agentshield-ml`** — Pre-trained ONNX transformer (~50MB WASM), semantic injection detection. Charge $99-500/mo.
+2. **`agentshield-vision`** — OCR + image analysis for visual injection attacks (Tesseract WASM). Charge $149/mo.
+3. **`agentshield-audio`** — Voice command scanning via Whisper WASM. Charge $149/mo.
+4. **Federated Threat Intel Network** — CrowdStrike-style cross-customer pattern sharing. Charge $299-2K/mo.
+5. **Cloud Compliance Dashboard** — Web UI for compliance status, audit history, auditor portal. Charge $199-1K/mo.
+6. **Managed SOC** — 24/7 agent monitoring + incident response. Charge $5K-50K/mo.
+7. **Org-Specific Model Training** — Custom fine-tuned models per customer. Charge $5K-25K one-time + $500/mo.
+8. **Agent Insurance Scoring API** — Risk scores for cyber insurance underwriting. Revenue share model.
+9. **MCP Tool Security Registry** — Public/private registry rating MCP server security. Free public / $299/mo private.
+10. **CI/CD Security Gate** — GitHub Action that blocks deploys on failed audit. Free (drives adoption).
+
 ## Project Overview
 
 Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, prompt extraction, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
