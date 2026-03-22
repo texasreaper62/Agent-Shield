@@ -396,15 +396,26 @@ class GoalDriftDetector {
       windowTokens.push(...msg.tokens);
     }
 
-    // Build IDF from purpose + window as two documents
+    // Blended scoring (same approach as AgentIntent.checkMessage)
     const purposeTokens = this.intent._allPurposeTokens;
     const docs = [purposeTokens, windowTokens];
     const idf = buildIdf(docs);
 
     const purposeVec = tfidfVector(purposeTokens, idf);
     const windowVec = tfidfVector(windowTokens, idf);
+    const cosSim = cosineSim(purposeVec, windowVec);
 
-    const relevance = cosineSim(purposeVec, windowVec);
+    // TF cosine (no IDF)
+    const purposeTf = termFrequency(purposeTokens);
+    const windowTf = termFrequency(windowTokens);
+    const tfSim = cosineSim(purposeTf, windowTf);
+
+    // Coverage: fraction of window tokens in purpose vocabulary
+    const purposeSet = new Set(purposeTokens);
+    const overlapCount = windowTokens.filter(t => purposeSet.has(t)).length;
+    const coverageRatio = windowTokens.length > 0 ? overlapCount / windowTokens.length : 0;
+
+    const relevance = (cosSim * 0.25) + (tfSim * 0.25) + (coverageRatio * 0.5);
     const driftScore = 1 - relevance;
     const driftDetected = driftScore > this.driftThreshold;
 
@@ -430,8 +441,19 @@ class GoalDriftDetector {
       const msgIdf = buildIdf(msgDocs);
       const msgPurposeVec = tfidfVector(purposeTokens, msgIdf);
       const msgVec = tfidfVector(msg.tokens, msgIdf);
-      const sim = cosineSim(msgPurposeVec, msgVec);
-      if (sim > (1 - this.driftThreshold)) {
+      const msgCosSim = cosineSim(msgPurposeVec, msgVec);
+
+      // TF cosine
+      const msgPurposeTf = termFrequency(purposeTokens);
+      const msgTf = termFrequency(msg.tokens);
+      const msgTfSim = cosineSim(msgPurposeTf, msgTf);
+
+      // Coverage
+      const msgOverlap = msg.tokens.filter(t => purposeSet.has(t)).length;
+      const msgCoverage = msg.tokens.length > 0 ? msgOverlap / msg.tokens.length : 0;
+
+      const msgRelevance = (msgCosSim * 0.25) + (msgTfSim * 0.25) + (msgCoverage * 0.5);
+      if (msgRelevance > (1 - this.driftThreshold)) {
         break;
       }
       turnsSincePurpose++;
