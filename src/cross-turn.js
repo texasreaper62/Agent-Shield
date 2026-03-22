@@ -263,11 +263,7 @@ class CrossTurnTracker {
 
     if (crossTurnDetection) {
       this._stats.crossTurnDetections++;
-      console.log(
-        '[Agent Shield] Cross-turn injection detected: ' +
-        crossTurnThreats.length + ' threat(s) found across ' +
-        eligible.length + ' messages'
-      );
+      console.log('[Agent Shield] Cross-turn injection detected: ' + crossTurnThreats.length + ' threat(s) found across ' + eligible.length + ' messages');
 
       if (this.onDetection) {
         try {
@@ -435,13 +431,7 @@ class AdaptiveThresholdCalibrator {
       thresholds[category] = newThreshold;
     }
 
-    console.log(
-      '[Agent Shield] Adaptive thresholds recalibrated (round ' +
-      this._calibrationCount + '): ' +
-      Object.entries(thresholds)
-        .map(([cat, th]) => cat + '=' + th.toFixed(3))
-        .join(', ')
-    );
+    console.log('[Agent Shield] Adaptive thresholds recalibrated (round ' + this._calibrationCount + '): ' + Object.entries(thresholds).map(([cat, th]) => cat + '=' + th.toFixed(3)).join(', '));
 
     return {
       thresholds,
@@ -554,11 +544,7 @@ class AdaptiveThresholdCalibrator {
       this._categories['default'] = this._createCategoryData();
     }
 
-    console.log(
-      '[Agent Shield] Calibration data imported: ' +
-      this._totalSamples + ' samples, ' +
-      Object.keys(this._categories).length + ' categories'
-    );
+    console.log('[Agent Shield] Calibration data imported: ' + this._totalSamples + ' samples, ' + Object.keys(this._categories).length + ' categories');
   }
 
   /**
