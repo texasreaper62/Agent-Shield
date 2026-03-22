@@ -1,0 +1,25 @@
+{
+  "name": "agentshield-ml",
+  "version": "1.0.0",
+  "description": "ML-powered prompt injection detection for Agent Shield. Runs locally via ONNX Runtime — no cloud calls, no API keys.",
+  "main": "src/inference.js",
+  "scripts": {
+    "test": "node test/test-ml.js",
+    "prepare-data": "node training/prepare-dataset.js",
+    "train": "echo 'Run on GPU: python training/train.py --data data/training-data.jsonl'"
+  },
+  "peerDependencies": {
+    "agentshield-sdk": ">=7.0.0"
+  },
+  "optionalDependencies": {
+    "onnxruntime-node": ">=1.15.0"
+  },
+  "keywords": ["ai", "security", "ml", "onnx", "prompt-injection", "detection"],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/texasreaper62/Agent-Shield-Pro"
+  },
+  "files": ["src/**/*.js", "models/**/*", "types/**/*.d.ts", "LICENSE.md", "README.md"],
+  "engines": { "node": ">=18" }
+}
