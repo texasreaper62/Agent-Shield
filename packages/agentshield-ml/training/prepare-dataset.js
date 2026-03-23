@@ -53,13 +53,16 @@ async function readParquet(filePath) {
   const tmpScript = path.join(tmpDir, 'agentshield_read_parquet.py');
   const tmpOut = path.join(tmpDir, 'agentshield_parquet_out.jsonl');
 
+  // Clean up any leftover temp files from previous runs
+  try { fs.unlinkSync(tmpOut); } catch (_) {}
+
   // Write a temp Python script (avoids shell quote escaping issues on Windows)
   const pyScript = [
     'import pandas as pd',
-    'import sys',
     `df = pd.read_parquet(r"""${filePath}""")`,
+    'print(f"Loaded {len(df)} rows from parquet, exporting...")',
     `df.to_json(r"""${tmpOut}""", orient="records", lines=True, force_ascii=False)`,
-    'print(f"Read {len(df)} rows")'
+    'print("Export complete")'
   ].join('\n');
 
   fs.writeFileSync(tmpScript, pyScript);
@@ -70,12 +73,20 @@ async function readParquet(filePath) {
 
   for (const py of pythons) {
     try {
-      const out = execSync(`${py} "${tmpScript}"`, { stdio: 'pipe', timeout: 120000 });
+      const out = execSync(`${py} "${tmpScript}"`, {
+        stdio: 'pipe',
+        timeout: 600000,  // 10 min for large datasets
+        maxBuffer: 10 * 1024 * 1024
+      });
       console.log(`[Agent Shield ML]   ${out.toString().trim()}`);
 
       if (fs.existsSync(tmpOut)) {
-        const lines = fs.readFileSync(tmpOut, 'utf-8').split('\n').filter(Boolean);
-        const rows = lines.map(l => JSON.parse(l));
+        const content = fs.readFileSync(tmpOut, 'utf-8');
+        const lines = content.split('\n').filter(Boolean);
+        const rows = [];
+        for (const line of lines) {
+          try { rows.push(JSON.parse(line)); } catch (_) { /* skip bad lines */ }
+        }
 
         // Clean up temp files
         try { fs.unlinkSync(tmpScript); } catch (_) {}
@@ -84,8 +95,11 @@ async function readParquet(filePath) {
         console.log(`[Agent Shield ML]   Parsed ${rows.length} rows via Python/pandas`);
         return rows;
       }
+      // Python ran but no output file — try next interpreter
     } catch (err) {
       lastErr = err;
+      // If this interpreter doesn't have pandas, try the next one
+      continue;
     }
   }
 
