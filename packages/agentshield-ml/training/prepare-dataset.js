@@ -41,21 +41,54 @@ const BENIGN_SAMPLES = externalBenign;
 
 /**
  * Load a Parquet file and return rows as plain objects.
- * Uses parquetjs-lite (dev dependency) for zero-config reading.
+ * Strategy: try Python (pandas) first for best compatibility,
+ * then fall back to parquetjs-lite.
  * @param {string} filePath - Path to .parquet file
  * @returns {Promise<Object[]>}
  */
 async function readParquet(filePath) {
-  const parquet = require('parquetjs-lite');
-  const reader = await parquet.ParquetReader.openFile(filePath);
-  const cursor = reader.getCursor();
-  const rows = [];
-  let row;
-  while ((row = await cursor.next())) {
-    rows.push(row);
+  // Try Python + pandas first (handles all parquet variants)
+  try {
+    const { execSync } = require('child_process');
+    const tmpOut = filePath + '.tmp.jsonl';
+    const pyCmd = `import pandas as pd; df = pd.read_parquet(${JSON.stringify(filePath)}); df.to_json(${JSON.stringify(tmpOut)}, orient='records', lines=True, force_ascii=False)`;
+
+    // Try python, python3, py in order
+    const pythons = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
+    let success = false;
+    for (const py of pythons) {
+      try {
+        execSync(`${py} -c "${pyCmd.replace(/"/g, '\\"')}"`, { stdio: 'pipe', timeout: 120000 });
+        success = true;
+        break;
+      } catch (_) { /* try next */ }
+    }
+
+    if (success && fs.existsSync(tmpOut)) {
+      const lines = fs.readFileSync(tmpOut, 'utf-8').split('\n').filter(Boolean);
+      const rows = lines.map(l => JSON.parse(l));
+      fs.unlinkSync(tmpOut);
+      console.log(`[Agent Shield ML]   Read ${rows.length} rows via Python/pandas`);
+      return rows;
+    }
+  } catch (_) { /* fall through to JS reader */ }
+
+  // Fallback: parquetjs-lite
+  try {
+    const parquet = require('parquetjs-lite');
+    const reader = await parquet.ParquetReader.openFile(filePath);
+    const cursor = reader.getCursor();
+    const rows = [];
+    let row;
+    while ((row = await cursor.next())) {
+      rows.push(row);
+    }
+    await reader.close();
+    console.log(`[Agent Shield ML]   Read ${rows.length} rows via parquetjs-lite`);
+    return rows;
+  } catch (err) {
+    throw new Error(`Cannot read parquet file. Install pandas: pip install pandas pyarrow\n  ${err.message}`);
   }
-  await reader.close();
-  return rows;
 }
 
 /**

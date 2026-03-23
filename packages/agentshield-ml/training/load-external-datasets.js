@@ -81,6 +81,7 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('[Agent Shield ML] Error:', err.message);
+  console.error('[Agent Shield ML] Error:', err.message || err);
+  console.error('[Agent Shield ML] Stack:', err.stack || '(no stack)');
   process.exit(1);
 });
