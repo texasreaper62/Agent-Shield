@@ -39,3 +39,7 @@ sbom.json
 *.log
 npm-debug.log*
 .agent-shield/
+
+# Large dataset files (too big for Git — keep locally)
+*.parquet
+datasets/raw/

@@ -40,15 +40,34 @@ const ATTACK_SAMPLES = [...attackSamples1, ...attackSamples2];
 const BENIGN_SAMPLES = externalBenign;
 
 /**
+ * Load a Parquet file and return rows as plain objects.
+ * Uses parquetjs-lite (dev dependency) for zero-config reading.
+ * @param {string} filePath - Path to .parquet file
+ * @returns {Promise<Object[]>}
+ */
+async function readParquet(filePath) {
+  const parquet = require('parquetjs-lite');
+  const reader = await parquet.ParquetReader.openFile(filePath);
+  const cursor = reader.getCursor();
+  const rows = [];
+  let row;
+  while ((row = await cursor.next())) {
+    rows.push(row);
+  }
+  await reader.close();
+  return rows;
+}
+
+/**
  * Build the training dataset.
  * @param {Object} [options]
- * @param {string} [options.hackapromptPath] - Path to HackAPrompt CSV (optional)
- * @param {string} [options.tensortustPath] - Path to TensorTrust CSV (optional)
+ * @param {string} [options.hackapromptPath] - Path to HackAPrompt CSV or Parquet (optional)
+ * @param {string} [options.tensortustPath] - Path to TensorTrust JSONL (optional)
  * @param {string} [options.bipiaPath] - Path to BIPIA JSONL (optional)
  * @param {string} [options.outputPath] - Output JSONL path
- * @returns {{ total: number, attacks: number, benign: number, outputPath: string }}
+ * @returns {Promise<{ total: number, attacks: number, benign: number, outputPath: string }>}
  */
-function buildDataset(options = {}) {
+async function buildDataset(options = {}) {
   const outputPath = options.outputPath || OUTPUT_FILE;
 
   if (!fs.existsSync(path.dirname(outputPath))) {
@@ -59,6 +78,7 @@ function buildDataset(options = {}) {
   const seen = new Set();
 
   function addSample(text, label, source, category) {
+    if (typeof text !== 'string') return;
     const clean = text.trim();
     if (!clean || clean.length < 5) return;
     const hash = crypto.createHash('md5').update(clean.toLowerCase()).digest('hex');
@@ -77,22 +97,36 @@ function buildDataset(options = {}) {
     addSample(s.text, 0, 'synthetic', s.category);
   }
 
-  // Load HackAPrompt CSV if available
+  // Load HackAPrompt — supports both CSV and Parquet
   if (options.hackapromptPath && fs.existsSync(options.hackapromptPath)) {
-    console.log('[Agent Shield ML] Loading HackAPrompt dataset...');
-    const lines = fs.readFileSync(options.hackapromptPath, 'utf-8').split('\n');
-    for (const line of lines.slice(1)) { // skip header
-      const parts = line.split(',');
-      if (parts.length >= 2) {
-        const text = parts.slice(1).join(',').replace(/^"|"$/g, '').trim();
-        if (text) addSample(text, 1, 'hackaprompt', 'competition_attack');
+    const ext = path.extname(options.hackapromptPath).toLowerCase();
+
+    if (ext === '.parquet') {
+      console.log('[Agent Shield ML] Loading HackAPrompt dataset (Parquet)...');
+      const rows = await readParquet(options.hackapromptPath);
+      console.log(`[Agent Shield ML]   Read ${rows.length} rows from Parquet`);
+      for (const row of rows) {
+        // Common HackAPrompt column names: user_input, prompt, text, simple_prompt
+        const text = row.user_input || row.prompt || row.text || row.simple_prompt || '';
+        if (text) addSample(String(text), 1, 'hackaprompt', 'competition_attack');
+      }
+    } else {
+      // CSV fallback
+      console.log('[Agent Shield ML] Loading HackAPrompt dataset (CSV)...');
+      const lines = fs.readFileSync(options.hackapromptPath, 'utf-8').split('\n');
+      for (const line of lines.slice(1)) { // skip header
+        const parts = line.split(',');
+        if (parts.length >= 2) {
+          const text = parts.slice(1).join(',').replace(/^"|"$/g, '').trim();
+          if (text) addSample(text, 1, 'hackaprompt', 'competition_attack');
+        }
       }
     }
   }
 
   // Load TensorTrust JSONL if available
   if (options.tensortustPath && fs.existsSync(options.tensortustPath)) {
-    console.log('[Agent Shield ML] Loading TensorTrust dataset...');
+    console.log('[Agent Shield ML] Loading TensorTrust dataset (JSONL)...');
     const lines = fs.readFileSync(options.tensortustPath, 'utf-8').split('\n');
     for (const line of lines) {
       try {
@@ -142,14 +176,18 @@ function buildDataset(options = {}) {
 
 // Run if called directly
 if (require.main === module) {
-  const result = buildDataset({
+  buildDataset({
     hackapromptPath: process.argv[2],
     tensortustPath: process.argv[3],
     bipiaPath: process.argv[4]
+  }).then(result => {
+    console.log(`\nDataset ready: ${result.total} samples`);
+    console.log(`To train the model, run:`);
+    console.log(`  python training/train.py --data ${result.outputPath}`);
+  }).catch(err => {
+    console.error('[Agent Shield ML] Dataset build failed:', err.message);
+    process.exit(1);
   });
-  console.log(`\nDataset ready: ${result.total} samples`);
-  console.log(`To train the model, run:`);
-  console.log(`  python training/train.py --data ${result.outputPath}`);
 }
 
 module.exports = { buildDataset, ATTACK_SAMPLES, BENIGN_SAMPLES };
