@@ -170,6 +170,9 @@ const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequir
 // OpenClaw
 const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = safeRequire('./openclaw', 'openclaw');
 
+// v8.0 — ML Detection (Pro/Enterprise)
+const { MLShield, isMLTier, isValidTier, loadMLPackage, ML_ENABLED_TIERS, VALID_TIERS } = safeRequire('./ml-detector', 'ml-detector');
+
 // v7.2 — IPIA Detector
 const { IPIADetector, ContextConstructor, FeatureExtractor, TreeClassifier, ExternalEmbedder, createIPIAScanner, ipiaMiddleware, FEATURE_NAMES: IPIA_FEATURE_NAMES, INJECTION_LEXICON: IPIA_INJECTION_LEXICON } = safeRequire('./ipia-detector', 'ipia-detector');
 
@@ -788,6 +791,14 @@ const _exports = {
   MCP_THREAT_CATEGORIES: CERT_THREAT_CATEGORIES,
   CERTIFICATION_REQUIREMENTS,
   CERTIFICATION_LEVELS,
+
+  // v8.0 — ML Detection (Pro/Enterprise)
+  MLShield,
+  isMLTier,
+  isValidTier,
+  loadMLPackage,
+  ML_ENABLED_TIERS,
+  VALID_TIERS,
 
   // v7.2 — IPIA Detector
   IPIADetector,

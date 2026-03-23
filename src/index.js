@@ -39,6 +39,9 @@ const { createShieldError } = require('./errors');
  * Default configuration for AgentShield.
  */
 const DEFAULT_CONFIG = {
+  /** License tier: 'free', 'pro', or 'enterprise'. ML features require 'pro' or 'enterprise'. */
+  tier: 'free',
+
   /** Sensitivity level: 'low', 'medium', or 'high'. */
   sensitivity: 'medium',
 
@@ -378,6 +381,27 @@ class AgentShield {
    */
   getPatterns() {
     return getPatterns();
+  }
+
+  /**
+   * Create an ML-enhanced shield (Pro/Enterprise only).
+   *
+   * Returns an MLShield instance that combines pattern matching with
+   * ONNX-based ML classification for higher detection accuracy.
+   * Requires the agentshield-ml package to be installed.
+   *
+   * @param {Object} [options] - ML options (threshold, modelPath, etc.)
+   * @returns {Object} MLShield instance — call .init() then .scan()
+   * @throws {Error} If tier is 'free'
+   */
+  enableML(options = {}) {
+    const tier = options.tier || this.config.tier || 'free';
+    try {
+      const { MLShield } = require('./ml-detector');
+      return new MLShield(this, { ...options, tier });
+    } catch (e) {
+      throw new Error(`[Agent Shield] Failed to load ML module: ${e.message}`);
+    }
   }
 
   /**
