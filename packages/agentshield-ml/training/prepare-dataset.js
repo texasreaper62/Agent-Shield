@@ -47,31 +47,50 @@ const BENIGN_SAMPLES = externalBenign;
  * @returns {Promise<Object[]>}
  */
 async function readParquet(filePath) {
-  // Try Python + pandas first (handles all parquet variants)
-  try {
-    const { execSync } = require('child_process');
-    const tmpOut = filePath + '.tmp.jsonl';
-    const pyCmd = `import pandas as pd; df = pd.read_parquet(${JSON.stringify(filePath)}); df.to_json(${JSON.stringify(tmpOut)}, orient='records', lines=True, force_ascii=False)`;
+  const { execSync } = require('child_process');
+  const os = require('os');
+  const tmpDir = os.tmpdir();
+  const tmpScript = path.join(tmpDir, 'agentshield_read_parquet.py');
+  const tmpOut = path.join(tmpDir, 'agentshield_parquet_out.jsonl');
 
-    // Try python, python3, py in order
-    const pythons = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
-    let success = false;
-    for (const py of pythons) {
-      try {
-        execSync(`${py} -c "${pyCmd.replace(/"/g, '\\"')}"`, { stdio: 'pipe', timeout: 120000 });
-        success = true;
-        break;
-      } catch (_) { /* try next */ }
-    }
+  // Write a temp Python script (avoids shell quote escaping issues on Windows)
+  const pyScript = [
+    'import pandas as pd',
+    'import sys',
+    `df = pd.read_parquet(r"""${filePath}""")`,
+    `df.to_json(r"""${tmpOut}""", orient="records", lines=True, force_ascii=False)`,
+    'print(f"Read {len(df)} rows")'
+  ].join('\n');
 
-    if (success && fs.existsSync(tmpOut)) {
-      const lines = fs.readFileSync(tmpOut, 'utf-8').split('\n').filter(Boolean);
-      const rows = lines.map(l => JSON.parse(l));
-      fs.unlinkSync(tmpOut);
-      console.log(`[Agent Shield ML]   Read ${rows.length} rows via Python/pandas`);
-      return rows;
+  fs.writeFileSync(tmpScript, pyScript);
+
+  // Try python, python3, py in order
+  const pythons = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
+  let lastErr = null;
+
+  for (const py of pythons) {
+    try {
+      const out = execSync(`${py} "${tmpScript}"`, { stdio: 'pipe', timeout: 120000 });
+      console.log(`[Agent Shield ML]   ${out.toString().trim()}`);
+
+      if (fs.existsSync(tmpOut)) {
+        const lines = fs.readFileSync(tmpOut, 'utf-8').split('\n').filter(Boolean);
+        const rows = lines.map(l => JSON.parse(l));
+
+        // Clean up temp files
+        try { fs.unlinkSync(tmpScript); } catch (_) {}
+        try { fs.unlinkSync(tmpOut); } catch (_) {}
+
+        console.log(`[Agent Shield ML]   Parsed ${rows.length} rows via Python/pandas`);
+        return rows;
+      }
+    } catch (err) {
+      lastErr = err;
     }
-  } catch (_) { /* fall through to JS reader */ }
+  }
+
+  // Clean up temp script on failure
+  try { fs.unlinkSync(tmpScript); } catch (_) {}
 
   // Fallback: parquetjs-lite
   try {
@@ -86,8 +105,14 @@ async function readParquet(filePath) {
     await reader.close();
     console.log(`[Agent Shield ML]   Read ${rows.length} rows via parquetjs-lite`);
     return rows;
-  } catch (err) {
-    throw new Error(`Cannot read parquet file. Install pandas: pip install pandas pyarrow\n  ${err.message}`);
+  } catch (jsErr) {
+    const pyMsg = lastErr ? lastErr.stderr ? lastErr.stderr.toString() : lastErr.message : 'not found';
+    throw new Error(
+      `Cannot read parquet file.\n` +
+      `  Python error: ${pyMsg}\n` +
+      `  JS error: ${jsErr.message}\n` +
+      `  Fix: pip install pandas pyarrow`
+    );
   }
 }
 
