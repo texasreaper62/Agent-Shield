@@ -12,7 +12,7 @@
  *   agentshield-pro generate-key      Generate a license key (admin only)
  */
 
-const { license, generateLicenseKey, validateLicenseKey } = require('../src/license');
+const { license, generateLicenseKey } = require('../src/license');
 
 const [,, command, ...args] = process.argv;
 
@@ -196,12 +196,20 @@ function commandCompliance(opts) {
   dashboard.enableCheck('output_scanning');
 
   if (opts.framework) {
+    // Show single framework report
     const report = dashboard.generateReport(opts.framework);
-    const formatted = dashboard.formatTerminal();
-    console.log(formatted);
+    const lines = [];
+    lines.push(`\n  ${report.framework} v${report.version}  —  Score: ${report.summary.score}%  (${report.summary.compliant}/${report.summary.total})\n`);
+    for (const ctrl of report.controls) {
+      const icon = ctrl.status === 'compliant' ? '\x1b[32m✓\x1b[0m' :
+        ctrl.status === 'exception' ? '\x1b[33m~\x1b[0m' :
+          ctrl.status === 'available' ? '\x1b[33m○\x1b[0m' : '\x1b[31m✗\x1b[0m';
+      lines.push(`    ${icon} ${ctrl.id.padEnd(16)} ${ctrl.name}`);
+    }
+    lines.push('');
+    console.log(lines.join('\n'));
   } else {
-    const output = dashboard.formatTerminal();
-    console.log(output);
+    console.log(dashboard.formatTerminal());
   }
 }
 

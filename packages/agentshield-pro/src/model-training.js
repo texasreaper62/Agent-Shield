@@ -239,8 +239,12 @@ class ModelTrainingPipeline {
       throw new Error(`[Agent Shield] Need at least 10 samples to train (have ${this._samples.length})`);
     }
 
-    // Shuffle and split
-    const shuffled = [...this._samples].sort(() => Math.random() - 0.5);
+    // Fisher-Yates shuffle and split
+    const shuffled = [...this._samples];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     const splitIdx = Math.floor(shuffled.length * (1 - this.testSplit));
     const trainSet = shuffled.slice(0, splitIdx);
     const testSet = shuffled.slice(splitIdx);

@@ -327,7 +327,8 @@ class ComplianceDashboard {
    */
   generateHTML(options = {}) {
     const posture = this.getPosture();
-    const title = options.title || `Agent Shield Compliance Report - ${this.orgInfo.name || 'Organization'}`;
+    const rawTitle = options.title || `Agent Shield Compliance Report - ${this.orgInfo.name || 'Organization'}`;
+    const title = rawTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     const frameworkRows = Object.entries(posture.frameworks).map(([id, report]) => {
       const scoreColor = report.summary.score >= 80 ? '#22c55e' : report.summary.score >= 50 ? '#f59e0b' : '#ef4444';

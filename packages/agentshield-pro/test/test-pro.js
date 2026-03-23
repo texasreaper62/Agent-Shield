@@ -4,8 +4,6 @@
  * Agent Shield Pro — Feature Tests
  */
 
-const path = require('path');
-
 let passed = 0;
 let failed = 0;
 
@@ -31,7 +29,7 @@ const { generateLicenseKey, license } = require('../src/license');
 const SECRET = 'test-secret-for-pro-tests';
 
 const { key } = generateLicenseKey({
-  tier: 'team',
+  tier: 'enterprise',
   orgId: 'test-pro',
   orgName: 'Pro Test Org',
   signingSecret: SECRET,
@@ -40,13 +38,17 @@ const { key } = generateLicenseKey({
 
 const activation = license.activate(key, SECRET);
 assert(activation.activated, 'License activated');
-assert(license.tier === 'team', 'Tier is team');
+assert(license.tier === 'enterprise', 'Tier is enterprise');
 assert(license.hasFeature('ensemble'), 'Has ensemble');
 assert(license.hasFeature('agent-intent'), 'Has agent-intent');
 assert(license.hasFeature('persistent-learning'), 'Has persistent-learning');
 assert(license.hasFeature('cross-turn'), 'Has cross-turn');
 assert(license.hasFeature('self-training'), 'Has self-training');
 assert(license.hasFeature('tui-dashboard'), 'Has tui-dashboard');
+assert(license.hasFeature('threat-intel-feed'), 'Has threat-intel-feed');
+assert(license.hasFeature('compliance-dashboard'), 'Has compliance-dashboard');
+assert(license.hasFeature('sso-integration'), 'Has sso-integration');
+assert(license.hasFeature('custom-model-training'), 'Has custom-model-training');
 
 // ============================================================
 // Ensemble Classifier

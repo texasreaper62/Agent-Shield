@@ -16,6 +16,13 @@
 
 const crypto = require('crypto');
 
+/** @private */
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all',
+  'can', 'her', 'was', 'one', 'our', 'out', 'has', 'have',
+  'this', 'that', 'with', 'from', 'they', 'been', 'will',
+]);
+
 /**
  * Enterprise threat intelligence feed manager.
  * Coordinates threat pattern sharing across an organization's deployments.
@@ -78,7 +85,7 @@ class ThreatIntelFeed {
     const signature = crypto.createHash('sha256').update(normalized).digest('hex').substring(0, 16);
 
     // Add differential privacy noise to confidence
-    const rawConfidence = report.confidence || 0.8;
+    const rawConfidence = report.confidence != null ? report.confidence : 0.8;
     const noise = (Math.random() - 0.5) * 2 * this.noiseLevel;
     const confidence = Math.max(0, Math.min(1, rawConfidence + noise));
 
@@ -255,6 +262,7 @@ class ThreatIntelFeed {
         continue;
       }
       if (this._patterns.size >= this.maxPatterns) {
+        skipped += patterns.length - imported - skipped;
         break;
       }
       this._patterns.set(p.signature, {
@@ -350,13 +358,8 @@ class ThreatIntelFeed {
 
   /** @private */
   _extractKeywords(text) {
-    const stopWords = new Set([
-      'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all',
-      'can', 'her', 'was', 'one', 'our', 'out', 'has', 'have',
-      'this', 'that', 'with', 'from', 'they', 'been', 'will',
-    ]);
     return text.split(/\s+/)
-      .filter(w => w.length > 3 && !stopWords.has(w))
+      .filter(w => w.length > 3 && !STOP_WORDS.has(w))
       .slice(0, 10);
   }
 }

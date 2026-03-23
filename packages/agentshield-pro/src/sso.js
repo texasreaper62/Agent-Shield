@@ -122,14 +122,14 @@ class SSOIntegration {
     const groups = identity.groups || [];
     const mapping = this._resolveRole(groups);
 
-    // Create session
+    // Create session (copy permissions so caller can't mutate stored session)
     const session = {
       id: crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'),
       email: identity.email,
       name: identity.name || identity.email,
       groups,
       role: mapping.role,
-      permissions: mapping.permissions,
+      permissions: [...mapping.permissions],
       provider: this.providerConfig.name || 'custom',
       createdAt: Date.now(),
       expiresAt: Date.now() + this.sessionTTL,
@@ -152,11 +152,11 @@ class SSOIntegration {
         email: session.email,
         name: session.name,
         role: session.role,
-        permissions: session.permissions,
+        permissions: [...session.permissions],
         expiresAt: new Date(session.expiresAt).toISOString(),
       },
       role: mapping.role,
-      permissions: mapping.permissions,
+      permissions: [...mapping.permissions],
     };
   }
 
