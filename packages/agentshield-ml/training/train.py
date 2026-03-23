@@ -9,9 +9,9 @@ Requirements (install on GPU machine):
     pip install torch transformers datasets onnx onnxruntime scikit-learn
 
 Usage:
-    python train.py --data ../data/training-data.jsonl
-    python train.py --data ../data/training-data.jsonl --model distilbert-base-uncased --epochs 5
-    python train.py --data ../data/training-data.jsonl --output ../models/shield-detector.onnx
+    python train.py --data training-data.jsonl
+    python train.py --data training-data.jsonl --model distilbert-base-uncased --epochs 5
+    python train.py --data training-data.jsonl --output ../models/shield-detector.onnx
 
 The output ONNX model can be loaded by the agentshield-ml JavaScript package
 for local, offline inference.

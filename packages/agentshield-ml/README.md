@@ -45,7 +45,7 @@ See [training/TRAINING-GUIDE.md](./training/TRAINING-GUIDE.md) for instructions.
 Quick version:
 1. `node training/prepare-dataset.js` — prepare training data
 2. Upload to a GPU machine (RunPod, ~$10)
-3. `python training/train.py --data data/training-data.jsonl`
+3. `python training/train.py --data training-data.jsonl`
 4. Download the model to `models/`
 
 ## License

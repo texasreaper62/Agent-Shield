@@ -14,7 +14,7 @@ cd packages/agentshield-ml
 node training/prepare-dataset.js
 ```
 
-This creates `data/training-data.jsonl` with ~100 built-in samples.
+This creates `training/training-data.jsonl` with ~100 built-in samples.
 For better results, download public datasets and include them:
 
 ```bash
@@ -122,9 +122,9 @@ node test/test-ml.js
 
 As new attack patterns emerge, retrain the model:
 
-1. Add new samples to `data/training-data.jsonl`
+1. Add new samples to `training/training-data.jsonl`
 2. Spin up GPU
-3. Run `python train.py --data data/training-data.jsonl`
+3. Run `python train.py --data training-data.jsonl`
 4. Download updated model
 5. Publish new version of agentshield-ml
 

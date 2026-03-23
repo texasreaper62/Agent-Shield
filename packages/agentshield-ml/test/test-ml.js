@@ -129,6 +129,6 @@ if (hasModel) {
   console.log('='.repeat(50));
   console.log('\nTo run full tests, train a model first:');
   console.log('  node training/prepare-dataset.js');
-  console.log('  python training/train.py --data data/training-data.jsonl');
+  console.log('  python training/train.py --data training-data.jsonl');
   if (failed > 0) process.exit(1);
 }

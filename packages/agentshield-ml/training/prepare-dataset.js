@@ -23,8 +23,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const OUTPUT_FILE = path.join(DATA_DIR, 'training-data.jsonl');
+const TRAINING_DIR = __dirname;
+const OUTPUT_FILE = path.join(TRAINING_DIR, 'training-data.jsonl');
 
 // ─── Load External Sample Libraries ──────────────────────────────────────
 // Full curated sample sets live in dedicated files for maintainability.
@@ -51,8 +51,8 @@ const BENIGN_SAMPLES = externalBenign;
 function buildDataset(options = {}) {
   const outputPath = options.outputPath || OUTPUT_FILE;
 
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(path.dirname(outputPath))) {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   }
 
   const samples = [];
