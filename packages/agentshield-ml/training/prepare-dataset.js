@@ -36,8 +36,11 @@ const attackSamples1 = require('./attack-samples-1');
 const attackSamples2 = require('./attack-samples-2');
 const externalBenign = require('./benign-samples');
 
+let expandedBenign = [];
+try { expandedBenign = require('./benign-samples-expanded'); } catch (_) {}
+
 const ATTACK_SAMPLES = [...attackSamples1, ...attackSamples2];
-const BENIGN_SAMPLES = externalBenign;
+const BENIGN_SAMPLES = [...externalBenign, ...expandedBenign];
 
 /**
  * Load a Parquet file and return rows as plain objects.
