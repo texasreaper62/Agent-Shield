@@ -195,6 +195,8 @@ class FlightRecorder {
     for (let i = incidentIdx - 1; i >= startIdx; i--) {
       if (this._log[i].threats && this._log[i].threats.length > 0) {
         firstSuspiciousIdx = i;
+      } else {
+        break; // Stop at first non-suspicious entry (find contiguous escalation path)
       }
     }
 

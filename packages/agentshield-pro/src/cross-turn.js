@@ -262,7 +262,7 @@ class CrossTurnTracker {
     }
 
     // Normalize: need at least 3 keywords across different turns for significance
-    if (keywordsHit < 2) return 0;
+    if (keywordsHit < 3) return 0;
 
     // Check that keywords come from multiple turns
     const turnsWithKeywords = new Set();

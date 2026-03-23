@@ -215,7 +215,7 @@ class SplunkTransport extends AuditTransport {
         hostname: parsed.hostname, port: parsed.port,
         path: parsed.pathname, method: 'POST',
         headers: { ...headers, 'Content-Length': Buffer.byteLength(body) },
-        rejectUnauthorized: false, timeout: 10000
+        rejectUnauthorized: true, timeout: 10000
       }, (res) => {
         let data = '';
         res.on('data', c => data += c);

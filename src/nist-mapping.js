@@ -133,12 +133,12 @@ class NISTMapper {
     for (const [funcName, func] of Object.entries(NIST_AI_RMF_2025.functions)) {
       const funcCovered = func.categories.filter(c => c.agentShieldMapping.length > 0).length;
       const funcTotal = func.categories.length;
-      byFunction[funcName] = { covered: funcCovered, total: funcTotal, percentage: Math.round((funcCovered / funcTotal) * 100) };
+      byFunction[funcName] = { covered: funcCovered, total: funcTotal, percentage: funcTotal > 0 ? Math.round((funcCovered / funcTotal) * 100) : 0 };
       covered += funcCovered;
       total += funcTotal;
     }
 
-    return { percentage: Math.round((covered / total) * 100), covered, total, byFunction };
+    return { percentage: total > 0 ? Math.round((covered / total) * 100) : 0, covered, total, byFunction };
   }
 
   /**

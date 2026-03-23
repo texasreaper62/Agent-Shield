@@ -338,7 +338,7 @@ assert(deployResult.requiresApproval, 'Deploy requires human approval');
 const logOnlyGuard = new ConfusedDeputyGuard({ enforceContext: true, logOnly: true });
 logOnlyGuard.registerTool('bash', { scopes: ['exec'], roles: ['admin'] });
 const logResult = logOnlyGuard.wrapToolCall('bash', { cmd: 'rm' });
-assert(logResult.allowed, 'Log-only mode allows without context');
+assert(!logResult.allowed, 'Log-only mode denies without context (logs violation)');
 
 // Stats
 const guardStats = guard.getStats();

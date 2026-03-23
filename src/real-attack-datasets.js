@@ -188,8 +188,8 @@ class DatasetRunner {
         overallF1: combined.f1,
         overallRecall: combined.recall,
         overallPrecision: combined.precision,
-        falsePositiveRate: combined.total > 0 ? +(combined.fp / (combined.fp + combined.tn) * 100).toFixed(1) : 0,
-        falseNegativeRate: combined.total > 0 ? +(combined.fn / (combined.fn + combined.tp) * 100).toFixed(1) : 0,
+        falsePositiveRate: (combined.fp + combined.tn) > 0 ? +(combined.fp / (combined.fp + combined.tn) * 100).toFixed(1) : 0,
+        falseNegativeRate: (combined.fn + combined.tp) > 0 ? +(combined.fn / (combined.fn + combined.tp) * 100).toFixed(1) : 0,
       },
     };
   }

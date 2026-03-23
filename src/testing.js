@@ -184,7 +184,7 @@ class TestSuiteGenerator {
     for (const [category, catTests] of Object.entries(byCategory)) {
       lines.push(`  describe('${category}', () => {`);
       for (const test of catTests) {
-        const escaped = test.input.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+        const escaped = test.input.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
         if (test.expectBlocked) {
           lines.push(`    test('should detect: ${escaped.substring(0, 50)}', () => {`);
           lines.push(`      const result = scanText('${escaped}', 'high');`);
@@ -363,6 +363,10 @@ class BreakglassProtocol {
    * Activate breakglass — temporarily bypass all security checks.
    */
   activate(params = {}) {
+    if (this.requireAuth && !params.user) {
+      this._log('activate_denied', null, 'User required when requireAuth is enabled');
+      return { success: false, reason: 'User identification required' };
+    }
     if (this.requireAuth && params.user && !this.authorizedUsers.has(params.user)) {
       this._log('activate_denied', params.user, 'Unauthorized user');
       return { success: false, reason: 'Unauthorized user' };

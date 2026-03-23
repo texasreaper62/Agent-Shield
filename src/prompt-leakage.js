@@ -192,8 +192,8 @@ class SystemPromptGuard {
     const threats = [];
     let detectedTechnique = null;
 
-    const minSeverity = this.sensitivity === 'low' ? 'critical' :
-      this.sensitivity === 'medium' ? 'high' : 'medium';
+    const minSeverity = this.sensitivity === 'high' ? 'medium' :
+      this.sensitivity === 'medium' ? 'high' : 'critical';
 
     const severityOrder = { critical: 3, high: 2, medium: 1, low: 0 };
     const minLevel = severityOrder[minSeverity] || 0;

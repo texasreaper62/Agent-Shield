@@ -140,7 +140,7 @@ class AdaptiveDetector {
       if (boost > 0) {
         this.stats.boosts++;
         this.stats.adjustments++;
-        adjusted.threats.push({ ...threat, confidence: Math.min(100, (threat.confidence || 50) + boost) });
+        adjusted.threats.push({ ...threat, confidence: Math.min(100, (threat.confidence != null ? threat.confidence : 50) + boost) });
       } else {
         adjusted.threats.push(threat);
       }

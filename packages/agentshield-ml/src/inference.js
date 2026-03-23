@@ -258,7 +258,7 @@ class MLDetector {
       const logits = Array.from(results.logits.data);
       const maxLogit = Math.max(...logits);
       const exps = logits.map(l => Math.exp(l - maxLogit));
-      const sumExp = exps.reduce((a, b) => a + b, 0);
+      const sumExp = exps.reduce((a, b) => a + b, 0) || 1e-10;
       const probs = exps.map(e => e / sumExp);
 
       const injectionProb = probs[1] || 0; // class 1 = injection

@@ -319,6 +319,18 @@ class BehavioralDNA {
 
       const m = mean(values);
       const sd = stdDev(values);
+      // If stddev is 0 (constant values), only flag if value differs from learned constant
+      if (sd === 0) {
+        if (value !== m) {
+          deviations.push({
+            feature: f, type: 'numeric', value,
+            expected: { mean: _round(m), stdDev: 0 },
+            zScore: Infinity, direction: value > m ? 'above' : 'below',
+            severity: 'high'
+          });
+        }
+        continue;
+      }
       const z = zScore(value, m, sd);
 
       if (Math.abs(z) > this.anomalyThreshold) {

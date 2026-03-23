@@ -245,9 +245,8 @@ class RateLimiter {
     const cutoff = now - this.windowMs;
 
     this.requestTimestamps = this.requestTimestamps.filter(t => t > cutoff);
-    this.requestTimestamps.push(now);
 
-    if (this.requestTimestamps.length > this.maxRequests) {
+    if (this.requestTimestamps.length >= this.maxRequests) {
       if (this.onLimit) {
         try {
           this.onLimit({ count: this.requestTimestamps.length, windowMs: this.windowMs });
@@ -262,6 +261,7 @@ class RateLimiter {
       };
     }
 
+    this.requestTimestamps.push(now);
     return {
       allowed: true,
       remaining: this.maxRequests - this.requestTimestamps.length

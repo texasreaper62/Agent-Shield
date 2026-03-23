@@ -181,7 +181,6 @@ class GracefulScanner {
       return result;
     } catch (error) {
       this.stats.errors++;
-      this.stats.fallbacks++;
       if (this.onError) this.onError({ error: error.message, text: text.substring(0, 100) });
       return this._fallback('error', 0, error.message);
     }

@@ -566,6 +566,10 @@ class ConfusedDeputyGuard {
     }
 
     if (!authCtx) {
+      if (this.logOnly) {
+        this.stats.denied++;
+        return { allowed: false, violations: [{ type: 'missing_context', message: 'AuthorizationContext required (log-only mode)' }], requiresApproval: false, token: null };
+      }
       this.stats.allowed++;
       return { allowed: true, violations: [], requiresApproval: false, token: null };
     }

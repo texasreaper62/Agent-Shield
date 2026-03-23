@@ -268,7 +268,7 @@ class OWASPCoverageMatrix {
       achievedWeight += weight * multiplier;
     }
 
-    const percentage = Math.round((achievedWeight / totalWeight) * 100);
+    const percentage = totalWeight > 0 ? Math.round((achievedWeight / totalWeight) * 100) : 0;
     let grade;
     if (percentage >= 90) grade = 'A';
     else if (percentage >= 80) grade = 'B';

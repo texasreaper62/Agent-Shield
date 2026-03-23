@@ -559,7 +559,7 @@ class AdaptiveScanner {
     this.deescalationThreshold = config.deescalationThreshold || 0.1;
     this.windowSize = config.windowSize || 100;
 
-    this.currentTier = 'fast';
+    this.currentTier = this.initialTier;
     this.tierManager = new TierManager();
 
     /** @type {Array<{tier: string, hadThreats: boolean, escalated: boolean, latency: number}>} */
