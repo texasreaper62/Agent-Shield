@@ -26,6 +26,7 @@ function safeRequire(path) {
 
 // Pro modules — loaded on demand
 let _ensemble, _agentIntent, _persistentLearning, _crossTurn, _selfTraining, _smartConfig, _tui;
+let _threatIntel, _complianceDashboard, _sso, _modelTraining;
 
 function getEnsemble() {
   if (!_ensemble) _ensemble = safeRequire('./ensemble');
@@ -54,6 +55,24 @@ function getSmartConfig() {
 function getTui() {
   if (!_tui) _tui = safeRequire('./tui-dashboard');
   return _tui;
+}
+
+// Enterprise modules
+function getThreatIntel() {
+  if (!_threatIntel) _threatIntel = safeRequire('./threat-intel');
+  return _threatIntel;
+}
+function getComplianceDashboard() {
+  if (!_complianceDashboard) _complianceDashboard = safeRequire('./compliance-dashboard');
+  return _complianceDashboard;
+}
+function getSSO() {
+  if (!_sso) _sso = safeRequire('./sso');
+  return _sso;
+}
+function getModelTraining() {
+  if (!_modelTraining) _modelTraining = safeRequire('./model-training');
+  return _modelTraining;
 }
 
 /**
@@ -175,6 +194,86 @@ function createProShield(configOrPreset, options = {}) {
     };
   }
 
+  // Enterprise: Threat intelligence feed
+  const threatIntel = getThreatIntel();
+  if (threatIntel.ThreatIntelFeed) {
+    proFeatures.threatFeed = new threatIntel.ThreatIntelFeed({
+      orgId: license.orgId || config.orgId,
+      ...config.threatIntel,
+    });
+    proFeatures.getThreatFeed = () => {
+      license.requireFeature('threat-intel-feed', 'Threat intelligence feed');
+      return proFeatures.threatFeed;
+    };
+    proFeatures.checkThreatFeed = (text) => {
+      license.requireFeature('threat-intel-feed', 'Threat intelligence feed');
+      return proFeatures.threatFeed.check(text);
+    };
+    proFeatures.submitThreat = (report) => {
+      license.requireFeature('threat-intel-feed', 'Threat intelligence feed');
+      return proFeatures.threatFeed.submit(report);
+    };
+  }
+
+  // Enterprise: Compliance dashboard
+  const complianceDash = getComplianceDashboard();
+  if (complianceDash.ComplianceDashboard) {
+    proFeatures.complianceDashboard = new complianceDash.ComplianceDashboard({
+      orgInfo: { name: license._license?.orgName, id: license.orgId },
+      ...config.compliance,
+    });
+    // Auto-detect modules from config
+    proFeatures.complianceDashboard.detectModules(shield, config);
+    proFeatures.getCompliancePosture = () => {
+      license.requireFeature('compliance-dashboard', 'Compliance dashboard');
+      return proFeatures.complianceDashboard.getPosture();
+    };
+    proFeatures.getComplianceReport = (frameworkId) => {
+      license.requireFeature('compliance-dashboard', 'Compliance dashboard');
+      return proFeatures.complianceDashboard.generateReport(frameworkId);
+    };
+    proFeatures.getComplianceHTML = (htmlOptions) => {
+      license.requireFeature('compliance-dashboard', 'Compliance dashboard');
+      return proFeatures.complianceDashboard.generateHTML(htmlOptions);
+    };
+  }
+
+  // Enterprise: SSO integration
+  const sso = getSSO();
+  if (sso.SSOIntegration) {
+    proFeatures.sso = new sso.SSOIntegration(config.sso || {});
+    proFeatures.ssoAuthenticate = (identity) => {
+      license.requireFeature('sso-integration', 'SSO integration');
+      return proFeatures.sso.authenticate(identity);
+    };
+    proFeatures.ssoValidate = (sessionId, permission) => {
+      license.requireFeature('sso-integration', 'SSO integration');
+      return proFeatures.sso.validate(sessionId, permission);
+    };
+    proFeatures.ssoMiddleware = (middlewareOptions) => {
+      license.requireFeature('sso-integration', 'SSO integration');
+      return proFeatures.sso.middleware(middlewareOptions);
+    };
+  }
+
+  // Enterprise: Custom model training
+  const modelTraining = getModelTraining();
+  if (modelTraining.ModelTrainingPipeline) {
+    proFeatures.training = new modelTraining.ModelTrainingPipeline(config.training || {});
+    proFeatures.trainModel = () => {
+      license.requireFeature('custom-model-training', 'Custom model training');
+      return proFeatures.training.train();
+    };
+    proFeatures.addTrainingSample = (text, label, metadata) => {
+      license.requireFeature('custom-model-training', 'Custom model training');
+      return proFeatures.training.addSample(text, label, metadata);
+    };
+    proFeatures.predictWithModel = (text) => {
+      license.requireFeature('custom-model-training', 'Custom model training');
+      return proFeatures.training.predict(text);
+    };
+  }
+
   // Combine into enhanced shield
   const proShield = Object.create(shield);
   Object.assign(proShield, proFeatures);
@@ -235,5 +334,11 @@ module.exports = {
   getCrossTurn,
   getSelfTraining,
   getSmartConfig,
-  getTui
+  getTui,
+
+  // Enterprise modules
+  getThreatIntel,
+  getComplianceDashboard,
+  getSSO,
+  getModelTraining
 };

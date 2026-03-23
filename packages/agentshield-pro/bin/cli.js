@@ -27,6 +27,8 @@ Commands:
   status             Show current license status
   audit              Run pre-deployment security audit
   dashboard          Launch TUI dashboard (interactive)
+  compliance         Show compliance posture (Enterprise)
+  compliance-html    Generate HTML compliance report (Enterprise)
   generate-key       Generate a license key (requires --secret)
 
 Options:
@@ -36,12 +38,16 @@ Options:
   --org-name <name>  Organization display name
   --days <n>         License validity in days (default: 365)
   --seats <n>        Number of seats (default: 1)
+  --framework <fw>   Compliance framework: owasp_llm, soc2, nist_ai, eu_ai_act, hipaa, gdpr
+  --output <file>    Output file path (for compliance-html)
 
 Examples:
   agentshield-pro activate AS-PRO-xxx.yyy --secret mysecret
   agentshield-pro generate-key --secret mysecret --tier team --org acme-corp --org-name "Acme Corp"
   agentshield-pro audit
   agentshield-pro dashboard
+  agentshield-pro compliance
+  agentshield-pro compliance-html --output report.html
   `);
 }
 
@@ -54,6 +60,8 @@ function parseArgs(args) {
     else if (args[i] === '--org-name' && args[i + 1]) opts.orgName = args[++i];
     else if (args[i] === '--days' && args[i + 1]) opts.days = parseInt(args[++i], 10);
     else if (args[i] === '--seats' && args[i + 1]) opts.seats = parseInt(args[++i], 10);
+    else if (args[i] === '--framework' && args[i + 1]) opts.framework = args[++i];
+    else if (args[i] === '--output' && args[i + 1]) opts.output = args[++i];
     else if (!args[i].startsWith('--')) opts.positional = opts.positional || args[i];
   }
   return opts;
@@ -174,6 +182,51 @@ async function commandDashboard() {
   }
 }
 
+function commandCompliance(opts) {
+  const { ComplianceDashboard } = require('../src/compliance-dashboard');
+  const dashboard = new ComplianceDashboard({
+    orgInfo: {
+      name: license._license?.orgName || opts.orgName || 'Organization',
+      id: license.orgId || opts.orgId || 'default',
+    },
+  });
+
+  // Enable core checks by default
+  dashboard.enableCheck('injection_scanning');
+  dashboard.enableCheck('output_scanning');
+
+  if (opts.framework) {
+    const report = dashboard.generateReport(opts.framework);
+    const formatted = dashboard.formatTerminal();
+    console.log(formatted);
+  } else {
+    const output = dashboard.formatTerminal();
+    console.log(output);
+  }
+}
+
+function commandComplianceHTML(opts) {
+  const fs = require('fs');
+  const { ComplianceDashboard } = require('../src/compliance-dashboard');
+  const dashboard = new ComplianceDashboard({
+    orgInfo: {
+      name: license._license?.orgName || opts.orgName || 'Organization',
+      id: license.orgId || opts.orgId || 'default',
+    },
+  });
+
+  dashboard.enableCheck('injection_scanning');
+  dashboard.enableCheck('output_scanning');
+
+  const html = dashboard.generateHTML({
+    title: `Compliance Report - ${dashboard.orgInfo.name}`,
+  });
+
+  const outputPath = opts.output || 'agentshield-compliance-report.html';
+  fs.writeFileSync(outputPath, html, 'utf-8');
+  console.log(`[Agent Shield Pro] Compliance report written to: ${outputPath}`);
+}
+
 // Route commands
 const opts = parseArgs(args);
 
@@ -192,6 +245,12 @@ switch (command) {
     break;
   case 'dashboard':
     commandDashboard();
+    break;
+  case 'compliance':
+    commandCompliance(opts);
+    break;
+  case 'compliance-html':
+    commandComplianceHTML(opts);
     break;
   case 'help':
   case '--help':
