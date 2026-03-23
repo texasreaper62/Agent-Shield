@@ -288,23 +288,49 @@ async function buildDataset(options = {}) {
     }
   }
 
+  // Balance to ~50/50 by capping the larger class
+  let attackSamples = samples.filter(s => s.label === 1);
+  let benignSamples = samples.filter(s => s.label === 0);
+
+  console.log(`[Agent Shield ML] Before balancing: ${attackSamples.length} attacks, ${benignSamples.length} benign`);
+
+  const targetSize = Math.min(attackSamples.length, benignSamples.length);
+  if (attackSamples.length > targetSize) {
+    // Shuffle attacks then take targetSize
+    for (let i = attackSamples.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [attackSamples[i], attackSamples[j]] = [attackSamples[j], attackSamples[i]];
+    }
+    attackSamples = attackSamples.slice(0, targetSize);
+  }
+  if (benignSamples.length > targetSize) {
+    for (let i = benignSamples.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [benignSamples[i], benignSamples[j]] = [benignSamples[j], benignSamples[i]];
+    }
+    benignSamples = benignSamples.slice(0, targetSize);
+  }
+
+  const balanced = [...attackSamples, ...benignSamples];
+  console.log(`[Agent Shield ML] After balancing: ${attackSamples.length} attacks, ${benignSamples.length} benign (${balanced.length} total)`);
+
   // Shuffle
-  for (let i = samples.length - 1; i > 0; i--) {
+  for (let i = balanced.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [samples[i], samples[j]] = [samples[j], samples[i]];
+    [balanced[i], balanced[j]] = [balanced[j], balanced[i]];
   }
 
   // Write JSONL
-  const lines = samples.map(s => JSON.stringify(s));
+  const lines = balanced.map(s => JSON.stringify(s));
   fs.writeFileSync(outputPath, lines.join('\n') + '\n');
 
-  const attacks = samples.filter(s => s.label === 1).length;
-  const benign = samples.filter(s => s.label === 0).length;
+  const attacks = attackSamples.length;
+  const benign = benignSamples.length;
 
-  console.log(`[Agent Shield ML] Dataset built: ${samples.length} samples (${attacks} attacks, ${benign} benign)`);
+  console.log(`[Agent Shield ML] Dataset built: ${balanced.length} samples (${attacks} attacks, ${benign} benign)`);
   console.log(`[Agent Shield ML] Written to: ${outputPath}`);
 
-  return { total: samples.length, attacks, benign, outputPath };
+  return { total: balanced.length, attacks, benign, outputPath };
 }
 
 // Run if called directly
