@@ -28,11 +28,12 @@ function findFile(dir, pattern) {
 }
 
 function parseArgs(args) {
-  const opts = {};
+  const opts = { benignPaths: [] };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--hackaprompt' && args[i + 1]) opts.hackapromptPath = args[++i];
     if (args[i] === '--tensortrust' && args[i + 1]) opts.tensortustPath = args[++i];
     if (args[i] === '--bipia' && args[i + 1]) opts.bipiaPath = args[++i];
+    if (args[i] === '--benign' && args[i + 1]) opts.benignPaths.push(args[++i]);
     if (args[i] === '--output' && args[i + 1]) opts.outputPath = args[++i];
   }
   return opts;
@@ -57,9 +58,16 @@ async function main() {
   console.log(`  HackAPrompt: ${cliOpts.hackapromptPath || '(not found)'}`);
   console.log(`  TensorTrust: ${cliOpts.tensortustPath || '(not found)'}`);
   console.log(`  BIPIA:       ${cliOpts.bipiaPath || '(not found)'}`);
+  if (cliOpts.benignPaths.length > 0) {
+    for (const bp of cliOpts.benignPaths) {
+      console.log(`  Benign:      ${bp}`);
+    }
+  } else {
+    console.log(`  Benign:      (none — using built-in only)`);
+  }
   console.log('─'.repeat(50));
 
-  if (!cliOpts.hackapromptPath && !cliOpts.tensortustPath && !cliOpts.bipiaPath) {
+  if (!cliOpts.hackapromptPath && !cliOpts.tensortustPath && !cliOpts.bipiaPath && cliOpts.benignPaths.length === 0) {
     console.log('\nNo external datasets found.');
     console.log(`\nTo use this script, either:`);
     console.log(`  1. Copy your files to: ${RAW_DIR}/`);

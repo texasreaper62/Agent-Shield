@@ -155,6 +155,7 @@ async function readParquet(filePath) {
  * @param {string} [options.hackapromptPath] - Path to HackAPrompt CSV or Parquet (optional)
  * @param {string} [options.tensortustPath] - Path to TensorTrust JSONL (optional)
  * @param {string} [options.bipiaPath] - Path to BIPIA JSONL (optional)
+ * @param {string[]} [options.benignPaths] - Paths to benign dataset Parquet/JSONL files (optional)
  * @param {string} [options.outputPath] - Output JSONL path
  * @returns {Promise<{ total: number, attacks: number, benign: number, outputPath: string }>}
  */
@@ -243,6 +244,47 @@ async function buildDataset(options = {}) {
           addSample(combined, obj.label || 0, 'bipia', 'indirect_injection');
         }
       } catch (_e) { /* skip malformed lines */ }
+    }
+  }
+
+  // Load external benign datasets (Parquet or JSONL)
+  if (options.benignPaths && options.benignPaths.length > 0) {
+    for (const benignPath of options.benignPaths) {
+      if (!fs.existsSync(benignPath)) {
+        console.log(`[Agent Shield ML] Benign file not found: ${benignPath}`);
+        continue;
+      }
+      const ext = path.extname(benignPath).toLowerCase();
+      const fileName = path.basename(benignPath);
+      console.log(`[Agent Shield ML] Loading benign dataset: ${fileName}...`);
+
+      if (ext === '.parquet') {
+        const rows = await readParquet(benignPath);
+        console.log(`[Agent Shield ML]   Read ${rows.length} rows from ${fileName}`);
+        for (const row of rows) {
+          // Common benign dataset columns: instruction, input, output, text, prompt, context
+          // Dolly: instruction, context, response, category
+          // Alpaca: instruction, input, output
+          const text = row.instruction || row.text || row.prompt || row.input || '';
+          const category = row.category || 'external_benign';
+          if (text) addSample(String(text), 0, 'external_benign', String(category));
+          // Also add the output/response as benign if present
+          const response = row.output || row.response || '';
+          if (response && String(response).length > 10) {
+            addSample(String(response), 0, 'external_benign', String(category));
+          }
+        }
+      } else {
+        // JSONL
+        const lines = fs.readFileSync(benignPath, 'utf-8').split('\n');
+        for (const line of lines) {
+          try {
+            const obj = JSON.parse(line);
+            const text = obj.instruction || obj.text || obj.prompt || obj.input || '';
+            if (text) addSample(text, 0, 'external_benign', obj.category || 'external_benign');
+          } catch (_e) { /* skip */ }
+        }
+      }
     }
   }
 
