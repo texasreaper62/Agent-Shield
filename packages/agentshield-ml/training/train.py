@@ -252,6 +252,15 @@ def export_onnx(model, tokenizer, max_length, output_path, device):
     model.eval()
     model.to(device)
 
+    # Force eager attention to avoid SDPA tracing issues with torch.onnx.export
+    if hasattr(model.config, '_attn_implementation'):
+        model.config._attn_implementation = "eager"
+    for module in model.modules():
+        if hasattr(module, '_attn_implementation'):
+            module._attn_implementation = "eager"
+        if hasattr(module, 'config') and hasattr(module.config, '_attn_implementation'):
+            module.config._attn_implementation = "eager"
+
     # Dummy input
     dummy = tokenizer(
         "This is a test input for ONNX export.",
