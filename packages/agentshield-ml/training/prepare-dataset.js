@@ -57,19 +57,28 @@ async function readParquet(filePath) {
   try { fs.unlinkSync(tmpOut); } catch (_) {}
 
   // Write a temp Python script (avoids shell quote escaping issues on Windows)
+  // Sample large datasets to 50K rows max — more than enough for training
   const pyScript = [
     'import pandas as pd',
     `df = pd.read_parquet(r"""${filePath}""")`,
-    'print(f"Loaded {len(df)} rows from parquet, exporting...")',
+    'print(f"Loaded {len(df)} rows from parquet")',
+    'if len(df) > 50000:',
+    '    df = df.sample(n=50000, random_state=42)',
+    '    print(f"Sampled down to {len(df)} rows")',
+    '# Keep only text-like columns to reduce output size',
+    'text_cols = [c for c in df.columns if df[c].dtype == "object"]',
+    'if text_cols:',
+    '    df = df[text_cols]',
     `df.to_json(r"""${tmpOut}""", orient="records", lines=True, force_ascii=False)`,
     'print("Export complete")'
   ].join('\n');
 
   fs.writeFileSync(tmpScript, pyScript);
 
-  // Try python, python3, py in order
+  // Try python, python3, py in order — stop after first success
   const pythons = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
   let lastErr = null;
+  let pySuccess = false;
 
   for (const py of pythons) {
     try {
@@ -79,27 +88,34 @@ async function readParquet(filePath) {
         maxBuffer: 10 * 1024 * 1024
       });
       console.log(`[Agent Shield ML]   ${out.toString().trim()}`);
-
-      if (fs.existsSync(tmpOut)) {
-        const content = fs.readFileSync(tmpOut, 'utf-8');
-        const lines = content.split('\n').filter(Boolean);
-        const rows = [];
-        for (const line of lines) {
-          try { rows.push(JSON.parse(line)); } catch (_) { /* skip bad lines */ }
-        }
-
-        // Clean up temp files
-        try { fs.unlinkSync(tmpScript); } catch (_) {}
-        try { fs.unlinkSync(tmpOut); } catch (_) {}
-
-        console.log(`[Agent Shield ML]   Parsed ${rows.length} rows via Python/pandas`);
-        return rows;
-      }
-      // Python ran but no output file — try next interpreter
+      pySuccess = true;
+      break;  // Stop after first working interpreter
     } catch (err) {
       lastErr = err;
-      // If this interpreter doesn't have pandas, try the next one
       continue;
+    }
+  }
+
+  // Read the output file if Python succeeded
+  if (pySuccess && fs.existsSync(tmpOut)) {
+    try {
+      console.log('[Agent Shield ML]   Reading exported JSONL...');
+      const content = fs.readFileSync(tmpOut, 'utf-8');
+      const lines = content.split('\n').filter(Boolean);
+      const rows = [];
+      for (const line of lines) {
+        try { rows.push(JSON.parse(line)); } catch (_) { /* skip bad lines */ }
+      }
+
+      // Clean up temp files
+      try { fs.unlinkSync(tmpScript); } catch (_) {}
+      try { fs.unlinkSync(tmpOut); } catch (_) {}
+
+      console.log(`[Agent Shield ML]   Parsed ${rows.length} rows via Python/pandas`);
+      return rows;
+    } catch (readErr) {
+      console.error(`[Agent Shield ML]   Failed to parse JSONL: ${readErr.message}`);
+      try { fs.unlinkSync(tmpOut); } catch (_) {}
     }
   }
 
