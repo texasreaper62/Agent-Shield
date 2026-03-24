@@ -170,6 +170,9 @@ const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequir
 // OpenClaw
 const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = safeRequire('./openclaw', 'openclaw');
 
+// v8.1 — Quick Start (Zero-Config)
+const { quickShield, shieldExpress, shieldAgent, shieldLLMCall, QuickShield, PRESETS: QUICKSTART_PRESETS } = safeRequire('./quickstart', 'quickstart');
+
 // v8.0 — ML Detection (Pro/Enterprise)
 const { MLShield, isMLTier, isValidTier, loadMLPackage, ML_ENABLED_TIERS, VALID_TIERS } = safeRequire('./ml-detector', 'ml-detector');
 
@@ -897,6 +900,14 @@ const _exports = {
   AUTHORITY_FRAMEWORKS,
   CA_CAPABILITY_MAP,
   CA_CERTIFICATE_LEVELS,
+
+  // v8.1 — Quick Start (Zero-Config)
+  quickShield,
+  shieldExpress,
+  shieldAgent,
+  shieldLLMCall,
+  QuickShield,
+  QUICKSTART_PRESETS,
 };
 
 // Filter out undefined exports (from modules that failed to load)
