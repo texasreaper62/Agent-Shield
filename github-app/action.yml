@@ -1,0 +1,37 @@
+name: 'Agent Shield PR Scanner'
+description: 'Scan pull requests for AI prompt injection vulnerabilities'
+author: 'Agent Shield'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  min-severity:
+    description: 'Minimum severity level to report (low, medium, high, critical)'
+    required: false
+    default: 'medium'
+  categories:
+    description: 'Comma-separated list of categories to scan (empty = all)'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+  blocking:
+    description: 'Fail the check if threats are found (true/false)'
+    required: false
+    default: 'true'
+
+outputs:
+  threat-count:
+    description: 'Number of threats detected'
+  severity:
+    description: 'Maximum severity level found'
+  safe:
+    description: 'Whether the PR passed the scan (true/false)'
+
+runs:
+  using: 'node20'
+  main: 'action.js'

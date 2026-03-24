@@ -1,0 +1,62 @@
+name: Detection Bypass
+description: Report an attack payload that evades detection
+title: "[Bypass]: "
+labels: ["detection-bypass", "security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found an attack payload that Agent Shield doesn't detect? Report it here.
+        **For critical security issues, use [SECURITY.md](../../SECURITY.md) for private reporting.**
+
+  - type: input
+    id: version
+    attributes:
+      label: Agent Shield Version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sensitivity
+    attributes:
+      label: Sensitivity Level Tested
+      options:
+        - low
+        - medium
+        - high
+    validations:
+      required: true
+
+  - type: textarea
+    id: payload
+    attributes:
+      label: Attack Payload
+      description: The text that should have been detected but wasn't.
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Expected Threat Category
+      options:
+        - prompt_injection
+        - jailbreak
+        - data_exfiltration
+        - tool_abuse
+        - encoding_attack
+        - social_engineering
+        - privilege_escalation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Why this payload is malicious and any context about the attack technique.
+    validations:
+      required: true

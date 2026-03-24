@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Shield — Live Dashboard</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --border: #2a2d3a;
+  --text: #e4e6f0;
+  --text-dim: #8b8fa3;
+  --accent: #6c5ce7;
+  --accent-glow: rgba(108, 92, 231, 0.3);
+  --green: #00d68f;
+  --yellow: #ffaa00;
+  --red: #ff3d71;
+  --orange: #ff7b00;
+  --blue: #0095ff;
+  --chart-bg: #141620;
+}
+
+.light-mode {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --border: #d9dce6;
+  --text: #1a1d27;
+  --text-dim: #6b7085;
+  --chart-bg: #f8f9fb;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  transition: background 0.3s;
+}
+
+.status-dot.connected { background: var(--green); }
+.status-dot.reconnecting { background: var(--yellow); animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.theme-toggle {
+  background: var(--border);
+  border: none;
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.theme-toggle:hover { opacity: 0.8; }
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.metric-card .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.metric-card .value {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-card .sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.chart-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.throughput-chart { grid-column: 1 / 3; }
+.donut-chart-card { grid-column: 3 / 4; }
+.bar-chart-card { grid-column: 4 / 5; }
+.heatmap-card { grid-column: 1 / 3; }
+.threat-feed-card { grid-column: 3 / 5; min-height: 300px; }
+
+.threat-feed {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.threat-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.threat-item:last-child { border-bottom: none; }
+
+.severity-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.severity-badge.critical { background: rgba(255, 61, 113, 0.15); color: var(--red); }
+.severity-badge.high { background: rgba(255, 123, 0, 0.15); color: var(--orange); }
+.severity-badge.medium { background: rgba(255, 170, 0, 0.15); color: var(--yellow); }
+.severity-badge.low { background: rgba(0, 149, 255, 0.15); color: var(--blue); }
+
+.threat-info { flex: 1; min-width: 0; }
+.threat-info .message { font-size: 13px; line-height: 1.4; }
+.threat-info .meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  display: flex;
+  gap: 12px;
+}
+
+svg text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(60, 1fr);
+  gap: 1px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--chart-bg);
+  transition: background 0.3s;
+}
+
+.heatmap-cell.s0 { background: var(--chart-bg); }
+.heatmap-cell.s1 { background: rgba(0, 149, 255, 0.3); }
+.heatmap-cell.s2 { background: rgba(255, 170, 0, 0.4); }
+.heatmap-cell.s3 { background: rgba(255, 123, 0, 0.5); }
+.heatmap-cell.s4 { background: rgba(255, 61, 113, 0.7); }
+
+.heatmap-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr 1fr;
+  }
+  .throughput-chart, .heatmap-card, .threat-feed-card { grid-column: 1 / -1; }
+  .donut-chart-card, .bar-chart-card { grid-column: auto; }
+}
+
+@media (max-width: 600px) {
+  .dashboard { grid-template-columns: 1fr; }
+  .throughput-chart, .donut-chart-card, .bar-chart-card,
+  .heatmap-card, .threat-feed-card { grid-column: auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">S</div>
+    <span>Agent Shield <span style="font-weight:400;font-size:14px;color:var(--text-dim)">Live Dashboard</span></span>
+  </div>
+  <div class="header-controls">
+    <div class="connection-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <button class="theme-toggle" id="themeToggle">Light Mode</button>
+  </div>
+</header>
+
+<main class="dashboard">
+  <!-- Metric Cards -->
+  <div class="metric-card">
+    <div class="label">Total Scans</div>
+    <div class="value" id="totalScans">0</div>
+    <div class="sub" id="scanRate">0 scans/sec</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Active Threats</div>
+    <div class="value" id="totalThreats" style="color:var(--red)">0</div>
+    <div class="sub" id="threatBreakdown">--</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Detection Rate</div>
+    <div class="value" id="detectionRate">0%</div>
+    <div class="sub">threats / scans</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Avg Latency</div>
+    <div class="value" id="avgLatency">0ms</div>
+    <div class="sub" id="clientCount">0 clients</div>
+  </div>
+
+  <!-- Throughput Line Chart -->
+  <div class="chart-card throughput-chart">
+    <h3>Throughput (scans/sec) — Last 60 Seconds</h3>
+    <svg id="throughputSvg" width="100%" height="160" viewBox="0 0 600 160" preserveAspectRatio="none"></svg>
+  </div>
+
+  <!-- Donut Chart -->
+  <div class="chart-card donut-chart-card">
+    <h3>Threat Distribution</h3>
+    <svg id="donutSvg" width="100%" height="200" viewBox="0 0 200 200"></svg>
+  </div>
+
+  <!-- Bar Chart -->
+  <div class="chart-card bar-chart-card">
+    <h3>Top Categories</h3>
+    <div id="barChart"></div>
+  </div>
+
+  <!-- Heatmap -->
+  <div class="chart-card heatmap-card">
+    <h3>Severity Heatmap (Last 60 Seconds)</h3>
+    <div class="heatmap-grid" id="heatmapGrid"></div>
+    <div class="heatmap-labels">
+      <span>60s ago</span>
+      <span>Now</span>
+    </div>
+  </div>
+
+  <!-- Threat Feed -->
+  <div class="chart-card threat-feed-card">
+    <h3>Live Threat Feed</h3>
+    <div class="threat-feed" id="threatFeed">
+      <div style="color:var(--text-dim);font-size:13px;padding:20px 0;text-align:center;">
+        Waiting for threats...
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function() {
+  'use strict';
+
+  // --- State ---
+  let ws = null;
+  let reconnectDelay = 1000;
+  const maxReconnectDelay = 30000;
+  let isLightMode = false;
+  let throughputHistory = new Array(60).fill(0);
+  let heatmapData = new Array(60).fill(0);
+  let stats = {
+    totalScans: 0,
+    totalThreats: 0,
+    detectionRate: '0.00',
+    avgLatency: 0,
+    threatsByCategory: {},
+    threatsBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+    throughputPerSecond: [],
+    connectedClients: 0
+  };
+  let recentThreats = [];
+
+  // --- WebSocket ---
+  function connect() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = protocol + '//' + location.host + '/ws';
+
+    setStatus('reconnecting', 'Connecting...');
+
+    try {
+      ws = new WebSocket(url);
+    } catch (e) {
+      scheduleReconnect();
+      return;
+    }
+
+    ws.onopen = function() {
+      setStatus('connected', 'Connected');
+      reconnectDelay = 1000;
+    };
+
+    ws.onmessage = function(event) {
+      try {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    ws.onclose = function() {
+      setStatus('disconnected', 'Disconnected');
+      scheduleReconnect();
+    };
+
+    ws.onerror = function() {
+      if (ws) ws.close();
+    };
+  }
+
+  function scheduleReconnect() {
+    setStatus('reconnecting', 'Reconnecting in ' + Math.round(reconnectDelay / 1000) + 's...');
+    setTimeout(function() {
+      reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelay);
+      connect();
+    }, reconnectDelay);
+  }
+
+  function setStatus(state, text) {
+    var dot = document.getElementById('statusDot');
+    var label = document.getElementById('statusText');
+    dot.className = 'status-dot ' + (state === 'connected' ? 'connected' : state === 'reconnecting' ? 'reconnecting' : '');
+    label.textContent = text;
+  }
+
+  function handleMessage(msg) {
+    if (msg.type === 'init') {
+      stats = msg.data.stats;
+      recentThreats = msg.data.recentThreats || [];
+      updateAll();
+      renderThreatFeed();
+    } else if (msg.type === 'stats') {
+      stats = msg.data;
+      updateMetrics();
+      updateThroughputChart();
+      updateDonutChart();
+      updateBarChart();
+      updateHeatmap();
+    } else if (msg.type === 'threat') {
+      recentThreats.push(msg.data);
+      if (recentThreats.length > 200) recentThreats.shift();
+      addThreatToFeed(msg.data);
+    }
+  }
+
+  // --- Metrics ---
+  function updateAll() {
+    updateMetrics();
+    updateThroughputChart();
+    updateDonutChart();
+    updateBarChart();
+    initHeatmap();
+    updateHeatmap();
+  }
+
+  function updateMetrics() {
+    document.getElementById('totalScans').textContent = formatNumber(stats.totalScans);
+    document.getElementById('totalThreats').textContent = formatNumber(stats.totalThreats);
+    document.getElementById('detectionRate').textContent = stats.detectionRate + '%';
+    document.getElementById('avgLatency').textContent = stats.avgLatency + 'ms';
+    document.getElementById('clientCount').textContent = (stats.connectedClients || 0) + ' client' + (stats.connectedClients === 1 ? '' : 's');
+
+    var tp = stats.throughputPerSecond || [];
+    var currentRate = tp.length > 0 ? tp[tp.length - 1] : 0;
+    document.getElementById('scanRate').textContent = currentRate + ' scans/sec';
+
+    var sev = stats.threatsBySeverity || {};
+    document.getElementById('threatBreakdown').textContent =
+      (sev.critical || 0) + ' crit / ' + (sev.high || 0) + ' high / ' + (sev.medium || 0) + ' med';
+  }
+
+  // --- Throughput Line Chart ---
+  function updateThroughputChart() {
+    var data = stats.throughputPerSecond || [];
+    if (data.length === 0) data = new Array(60).fill(0);
+    throughputHistory = data.slice(-60);
+    while (throughputHistory.length < 60) throughputHistory.unshift(0);
+
+    var svg = document.getElementById('throughputSvg');
+    var w = 600, h = 160, pad = 20;
+    var maxVal = Math.max(1, Math.max.apply(null, throughputHistory));
+
+    var points = [];
+    var areaPoints = [];
+    for (var i = 0; i < 60; i++) {
+      var x = pad + (i / 59) * (w - 2 * pad);
+      var y = h - pad - ((throughputHistory[i] / maxVal) * (h - 2 * pad));
+      points.push(x + ',' + y);
+      areaPoints.push(x + ',' + y);
+    }
+
+    var areaPath = 'M' + (pad) + ',' + (h - pad) + ' L' + areaPoints.join(' L') + ' L' + (w - pad) + ',' + (h - pad) + ' Z';
+    var linePath = 'M' + points.join(' L');
+
+    // Grid lines
+    var gridHtml = '';
+    for (var g = 0; g <= 4; g++) {
+      var gy = pad + (g / 4) * (h - 2 * pad);
+      var label = Math.round(maxVal * (1 - g / 4));
+      gridHtml += '<line x1="' + pad + '" y1="' + gy + '" x2="' + (w - pad) + '" y2="' + gy + '" stroke="' + getCssVar('--border') + '" stroke-width="0.5"/>';
+      gridHtml += '<text x="' + (pad - 4) + '" y="' + (gy + 4) + '" text-anchor="end" fill="' + getCssVar('--text-dim') + '" font-size="10">' + label + '</text>';
+    }
+
+    svg.innerHTML = gridHtml +
+      '<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="' + getCssVar('--accent') + '" stop-opacity="0.3"/><stop offset="100%" stop-color="' + getCssVar('--accent') + '" stop-opacity="0"/></linearGradient></defs>' +
+      '<path d="' + areaPath + '" fill="url(#areaGrad)"/>' +
+      '<path d="' + linePath + '" fill="none" stroke="' + getCssVar('--accent') + '" stroke-width="2"/>';
+  }
+
+  // --- Donut Chart ---
+  function updateDonutChart() {
+    var cats = stats.threatsByCategory || {};
+    var entries = Object.entries(cats).sort(function(a, b) { return b[1] - a[1]; });
+    var total = entries.reduce(function(s, e) { return s + e[1]; }, 0);
+
+    var svg = document.getElementById('donutSvg');
+    if (total === 0) {
+      svg.innerHTML = '<text x="100" y="105" text-anchor="middle" fill="' + getCssVar('--text-dim') + '" font-size="13">No threats yet</text>';
+      return;
+    }
+
+    var colors = ['#6c5ce7', '#0095ff', '#00d68f', '#ffaa00', '#ff7b00', '#ff3d71', '#a29bfe', '#00cec9'];
+    var cx = 100, cy = 100, r = 70, inner = 45;
+    var angle = -90;
+    var html = '';
+
+    for (var i = 0; i < entries.length && i < 8; i++) {
+      var pct = entries[i][1] / total;
+      var startAngle = angle;
+      var endAngle = angle + pct * 360;
+      var color = colors[i % colors.length];
+
+      var start = polarToCartesian(cx, cy, r, startAngle);
+      var end = polarToCartesian(cx, cy, r, endAngle);
+      var innerStart = polarToCartesian(cx, cy, inner, endAngle);
+      var innerEnd = polarToCartesian(cx, cy, inner, startAngle);
+      var largeArc = pct > 0.5 ? 1 : 0;
+
+      var d = 'M' + start.x + ',' + start.y +
+              ' A' + r + ',' + r + ' 0 ' + largeArc + ',1 ' + end.x + ',' + end.y +
+              ' L' + innerStart.x + ',' + innerStart.y +
+              ' A' + inner + ',' + inner + ' 0 ' + largeArc + ',0 ' + innerEnd.x + ',' + innerEnd.y + ' Z';
+
+      html += '<path d="' + d + '" fill="' + color + '" opacity="0.85"><title>' + entries[i][0] + ': ' + entries[i][1] + '</title></path>';
+      angle = endAngle;
+    }
+
+    // Center label
+    html += '<text x="100" y="96" text-anchor="middle" fill="' + getCssVar('--text') + '" font-size="22" font-weight="700">' + total + '</text>';
+    html += '<text x="100" y="112" text-anchor="middle" fill="' + getCssVar('--text-dim') + '" font-size="11">threats</text>';
+
+    // Legend
+    var ly = 195;
+    // Show legend below for small counts
+    svg.innerHTML = html;
+  }
+
+  function polarToCartesian(cx, cy, r, angleDeg) {
+    var rad = (angleDeg * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  // --- Bar Chart ---
+  function updateBarChart() {
+    var cats = stats.threatsByCategory || {};
+    var entries = Object.entries(cats).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 6);
+    var container = document.getElementById('barChart');
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;text-align:center;padding:20px;">No data</div>';
+      return;
+    }
+
+    var maxVal = entries[0][1];
+    var html = '';
+    for (var i = 0; i < entries.length; i++) {
+      var pct = (entries[i][1] / maxVal) * 100;
+      html += '<div style="margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">' +
+        '<span style="color:var(--text)">' + entries[i][0] + '</span>' +
+        '<span style="color:var(--text-dim)">' + entries[i][1] + '</span></div>' +
+        '<div style="height:6px;background:var(--chart-bg);border-radius:3px;overflow:hidden;">' +
+        '<div style="width:' + pct + '%;height:100%;background:var(--accent);border-radius:3px;transition:width 0.5s;"></div>' +
+        '</div></div>';
+    }
+    container.innerHTML = html;
+  }
+
+  // --- Heatmap ---
+  function initHeatmap() {
+    var grid = document.getElementById('heatmapGrid');
+    // 4 rows (severity) x 60 cols (seconds)
+    var html = '';
+    for (var row = 0; row < 4; row++) {
+      for (var col = 0; col < 60; col++) {
+        html += '<div class="heatmap-cell s0" data-row="' + row + '" data-col="' + col + '"></div>';
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  function updateHeatmap() {
+    var tp = stats.throughputPerSecond || [];
+    var sev = stats.threatsBySeverity || {};
+    var grid = document.getElementById('heatmapGrid');
+    var cells = grid.querySelectorAll('.heatmap-cell');
+    if (cells.length === 0) {
+      initHeatmap();
+      cells = grid.querySelectorAll('.heatmap-cell');
+    }
+
+    // Simple heatmap: distribute severity counts across recent seconds
+    var severities = ['critical', 'high', 'medium', 'low'];
+    for (var row = 0; row < 4; row++) {
+      var count = sev[severities[row]] || 0;
+      for (var col = 0; col < 60; col++) {
+        var idx = row * 60 + col;
+        if (idx >= cells.length) break;
+        var scansInSec = tp[col] || 0;
+        var level = 0;
+        if (scansInSec > 0 && count > 0) {
+          level = Math.min(4, Math.ceil(scansInSec * (count / Math.max(1, stats.totalScans)) * 4));
+        }
+        cells[idx].className = 'heatmap-cell s' + level;
+      }
+    }
+  }
+
+  // --- Threat Feed ---
+  function renderThreatFeed() {
+    var feed = document.getElementById('threatFeed');
+    if (recentThreats.length === 0) {
+      feed.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px 0;text-align:center;">Waiting for threats...</div>';
+      return;
+    }
+    feed.innerHTML = '';
+    var display = recentThreats.slice(-50).reverse();
+    for (var i = 0; i < display.length; i++) {
+      feed.appendChild(createThreatElement(display[i]));
+    }
+  }
+
+  function addThreatToFeed(threat) {
+    var feed = document.getElementById('threatFeed');
+    // Remove placeholder
+    if (feed.querySelector('div[style]') && recentThreats.length <= 1) {
+      feed.innerHTML = '';
+    }
+    var el = createThreatElement(threat);
+    feed.insertBefore(el, feed.firstChild);
+    // Cap visible items
+    while (feed.children.length > 50) {
+      feed.removeChild(feed.lastChild);
+    }
+  }
+
+  function createThreatElement(threat) {
+    var div = document.createElement('div');
+    div.className = 'threat-item';
+    var time = new Date(threat.timestamp).toLocaleTimeString();
+    div.innerHTML = '<span class="severity-badge ' + (threat.severity || 'medium') + '">' + (threat.severity || 'medium') + '</span>' +
+      '<div class="threat-info">' +
+      '<div class="message">' + escapeHtml(threat.message || threat.description || 'Threat detected') + '</div>' +
+      '<div class="meta"><span>' + escapeHtml(threat.category || 'unknown') + '</span><span>' + time + '</span></div>' +
+      '</div>';
+    return div;
+  }
+
+  // --- Helpers ---
+  function formatNumber(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function getCssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // --- Theme Toggle ---
+  document.getElementById('themeToggle').addEventListener('click', function() {
+    isLightMode = !isLightMode;
+    document.body.classList.toggle('light-mode', isLightMode);
+    this.textContent = isLightMode ? 'Dark Mode' : 'Light Mode';
+    // Re-render charts for color update
+    updateThroughputChart();
+  });
+
+  // --- Init ---
+  initHeatmap();
+  connect();
+})();
+</script>
+</body>
+</html>

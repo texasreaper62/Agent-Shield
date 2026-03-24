@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Shield — Live Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: #0a0a0f; color: #e0e0e0; }
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 16px 24px; border-bottom: 1px solid #2a2a4a; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 1.3em; color: #00d4ff; }
+  .header .status { display: flex; align-items: center; gap: 8px; }
+  .header .dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px 24px; }
+  .metric { background: #12121f; border: 1px solid #2a2a4a; border-radius: 10px; padding: 16px; }
+  .metric .value { font-size: 2em; font-weight: 700; color: #00d4ff; }
+  .metric .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .metric .change { font-size: 12px; margin-top: 4px; }
+  .metric .change.up { color: #ff4444; }
+  .metric .change.down { color: #00ff88; }
+  .main { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; padding: 0 24px 24px; }
+  .card { background: #12121f; border: 1px solid #2a2a4a; border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 0.85em; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .feed { max-height: 400px; overflow-y: auto; }
+  .feed-item { padding: 8px 12px; border-left: 3px solid #2a2a4a; margin: 4px 0; font-size: 13px; background: #0a0a0f; border-radius: 0 6px 6px 0; }
+  .feed-item.critical { border-left-color: #ff3333; }
+  .feed-item.high { border-left-color: #ff6600; }
+  .feed-item.medium { border-left-color: #ffaa00; }
+  .feed-item.safe { border-left-color: #00ff88; }
+  .feed-item .time { color: #666; font-size: 11px; }
+  .feed-item .cat { color: #00d4ff; font-size: 11px; }
+  .heatmap-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+  .heatmap-cell { aspect-ratio: 1; border-radius: 2px; background: #1a1a2e; }
+  .bar-chart .bar-row { display: flex; align-items: center; margin: 4px 0; }
+  .bar-chart .bar-label { width: 140px; font-size: 12px; color: #aaa; text-align: right; padding-right: 10px; }
+  .bar-chart .bar { height: 20px; border-radius: 3px; min-width: 2px; transition: width 0.5s; }
+  .bar-chart .bar-value { font-size: 11px; color: #888; margin-left: 6px; }
+  .timeline { position: relative; height: 120px; }
+  .timeline canvas { width: 100%; height: 100%; }
+  .severity-dist { display: flex; gap: 8px; margin-top: 8px; }
+  .sev-badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .sev-badge.critical { background: #ff333322; color: #ff3333; }
+  .sev-badge.high { background: #ff660022; color: #ff6600; }
+  .sev-badge.medium { background: #ffaa0022; color: #ffaa00; }
+  .sev-badge.low { background: #88888822; color: #888; }
+  .circuit-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .circuit-status.closed { background: #00ff8822; color: #00ff88; }
+  .circuit-status.open { background: #ff333322; color: #ff3333; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Agent Shield Live Dashboard</h1>
+  <div class="status">
+    <div class="dot"></div>
+    <span style="font-size:13px;color:#00ff88">Monitoring</span>
+    <span style="font-size:12px;color:#666;margin-left:10px" id="uptime">0:00:00</span>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="metric">
+    <div class="value" id="mScans">0</div>
+    <div class="label">Total Scans</div>
+    <div class="change" id="mScansRate">0/sec</div>
+  </div>
+  <div class="metric">
+    <div class="value" id="mThreats">0</div>
+    <div class="label">Threats Detected</div>
+    <div class="change up" id="mThreatRate">0/min</div>
+  </div>
+  <div class="metric">
+    <div class="value" id="mBlocked">0</div>
+    <div class="label">Requests Blocked</div>
+    <div class="change" id="mBlockRate">0%</div>
+  </div>
+  <div class="metric">
+    <div class="value" id="mLatency">0ms</div>
+    <div class="label">Avg Latency</div>
+    <div class="change down" id="mP99">p99: 0ms</div>
+  </div>
+</div>
+
+<div class="main">
+  <div>
+    <div class="card" style="margin-bottom:12px">
+      <h2>Threat Timeline (Last 60s)</h2>
+      <div class="timeline"><canvas id="timelineCanvas"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Threat Categories</h2>
+      <div class="bar-chart" id="categoryBars"></div>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>Circuit Breaker</h2>
+        <div class="circuit-status closed" id="circuitStatus">CLOSED</div>
+      </div>
+      <div class="severity-dist" id="sevDist" style="margin-top:12px">
+        <span class="sev-badge critical">Critical: 0</span>
+        <span class="sev-badge high">High: 0</span>
+        <span class="sev-badge medium">Medium: 0</span>
+      </div>
+      <div style="margin-top:12px">
+        <h2 style="margin-bottom:8px">24h Heatmap</h2>
+        <div class="heatmap-grid" id="heatmap24h"></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#666;margin-top:4px">
+          <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Live Feed</h2>
+      <div class="feed" id="liveFeed">
+        <div class="feed-item safe"><span class="time">--:--:--</span> Dashboard initialized</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Simulated live dashboard data
+const state = {
+  scans: 0, threats: 0, blocked: 0,
+  latencies: [], categories: {},
+  timeline: new Array(60).fill(0),
+  severity: { critical: 0, high: 0, medium: 0, low: 0 },
+  heatmap: new Array(24).fill(0),
+  startTime: Date.now(),
+  circuitBreaker: 'closed'
+};
+
+const CATEGORIES = ['instruction_override', 'role_hijack', 'prompt_injection', 'data_exfiltration', 'tool_abuse', 'social_engineering', 'encoding_evasion', 'ai_phishing'];
+const SEVERITIES = ['critical', 'high', 'medium', 'low'];
+const COLORS = { instruction_override: '#ff3333', role_hijack: '#ff6600', prompt_injection: '#ffaa00', data_exfiltration: '#a855f7', tool_abuse: '#06b6d4', social_engineering: '#ec4899', encoding_evasion: '#3b82f6', ai_phishing: '#f97316' };
+
+function simulateEvent() {
+  state.scans++;
+  const latency = Math.random() * 2 + 0.01;
+  state.latencies.push(latency);
+  if (state.latencies.length > 1000) state.latencies.shift();
+
+  const isThreat = Math.random() < 0.15;
+  if (isThreat) {
+    state.threats++;
+    const cat = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+    const sev = SEVERITIES[Math.floor(Math.random() * 3)];
+    state.categories[cat] = (state.categories[cat] || 0) + 1;
+    state.severity[sev]++;
+    state.timeline[state.timeline.length - 1]++;
+    state.heatmap[new Date().getHours()]++;
+    if (Math.random() < 0.7) state.blocked++;
+    if (state.threats > 20 && Math.random() < 0.05) state.circuitBreaker = 'open';
+    addFeedItem(sev, cat, `${cat.replace(/_/g, ' ')} detected`);
+  }
+}
+
+function addFeedItem(severity, category, msg) {
+  const feed = document.getElementById('liveFeed');
+  const now = new Date();
+  const time = now.toTimeString().substring(0, 8);
+  const item = document.createElement('div');
+  item.className = `feed-item ${severity}`;
+  item.innerHTML = `<span class="time">${time}</span> <span class="cat">${category.replace(/_/g, ' ')}</span> ${msg}`;
+  feed.insertBefore(item, feed.firstChild);
+  if (feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+function updateMetrics() {
+  document.getElementById('mScans').textContent = state.scans.toLocaleString();
+  document.getElementById('mThreats').textContent = state.threats.toLocaleString();
+  document.getElementById('mBlocked').textContent = state.blocked.toLocaleString();
+  const avg = state.latencies.length ? (state.latencies.reduce((a,b) => a+b, 0) / state.latencies.length) : 0;
+  document.getElementById('mLatency').textContent = avg.toFixed(2) + 'ms';
+
+  const elapsed = (Date.now() - state.startTime) / 1000;
+  document.getElementById('mScansRate').textContent = (state.scans / Math.max(1, elapsed)).toFixed(1) + '/sec';
+  document.getElementById('mThreatRate').textContent = (state.threats / Math.max(1, elapsed / 60)).toFixed(1) + '/min';
+  document.getElementById('mBlockRate').textContent = state.scans ? ((state.blocked / state.scans) * 100).toFixed(1) + '%' : '0%';
+
+  const sorted = [...state.latencies].sort((a,b) => a - b);
+  const p99 = sorted.length ? sorted[Math.floor(sorted.length * 0.99)] : 0;
+  document.getElementById('mP99').textContent = 'p99: ' + p99.toFixed(2) + 'ms';
+
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = Math.floor(elapsed % 60);
+  document.getElementById('uptime').textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  const sevHtml = Object.entries(state.severity).filter(([k]) => k !== 'low').map(([k, v]) => `<span class="sev-badge ${k}">${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}</span>`).join('');
+  document.getElementById('sevDist').innerHTML = sevHtml;
+
+  const cs = document.getElementById('circuitStatus');
+  cs.textContent = state.circuitBreaker.toUpperCase();
+  cs.className = `circuit-status ${state.circuitBreaker}`;
+}
+
+function updateCategoryBars() {
+  const el = document.getElementById('categoryBars');
+  const max = Math.max(1, ...Object.values(state.categories));
+  let html = '';
+  for (const cat of CATEGORIES) {
+    const count = state.categories[cat] || 0;
+    const width = Math.max(2, (count / max) * 100);
+    const color = COLORS[cat] || '#888';
+    html += `<div class="bar-row">
+      <span class="bar-label">${cat.replace(/_/g, ' ')}</span>
+      <div class="bar" style="width:${width}%;background:${color}"></div>
+      <span class="bar-value">${count}</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function drawTimeline() {
+  const canvas = document.getElementById('timelineCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = canvas.offsetHeight * 2;
+  ctx.scale(2, 2);
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  const max = Math.max(1, ...state.timeline);
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = '#2a2a4a';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y < h; y += h / 4) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  // Area fill
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+  grad.addColorStop(1, 'rgba(0, 212, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  for (let i = 0; i < state.timeline.length; i++) {
+    const x = (i / (state.timeline.length - 1)) * w;
+    const y = h - (state.timeline[i] / max) * (h - 10);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, h);
+  ctx.fill();
+
+  // Line
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < state.timeline.length; i++) {
+    const x = (i / (state.timeline.length - 1)) * w;
+    const y = h - (state.timeline[i] / max) * (h - 10);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function updateHeatmap() {
+  const el = document.getElementById('heatmap24h');
+  const max = Math.max(1, ...state.heatmap);
+  let html = '';
+  for (let i = 0; i < 24; i++) {
+    const intensity = state.heatmap[i] / max;
+    const r = Math.floor(intensity * 255);
+    const g = Math.floor((1 - intensity) * 100);
+    const bg = intensity > 0 ? `rgba(${r}, ${g}, 0, ${0.2 + intensity * 0.8})` : '#1a1a2e';
+    html += `<div class="heatmap-cell" style="background:${bg}" title="${i}:00 - ${state.heatmap[i]} threats"></div>`;
+  }
+  el.innerHTML = html;
+}
+
+// Simulation loop
+setInterval(() => {
+  for (let i = 0; i < 3 + Math.floor(Math.random() * 5); i++) simulateEvent();
+}, 200);
+
+setInterval(() => {
+  state.timeline.push(0);
+  state.timeline.shift();
+}, 1000);
+
+setInterval(() => {
+  updateMetrics();
+  updateCategoryBars();
+  drawTimeline();
+  updateHeatmap();
+}, 500);
+
+// Initial render
+updateMetrics();
+updateCategoryBars();
+updateHeatmap();
+</script>
+
+</body>
+</html>

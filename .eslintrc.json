@@ -1,0 +1,42 @@
+{
+  "env": {
+    "node": true,
+    "es2020": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022
+  },
+  "rules": {
+    "no-var": "error",
+    "prefer-const": "warn",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "eqeqeq": ["error", "always"],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "strict": ["error", "global"],
+    "no-throw-literal": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "warn",
+    "no-duplicate-imports": "error",
+    "no-promise-executor-return": "warn",
+    "no-constant-binary-expression": "error"
+  },
+  "overrides": [
+    {
+      "files": ["test/**/*.js"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["wasm/worker.js"],
+      "parserOptions": {
+        "sourceType": "module"
+      },
+      "rules": {
+        "strict": "off"
+      }
+    }
+  ]
+}

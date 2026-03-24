@@ -1,0 +1,129 @@
+{
+  "name": "agentshield-sdk",
+  "version": "9.0.0",
+  "description": "The complete security standard for AI agents. 400+ exports, 94 modules, ML detection, compliance reporting, CORTEX autonomous defense. Everything free. Zero dependencies, runs locally.",
+  "main": "src/main.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/main.mjs",
+      "require": "./src/main.js",
+      "types": "./types/index.d.ts"
+    },
+    "./core": "./src/index.js",
+    "./detector": "./src/detector-core.js",
+    "./middleware": "./src/middleware.js",
+    "./integrations": "./src/integrations.js",
+    "./mcp": "./src/mcp-sdk-integration.js",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "agent-shield": "bin/agent-shield.js"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js",
+    "test:all": "node test/test-all-40-features.js",
+    "test:mcp": "node test/test-mcp-security.js",
+    "test:deputy": "node test/test-confused-deputy.js",
+    "test:v6": "node test/test-v6-modules.js",
+    "test:adaptive": "node test/test-adaptive-defense.js",
+    "test:ipia": "node test/test-ipia-detector.js",
+    "test:ml": "node test/test-ml-detector.js",
+    "test:production": "node test/test-production-readiness.js",
+    "test:v8": "node test/test-v8-features.js",
+    "test:full": "npm test && node test/test-mcp-security.js && node test/test-confused-deputy.js && node test/test-v6-modules.js && node test/test-adaptive-defense.js && node test/test-ipia-detector.js && node test/test-production-readiness.js && node test/test-normalizer.js && node test/test-edge-cases.js && node test/benchmark-scorecard.js && node test/test-v8-features.js && npm run test:all",
+    "test:coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary npm test",
+    "lint": "node test/lint.js",
+    "lint:eslint": "eslint src/ test/ bin/",
+    "lint:eslint:fix": "eslint --fix src/ test/ bin/",
+    "format": "prettier --write \"src/**/*.js\" \"test/**/*.js\" \"bin/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"test/**/*.js\" \"bin/**/*.js\"",
+    "score": "node -e \"const {ShieldScoreCalculator}=require('./src/shield-score');console.log(new ShieldScoreCalculator().formatReport())\"",
+    "benchmark": "node test/benchmark.js",
+    "redteam": "node -e \"const {AttackSimulator}=require('./src/redteam');const s=new AttackSimulator();s.runAll();console.log(s.formatReport())\"",
+    "test:fp": "node test/false-positives.js",
+    "test:adversarial": "node test/test-adversarial.js",
+    "audit": "npm audit --omit=dev",
+    "sbom": "node scripts/generate-sbom.js",
+    "audit:security": "node -e \"const {runAuditCLI}=require('./src/audit');runAuditCLI()\"",
+    "report": "node -e \"const {SecurityAudit}=require('./src/audit');const {generateReportFile}=require('./src/report-generator');const r=new SecurityAudit().run();generateReportFile(r,'shield-report.html');console.log('Report saved to shield-report.html')\"",
+    "mcp": "node src/mcp-server.js",
+    "sidecar": "node sidecar/server.js",
+    "ctf": "node -e \"const {CTFEngine,CTFReporter}=require('./src/ctf');const e=new CTFEngine();console.log(new CTFReporter().formatReport(e.getScoreboard()))\"",
+    "demo": "node bin/agent-shield.js demo",
+    "playground": "echo 'Open playground/index.html in a browser'",
+    "certify": "node -e \"const {CertificationRunner}=require('./src/certification');new CertificationRunner().runCertification().then(r=>console.log(r.certificate.toText()))\"",
+    "benchmark:scorecard": "node test/benchmark-scorecard.js",
+    "benchmark:run": "node scripts/run-benchmark.js",
+    "dataset:load": "node packages/agentshield-ml/training/load-external-datasets.js",
+    "benchmark:generate": "node scripts/generate-dataset.js",
+    "benchmark:baseline": "node scripts/run-benchmark.js --save-baseline",
+    "benchmark:regression": "node scripts/run-benchmark.js --check-regression",
+    "sync:patterns": "node scripts/sync-patterns.js",
+    "prepublishOnly": "npm run test:full"
+  },
+  "keywords": [
+    "ai",
+    "security",
+    "prompt-injection",
+    "agent",
+    "llm",
+    "protection",
+    "shield",
+    "safety",
+    "firewall",
+    "pii",
+    "dlp",
+    "canary",
+    "watermark",
+    "red-team",
+    "compliance",
+    "enterprise",
+    "langchain",
+    "openai",
+    "anthropic",
+    "claude-sdk",
+    "sub-agent",
+    "mcp",
+    "model-context-protocol",
+    "confused-deputy",
+    "agent-trust",
+    "certification"
+  ],
+  "author": "texasreaper62",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/texasreaper62/Agent-Shield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/texasreaper62/Agent-Shield/issues"
+  },
+  "homepage": "https://github.com/texasreaper62/Agent-Shield#readme",
+  "files": [
+    "src/**/*.js",
+    "src/**/*.mjs",
+    "types/index.d.ts",
+    "bin/agent-shield.js",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "c8": "^11.0.0",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "parquetjs-lite": "^0.8.7",
+    "prettier": "^3.4.0"
+  }
+}

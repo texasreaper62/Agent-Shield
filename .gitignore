@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+dist/
+build/
+*.zip
+*.tgz
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+.env.local
+
+# Test coverage
+coverage/
+.c8_output/
+
+# SBOM (generated, not committed)
+sbom.json
+
+# Logs
+*.log
+npm-debug.log*
+.agent-shield/
+
+# Large dataset files (too big for Git — keep locally)
+*.parquet
+datasets/raw/

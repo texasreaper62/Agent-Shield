@@ -1,0 +1,23 @@
+name: Agent Shield
+url: https://github.com/agent-shield/agent-shield
+description: >
+  Automatically scans pull requests for prompt injection, data exfiltration,
+  role hijacking, and 20+ other AI-specific security threats. Runs locally
+  with zero external dependencies. All detection is pattern-based — no data
+  leaves your environment.
+
+public: true
+
+default_permissions:
+  checks: write
+  pull_requests: read
+  contents: read
+
+default_events:
+  - pull_request
+  - check_suite
+
+setup_url: https://github.com/agent-shield/agent-shield/blob/main/github-app/README.md
+hook_attributes:
+  url: https://your-server.example.com/webhook
+  active: true

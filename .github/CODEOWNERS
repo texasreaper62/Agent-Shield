@@ -1,0 +1,15 @@
+# Default owners
+* @texasreaper62
+
+# Core SDK
+/src/ @texasreaper62
+/test/ @texasreaper62
+
+# SDKs
+/python-sdk/ @texasreaper62
+/go-sdk/ @texasreaper62
+/rust-core/ @texasreaper62
+
+# Infrastructure
+/k8s/ @texasreaper62
+/.github/ @texasreaper62
