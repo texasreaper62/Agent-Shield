@@ -127,8 +127,8 @@ class MLShield {
       if (this.mlRequired) {
         throw new Error(msg);
       }
-      console.warn(msg);
-      console.warn(`${PREFIX} Falling back to pattern-only detection.`);
+      console.warn(`[Agent Shield] agentshield-ml package not found. Install: npm install agentshield-ml`);
+      console.warn(`[Agent Shield] Falling back to pattern-only detection.`);
       this._initialized = true;
       return this._status();
     }
@@ -146,7 +146,7 @@ class MLShield {
       if (this.mlRequired) {
         throw new Error(msg);
       }
-      console.warn(msg);
+      console.warn(`[Agent Shield] ML model not found. See agentshield-ml training guide.`);
       this._initialized = true;
       return this._status();
     }
