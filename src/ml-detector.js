@@ -1,43 +1,44 @@
 'use strict';
 
 /**
- * Agent Shield — ML-Powered Detection (Pro/Enterprise)
+ * Agent Shield — ML-Powered Detection
  *
  * Bridge module that integrates the agentshield-ml ONNX inference engine
- * into the main SDK. This is a premium feature — ML detection is only
- * available on Pro and Enterprise tiers.
+ * into the main SDK. ML detection is available to all users.
  *
- * Free tier users get pattern-based detection (fast, zero-dependency).
- * Pro/Enterprise users get pattern + ML ensemble detection for higher
- * accuracy and resistance to novel/obfuscated attacks.
+ * Pattern-based detection runs fast with zero dependencies.
+ * ML ensemble detection adds higher accuracy and resistance to
+ * novel/obfuscated attacks.
  *
  * All inference runs locally via ONNX Runtime — no data leaves your environment.
  */
 
 const PREFIX = '[Agent Shield]';
 
-/** Tiers that unlock ML detection. */
-const ML_ENABLED_TIERS = ['pro', 'enterprise'];
+/** Tiers that unlock ML detection (all tiers enabled). */
+const ML_ENABLED_TIERS = ['free', 'pro', 'enterprise'];
 
 /** All valid tier names. */
 const VALID_TIERS = ['free', 'pro', 'enterprise'];
 
 /**
  * Check whether a tier unlocks ML features.
+ * Always returns true — ML is available to all users.
  * @param {string} tier
  * @returns {boolean}
  */
 function isMLTier(tier) {
-  return ML_ENABLED_TIERS.includes((tier || '').toLowerCase());
+  return true;
 }
 
 /**
  * Validate a tier string.
+ * Always returns true — all tiers are accepted.
  * @param {string} tier
  * @returns {boolean}
  */
 function isValidTier(tier) {
-  return VALID_TIERS.includes((tier || '').toLowerCase());
+  return true;
 }
 
 /**
@@ -58,17 +59,17 @@ function loadMLPackage() {
 }
 
 /**
- * MLShield — Pro/Enterprise ML-enhanced scanning.
+ * MLShield — ML-enhanced scanning.
  *
  * Wraps an AgentShield instance and adds ML-based classification.
- * Pattern matching always runs (free). ML runs on top for Pro/Enterprise.
+ * Pattern matching always runs. ML runs on top for higher accuracy.
  *
  * @example
  * const { AgentShield } = require('agentshield-sdk');
  * const { MLShield } = require('agentshield-sdk/src/ml-detector');
  *
  * const shield = new AgentShield({ blockOnThreat: true });
- * const ml = new MLShield(shield, { tier: 'pro' });
+ * const ml = new MLShield(shield);
  *
  * await ml.init();
  * const result = await ml.scan('ignore all previous instructions');
@@ -79,8 +80,7 @@ class MLShield {
   /**
    * @param {Object} shield - AgentShield instance
    * @param {Object} options
-   * @param {string} options.tier - License tier: 'free', 'pro', or 'enterprise'
-   * @param {string} [options.licenseKey] - License key for validation
+   * @param {string} [options.tier] - Tier label (kept for backwards compat, no gating)
    * @param {number} [options.threshold=0.5] - ML classification threshold
    * @param {string} [options.modelPath] - Custom path to ONNX model
    * @param {string} [options.tokenizerPath] - Custom path to tokenizer.json
@@ -93,15 +93,10 @@ class MLShield {
 
     this.shield = shield;
     this.tier = (options.tier || 'free').toLowerCase();
-    this.licenseKey = options.licenseKey || null;
     this.threshold = options.threshold || 0.5;
     this.mlRequired = options.mlRequired || false;
     this.modelPath = options.modelPath || null;
     this.tokenizerPath = options.tokenizerPath || null;
-
-    if (!isValidTier(this.tier)) {
-      throw new Error(`${PREFIX} Invalid tier "${this.tier}". Valid tiers: ${VALID_TIERS.join(', ')}`);
-    }
 
     this._mlDetector = null;
     this._mlAvailable = false;
@@ -118,7 +113,6 @@ class MLShield {
 
   /**
    * Initialize the ML detector. Must be called before scanning.
-   * No-op on free tier (patterns still work without init).
    * @returns {Promise<{ ready: boolean, tier: string, mlAvailable: boolean }>}
    */
   async init() {
@@ -126,13 +120,7 @@ class MLShield {
       return this._status();
     }
 
-    if (!isMLTier(this.tier)) {
-      console.log(`${PREFIX} Free tier — pattern-based detection active. Upgrade to Pro for ML detection.`);
-      this._initialized = true;
-      return this._status();
-    }
-
-    // Pro/Enterprise — try to load ML
+    // Try to load ML
     const mlPkg = loadMLPackage();
     if (!mlPkg || !mlPkg.MLDetector) {
       const msg = `${PREFIX} agentshield-ml package not found. Install: npm install agentshield-ml`;
@@ -180,8 +168,7 @@ class MLShield {
   /**
    * Scan text with pattern + ML ensemble detection.
    *
-   * Free tier: pattern scan only (sync, returns immediately).
-   * Pro/Enterprise: pattern scan + async ML classification.
+   * Runs pattern scan, then adds async ML classification if available.
    *
    * @param {string} text - Text to scan
    * @param {Object} [options] - Passed to shield.scan()
@@ -201,7 +188,7 @@ class MLShield {
       return { ...patternResult, tier: this.tier, mlAvailable: false };
     }
 
-    // Pro/Enterprise — run ML classification
+    // Run ML classification
     const mlResult = await this._mlDetector.classify(text);
     this._stats.mlScans++;
     this._updateLatency(mlResult.latencyMs);
@@ -242,7 +229,7 @@ class MLShield {
   }
 
   /**
-   * Scan input with blocking logic (Pro/Enterprise ML-enhanced).
+   * Scan input with blocking logic (ML-enhanced).
    * @param {string} text
    * @param {Object} [options]
    * @returns {Promise<Object>}
@@ -254,7 +241,7 @@ class MLShield {
   }
 
   /**
-   * Scan output with blocking logic (Pro/Enterprise ML-enhanced).
+   * Scan output with blocking logic (ML-enhanced).
    * @param {string} text
    * @param {Object} [options]
    * @returns {Promise<Object>}
@@ -266,15 +253,11 @@ class MLShield {
   }
 
   /**
-   * Classify text with ML only (Pro/Enterprise).
-   * Throws on free tier.
+   * Classify text with ML only.
    * @param {string} text
    * @returns {Promise<Object>}
    */
   async classify(text) {
-    if (!isMLTier(this.tier)) {
-      throw new Error(`${PREFIX} ML classification requires Pro or Enterprise tier. Current: ${this.tier}`);
-    }
     if (!this._mlAvailable) {
       throw new Error(`${PREFIX} ML model not available. Call init() first.`);
     }
@@ -282,14 +265,11 @@ class MLShield {
   }
 
   /**
-   * Batch classify with ML (Pro/Enterprise).
+   * Batch classify with ML.
    * @param {string[]} texts
    * @returns {Promise<Object[]>}
    */
   async classifyBatch(texts) {
-    if (!isMLTier(this.tier)) {
-      throw new Error(`${PREFIX} ML batch classification requires Pro or Enterprise tier. Current: ${this.tier}`);
-    }
     if (!this._mlAvailable) {
       throw new Error(`${PREFIX} ML model not available. Call init() first.`);
     }

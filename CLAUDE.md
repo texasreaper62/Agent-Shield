@@ -68,7 +68,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 ```
 /
-├── src/                           # Node.js SDK (390 exports, 93 modules)
+├── src/                           # Node.js SDK (400+ exports, 94 modules)
 │   ├── index.js                   # AgentShield class — main SDK entry point
 │   ├── main.js                    # Unified re-export of all modules
 │   ├── detector-core.js           # Core detection engine (patterns, scanning)
@@ -290,7 +290,7 @@ cd python-sdk && python -m unittest tests/test_detector.py
 
 - **detector-core.js** — standalone pattern matching engine, no DOM dependencies
 - **index.js** — `AgentShield` class wrapping the detector with config, stats, blocking
-- **main.js** — unified re-export of all 390 symbols via `safeRequire()` for graceful loading
+- **main.js** — unified re-export of all 400+ symbols via `safeRequire()` for graceful loading
 - **integrations.js** — framework-specific wrappers (Anthropic, OpenAI, LangChain, Vercel)
 - **middleware.js** — generic agent wrapping and Express middleware
 - **agent-protocol.js** — HMAC-signed secure channels with replay protection
@@ -317,3 +317,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v7.1** — Adaptive Defense: learning loops, agent contracts, compliance attestation, CTF challenges, adaptive detection with community patterns, MCP SDK integration, OpenClaw hooks
 - **v7.2** — IPIA Detection: joint-context embedding pipeline, TF-IDF + decision tree classifier, pluggable embedding backends, batch RAG scanning, Express middleware
 - **v7.3** — CORTEX Autonomous Defense: attack genome sequencing, adversarial evolution simulator, intent firewall, herd immunity, federated threat intel, behavioral DNA, pre-deployment audit, flight recorder, supply chain verification, SOC dashboard, compliance certification authority
+- **v8.0** — Everything Free: removed all tier gating, ML detection free for all, 400+ exports, 2,220 tests

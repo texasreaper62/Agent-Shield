@@ -116,6 +116,18 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] 28 quality hardening fixes (detection engine, memory, CI, types, docs)
 - [x] Web Playground, competitive benchmark page, Claude/MCP demos
 
+## v8.0 — Everything Free (Current)
+
+- [x] Removed all paid tier gating — every feature is now free and open source
+- [x] ML detection available to all users (previously Pro/Enterprise only)
+- [x] Removed license key system — no keys, no validation, no restrictions
+- [x] Merged agentshield-pro features into core SDK
+- [x] 400+ exports across 94 modules — the complete security toolkit
+- [x] 2,220 test assertions across 16 test suites + Python + VSCode
+- [x] All compliance modules (SOC2, OWASP, NIST, EU AI Act) available to everyone
+- [x] All enterprise modules (distributed scanning, SSO, audit streaming) available to everyone
+- [x] CORTEX autonomous defense (attack genome, intent firewall, herd immunity) available to everyone
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks

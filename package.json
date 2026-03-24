@@ -1,7 +1,7 @@
 {
   "name": "agentshield-sdk",
-  "version": "7.3.0",
-  "description": "The security standard for MCP and AI agents. 141 detection patterns, CORTEX threat intelligence, pre-deployment audit, intent firewall, flight recorder, and 390+ exports. Zero dependencies, runs locally.",
+  "version": "8.0.0",
+  "description": "The complete security standard for AI agents. 400+ exports, 94 modules, ML detection, compliance reporting, CORTEX autonomous defense. Everything free. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
   "exports": {

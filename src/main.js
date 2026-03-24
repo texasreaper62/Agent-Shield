@@ -320,6 +320,9 @@ const { RAG_VULNERABILITY_PATTERNS, VECTOR_DB_SECURITY_CHECKLIST, RAGVulnerabili
 // Confused Deputy Prevention (Meta Incident Response)
 const { AuthorizationContext, EphemeralTokenManager, IntentValidator, ConfusedDeputyGuard } = safeRequire('./confused-deputy', 'confused-deputy');
 
+// Fix Suggester — actionable code fixes for scan results
+const { FixSuggester, suggestFix, FIX_TEMPLATES, FIX_CATEGORIES } = safeRequire('./fix-suggester', 'fix-suggester');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -897,6 +900,12 @@ const _exports = {
   AUTHORITY_FRAMEWORKS,
   CA_CAPABILITY_MAP,
   CA_CERTIFICATE_LEVELS,
+
+  // Fix Suggester
+  FixSuggester,
+  suggestFix,
+  FIX_TEMPLATES,
+  FIX_CATEGORIES,
 };
 
 // Filter out undefined exports (from modules that failed to load)
