@@ -129,6 +129,10 @@ class BehaviorProfile {
         observation: this._totalObservations,
         anomalies
       });
+      // Prevent unbounded growth of anomaly history
+      if (this._anomalies.length > this.windowSize * 5) {
+        this._anomalies = this._anomalies.slice(-this.windowSize * 2);
+      }
     }
 
     return { anomalies, isLearning };
@@ -142,11 +146,17 @@ class BehaviorProfile {
     const baseline = {};
     for (const [metric, values] of Object.entries(this._metrics)) {
       if (values.length > 0) {
+        let min = values[0];
+        let max = values[0];
+        for (let i = 1; i < values.length; i++) {
+          if (values[i] < min) min = values[i];
+          if (values[i] > max) max = values[i];
+        }
         baseline[metric] = {
           mean: Math.round(mean(values) * 100) / 100,
           stdDev: Math.round(stdDev(values) * 100) / 100,
-          min: Math.min(...values),
-          max: Math.max(...values),
+          min,
+          max,
           samples: values.length
         };
       }

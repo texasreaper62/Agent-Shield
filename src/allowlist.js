@@ -494,9 +494,11 @@ class ScanCache {
    * Generate cache key from text and sensitivity.
    */
   _key(text, sensitivity) {
-    // Simple hash: use first 200 chars + length + sensitivity
-    const prefix = text.substring(0, 200);
-    return `${sensitivity}:${text.length}:${prefix}`;
+    // Sample from start, middle, and end to reduce collisions on long texts
+    const prefix = text.substring(0, 100);
+    const mid = text.length > 200 ? text.substring(Math.floor(text.length / 2), Math.floor(text.length / 2) + 50) : '';
+    const suffix = text.length > 100 ? text.substring(text.length - 50) : '';
+    return `${sensitivity}:${text.length}:${prefix}${mid}${suffix}`;
   }
 
   /**

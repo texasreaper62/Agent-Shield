@@ -300,6 +300,10 @@ class SecureChannel {
 
     const { encrypted, signature, sequenceNum } = envelope;
 
+    if (!encrypted || !signature || sequenceNum === undefined) {
+      throw new Error('[Agent Shield] Invalid message envelope: missing required fields');
+    }
+
     // Verify HMAC signature
     if (!this._verify(encrypted, signature, this.sharedSecret)) {
       throw new Error('[Agent Shield] Message signature verification failed');

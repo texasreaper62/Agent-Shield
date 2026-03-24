@@ -80,6 +80,9 @@ const { PrometheusExporter, DatadogLogger, MetricsCollector: ObservabilityMetric
 // v5.1 — Benchmark harness
 const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, BenchmarkReportGenerator } = safeRequire('./benchmark-harness', 'benchmark-harness');
 
+// Text Normalizer
+const { TextNormalizer, normalize: normalizeText, HOMOGLYPH_MAP: NORMALIZER_HOMOGLYPH_MAP, LEET_MAP, DEFAULT_LAYERS } = safeRequire('./normalizer', 'normalizer');
+
 // Integrations
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
@@ -108,6 +111,24 @@ const { Allowlist, ConfidenceCalibrator, FeedbackLoop, ScanCache } = safeRequire
 
 // Presets & Config Builder
 const { PRESETS, ConfigBuilder, SnippetGenerator, getPresets, getPreset } = safeRequire('./presets', 'presets');
+
+// v8.0 — Smart Config
+const { ShieldBuilder, createShield, validateConfig, describeConfig, FEATURE_DEFAULTS, VALID_PRESETS } = safeRequire('./smart-config', 'smart-config');
+
+// v8.0 — Ensemble Detection
+const { EnsembleClassifier, PatternVoter, TFIDFVoter, EntropyVoter, IPIAVoter, VOTER_NAMES } = safeRequire('./ensemble', 'ensemble');
+
+// v8.0 — Agent Intent & Goal Drift
+const { AgentIntent, GoalDriftDetector, ToolSequenceModeler } = safeRequire('./agent-intent', 'agent-intent');
+
+// v8.0 — Persistent Learning & Feedback
+const { PersistentLearningLoop, FeedbackCollector } = safeRequire('./persistent-learning', 'persistent-learning');
+
+// v8.0 — Cross-Turn & Adaptive Thresholds
+const { CrossTurnTracker, AdaptiveThresholdCalibrator } = safeRequire('./cross-turn', 'cross-turn');
+
+// v8.0 — Adversarial Self-Training
+const { SelfTrainer, MutationEngine: SelfTrainingMutationEngine, SEED_ATTACKS, MUTATION_STRATEGIES } = safeRequire('./self-training', 'self-training');
 
 // Advanced Scanners
 const { RAGScanner, RAG_INJECTION_PATTERNS, PromptLinter, LINT_RULES, ToolSchemaValidator, DANGEROUS_TOOL_PATTERNS } = safeRequire('./scanners', 'scanners');

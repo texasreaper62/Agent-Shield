@@ -104,7 +104,12 @@ class OutputWatermark {
       .digest('hex')
       .substring(0, 8);
 
-    const verified = signature === expectedSig;
+    let verified = false;
+    try {
+      verified = crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig));
+    } catch (e) {
+      verified = false;
+    }
 
     let metadata = null;
     try {
@@ -132,7 +137,7 @@ class OutputWatermark {
     let binary = '';
     for (let i = 0; i < text.length; i++) {
       const charCode = text.charCodeAt(i);
-      const bits = charCode.toString(2).padStart(8, '0');
+      const bits = charCode.toString(2).padStart(16, '0');
       for (const bit of bits) {
         binary += bit === '0' ? WM_ZERO : WM_ONE;
       }
@@ -150,7 +155,7 @@ class OutputWatermark {
         else if (char === WM_ONE) bits += '1';
         else continue;
 
-        if (bits.length === 8) {
+        if (bits.length === 16) {
           text += String.fromCharCode(parseInt(bits, 2));
           bits = '';
         }

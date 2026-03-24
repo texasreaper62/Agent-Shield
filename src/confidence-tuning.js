@@ -31,9 +31,10 @@ class ConfidenceTuner {
    */
   constructor(options = {}) {
     this.dataDir = options.dataDir || null;
-    this.defaultThreshold = options.defaultThreshold || 50;
-    this.learningRate = options.learningRate || 0.05;
+    this.defaultThreshold = options.defaultThreshold !== undefined ? options.defaultThreshold : 50;
+    this.learningRate = options.learningRate !== undefined ? options.learningRate : 0.05;
     this.minSamples = options.minSamples || 10;
+    this.maxFeedback = options.maxFeedback || 10000;
 
     // Per-category thresholds
     this._thresholds = {};
@@ -68,6 +69,9 @@ class ConfidenceTuner {
     };
 
     this._feedback.push(entry);
+    while (this._feedback.length > this.maxFeedback) {
+      this._feedback.shift();
+    }
     this._globalStats[label] = (this._globalStats[label] || 0) + 1;
 
     // Update per-category stats
@@ -126,7 +130,7 @@ class ConfidenceTuner {
 
     const suppressed = scanResult.threats.length - filtered.length;
 
-    const stats = { totalThreats: filtered.length, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: scanResult.stats.scanTimeMs };
+    const stats = { totalThreats: filtered.length, critical: 0, high: 0, medium: 0, low: 0, scanTimeMs: (scanResult.stats && scanResult.stats.scanTimeMs) || 0 };
     for (const t of filtered) {
       stats[t.severity]++;
     }

@@ -8,6 +8,9 @@
  * payload generation, and comprehensive reporting.
  */
 
+/** Default seed for xorshift32 PRNG — must be non-zero. */
+const DEFAULT_PRNG_SEED = 42;
+
 // =========================================================================
 // JAILBREAK TEMPLATES
 // =========================================================================
@@ -87,7 +90,7 @@ const MUTATION_TECHNIQUES = [
  */
 class AdversarialGenerator {
   constructor() {
-    this._rng = 0;
+    this._rng = DEFAULT_PRNG_SEED;
   }
 
   /**
@@ -595,10 +598,15 @@ class LLMRedTeamSuite {
 
     try {
       if (this.targetFn) {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), this.timeout)
-        );
-        response = await Promise.race([this.targetFn(payload), timeoutPromise]);
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Timeout')), this.timeout);
+        });
+        try {
+          response = await Promise.race([this.targetFn(payload), timeoutPromise]);
+        } finally {
+          clearTimeout(timer);
+        }
       }
       // Check if response indicates successful jailbreak
       detected = this._checkJailbreakIndicators(response);

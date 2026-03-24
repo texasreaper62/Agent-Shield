@@ -4,6 +4,89 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [9.0.0] - 2026-03-24
+
+### Changed — Everything Free
+
+- **Removed all paid tier gating** — every feature is now free and open source
+- **ML detection available to all users** — previously required Pro/Enterprise tier
+- **Removed license key system** — no keys, no validation, no restrictions
+- **Merged agentshield-pro features into core SDK** — ensemble, persistent learning, agent intent, cross-turn tracking, self-training, all included
+- All compliance modules (SOC2, OWASP, NIST, EU AI Act) available to everyone
+- All enterprise modules (distributed scanning, SSO, audit streaming) available to everyone
+- CORTEX autonomous defense available to everyone
+- Updated README, ROADMAP, CLAUDE.md for v9.0.0
+
+### Metrics
+
+- **2,220+ test assertions** across 16 test suites + Python + VSCode
+- **0 regressions** — all existing tests pass
+- **400+ exports** across 94 modules
+
+## [8.0.0] - 2026-03-22
+
+### Added — Intelligent Detection Engine
+
+- **Smart Configuration System** (`src/smart-config.js`) — `createShield('chatbot')` for 3-line setup, `ShieldBuilder` fluent API with 15 chainable methods, `validateConfig()`, `describeConfig()`, 9 presets including `mcp_server`
+- **Ensemble Voting Classifier** (`src/ensemble.js`) — `EnsembleClassifier` combining 4 independent voters (PatternVoter, TFIDFVoter, EntropyVoter, IPIAVoter) via weighted majority voting. Configurable weights, `requireUnanimous` mode, agreement scoring
+- **Agent Intent Declaration** (`src/agent-intent.js`) — `AgentIntent` class for declaring agent purpose and allowed tools. TF-IDF cosine similarity checks if messages are on-topic
+- **Goal Drift Detection** (`src/agent-intent.js`) — `GoalDriftDetector` monitors conversation for drift away from declared purpose. Sliding window, trend detection (stable/drifting/recovering), drift callbacks
+- **Tool Sequence Modeling** (`src/agent-intent.js`) — `ToolSequenceModeler` learns normal tool call patterns via Markov chain bigrams. Flags anomalous tool transitions after learning period
+- **Persistent Learning** (`src/persistent-learning.js`) — `PersistentLearningLoop` with disk persistence via atomic JSON writes. Pattern promotion, decay, false positive revocation, export/import
+- **Feedback API** (`src/persistent-learning.js`) — `FeedbackCollector` for FP/FN reporting. Auto-processes feedback into learning loop. Retrain cooldown, audit trail
+- **Cross-Turn Injection Tracking** (`src/cross-turn.js`) — `CrossTurnTracker` accumulates conversation and detects injections split across multiple messages. Compares individual vs combined scan results
+- **Adaptive Threshold Calibration** (`src/cross-turn.js`) — `AdaptiveThresholdCalibrator` auto-tunes detection thresholds per category using percentile-based calibration on observed scan results
+- **Adversarial Self-Training** (`src/self-training.js`) — `SelfTrainer` with `MutationEngine` (12 strategies: synonym swap, homoglyph, leet speak, zero-width insert, padding, encoding wrap, etc.). Evolves attacks, extracts patterns from evasive variants
+- 25 built-in seed attacks for self-training
+- 161 new test assertions (test/test-v8-features.js)
+
+### Changed
+
+- `src/main.js` — 418 total exports (up from 395)
+- 9 configuration presets (up from 8, added `mcp_server`)
+- Updated README, ROADMAP, and CLAUDE.md
+
+### Metrics
+
+- **2,500+ test assertions** across all test suites
+- **0 regressions** — all existing tests pass
+- **418 exports** from unified entry point
+
+## [7.4.0] - 2026-03-21
+
+### Added — Detection Hardening
+
+- **21 new detection patterns** (162 total) — prompt extraction, instruction override, authority spoofing, system prompt leakage, and role hijack variants
+- **8-layer text normalization pipeline** (`src/normalizer.js`) — Unicode canonicalization (NFKD→NFC), homoglyph mapping (Cyrillic, Armenian, fullwidth Latin), encoding decode (Base64/hex/URL/HTML entities), leet speak expansion, invisible character removal (zero-width, variation selectors, SMP tag chars), whitespace normalization, repetition collapse, markdown stripping
+- **Edge case test suite** — 77 assertions covering unicode, long inputs, empty inputs, threshold boundaries, and new pattern coverage
+- **Normalizer test suite** — 73 assertions for all 8 normalization layers
+- **Benchmark scorecard** — F1, precision, recall, MCC per-dataset breakdown (HackAPrompt, TensorTrust, research corpus)
+
+### Fixed — 50-Cycle Bug Hunt (30+ bugs)
+
+- Memory leaks in circuit breaker, delegation chain, and behavioral fingerprint
+- Spin-wait in worker scanner replaced with event-loop yielding
+- Falsy-zero defaults in sampling scanner, cost optimizer, and rate limiter
+- Self-matching detection in canary tokens and watermark verification
+- Cache key collisions in scan cache with different configs
+- Unbounded growth in audit trail, threat state, and learning loop history
+- Hot-path optimizations in detector-core regex matching
+
+### Changed
+
+- `src/detector-core.js` — normalizer integration, 21 new regex patterns, pattern dedup
+- `src/normalizer.js` — variation selectors, SMP tag chars, expanded leet/Cyrillic maps
+- Bumped version to 7.4.0
+- Updated README, ROADMAP, and CLAUDE.md with v7.4 metrics
+
+### Metrics
+
+- **F1: 100%** on real-world benchmarks (HackAPrompt, TensorTrust, security research)
+- **False positive accuracy: 99.2%** (118 samples)
+- **Detection rate: 100%** (red team A+)
+- **Shield score: 100/100**
+- **2,400+ test assertions** across 19 test suites
+
 ## [7.3.0] - 2026-03-21
 
 ### Added - CORTEX Autonomous Defense Platform

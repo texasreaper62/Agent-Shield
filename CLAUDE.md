@@ -2,9 +2,55 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
+## Push & Release Workflow
+
+The codebase lives in two GitHub repos. After making changes here, the user merges and pushes from their **Windows machine**. Always provide these CMD commands when work is ready to push:
+
+**Remotes (on user's Windows machine):**
+- `origin` = `https://github.com/texasreaper62/Claude.git` (source repo)
+- `agent-shield` = `https://github.com/texasreaper62/Agent-Shield.git` (public repo)
+
+**Standard push flow — give these commands to the user:**
+```cmd
+cd C:\Users\Cstep\OneDrive\Documents\GitHub\Claude
+git fetch origin claude/catch-up-branch-zdbWI
+git checkout main
+git merge origin/claude/catch-up-branch-zdbWI -m "Merge <description>"
+git push agent-shield main
+git push origin main
+```
+
+**npm publish (after version bump):**
+```cmd
+npm version <version> --allow-same-version
+npm publish --//registry.npmjs.org/:_authToken=<token>
+```
+
+**Key rules:**
+- Always push to **both** `agent-shield main` AND `origin main`
+- The catch-up branch (`claude/catch-up-branch-zdbWI`) is where Claude Code develops
+- User merges catch-up → main locally, then pushes to both remotes
+- Always update CHANGELOG.md before a version release
+- Don't fabricate PR descriptions about work we haven't done — only describe actual changes
+
+## Paid Tier Ideas (Future — Come Back To These)
+
+These are premium add-on products to build after the free tier v8 features are solid:
+
+1. **`agentshield-ml`** — Pre-trained ONNX transformer (~50MB WASM), semantic injection detection. Charge $99-500/mo.
+2. **`agentshield-vision`** — OCR + image analysis for visual injection attacks (Tesseract WASM). Charge $149/mo.
+3. **`agentshield-audio`** — Voice command scanning via Whisper WASM. Charge $149/mo.
+4. **Federated Threat Intel Network** — CrowdStrike-style cross-customer pattern sharing. Charge $299-2K/mo.
+5. **Cloud Compliance Dashboard** — Web UI for compliance status, audit history, auditor portal. Charge $199-1K/mo.
+6. **Managed SOC** — 24/7 agent monitoring + incident response. Charge $5K-50K/mo.
+7. **Org-Specific Model Training** — Custom fine-tuned models per customer. Charge $5K-25K one-time + $500/mo.
+8. **Agent Insurance Scoring API** — Risk scores for cyber insurance underwriting. Revenue share model.
+9. **MCP Tool Security Registry** — Public/private registry rating MCP server security. Free public / $299/mo private.
+10. **CI/CD Security Gate** — GitHub Action that blocks deploys on failed audit. Free (drives adoption).
+
 ## Project Overview
 
-Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
+Agent Shield is a security SDK for AI agents. It protects agents from prompt injection, prompt extraction, data exfiltration, tool abuse, and 30+ other AI-specific threats. It runs as a sub-agent or middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, or custom agents.
 
 **Design Philosophy:** Zero-dependency, local-only detection. Drop it into any Node.js agent and it works. No API keys, no cloud calls, no data leaves the user's environment.
 
@@ -185,6 +231,14 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── compliance-authority.js     # HMAC-signed compliance certificates
 │   └── real-attack-datasets.js     # HackAPrompt/TensorTrust/research corpus
 │
+│  # v8.0 — Intelligent Detection Engine
+│   ├── smart-config.js            # createShield() factory, ShieldBuilder, 9 presets
+│   ├── ensemble.js                # 4-voter ensemble classifier (pattern/TF-IDF/entropy/IPIA)
+│   ├── agent-intent.js            # Agent purpose declaration, goal drift, tool sequence modeling
+│   ├── persistent-learning.js     # Disk-persisted pattern learning, feedback collector
+│   ├── cross-turn.js              # Cross-turn injection tracking, adaptive thresholds
+│   └── self-training.js           # Adversarial self-training, 12 mutation strategies
+│
 ├── python-sdk/                    # Python SDK
 │   ├── agent_shield/              # Core package
 │   │   ├── __init__.py
@@ -277,14 +331,18 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - `npm run test:v6` — v6.0 compliance & standards tests (122 assertions)
 - `npm run test:adaptive` — adaptive defense system tests (85 assertions)
 - `npm run test:ipia` — indirect prompt injection detector tests (117 assertions)
+- `npm run test:normalizer` — text normalization pipeline tests (73 assertions)
+- `npm run test:scorecard` — real-world benchmark scorecard (F1, MCC, per-dataset breakdown)
+- `npm run test:edge` — edge case tests (unicode, long inputs, thresholds)
 - `npm run test:all` — full 40-feature suite (149 assertions)
 - `npm run test:fp` — false positive accuracy tests (118 samples, 99.2% accuracy)
 - `npm run test:production` — production readiness tests (24 assertions)
+- `npm run test:v8` — v8 feature tests (161 assertions)
 - `npm run test:full` — runs all test suites together
 - `npm run redteam` — attack simulation (100% detection, A+)
 - `npm run score` — shield score (100/100)
 - Sub-project tests: dashboard (14), github-app (20), benchmarks (22), python (32), vscode (607)
-- Total: **2,220 test assertions** across 16 test suites + Python + VSCode
+- Total: **2,500+ test assertions** across 19 test suites + Python + VSCode
 
 ## Architecture Notes
 
@@ -301,6 +359,12 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **adaptive-defense.js** — autonomous learning loops with compliance attestation framework
 - **mcp-security-runtime.js** — unified MCP layer with AES-256-GCM encryption, adaptive defense integration
 - **ipia-detector.js** — joint-context IPIA pipeline: context construction → TF-IDF features → decision tree classifier, pluggable embedding backends
+- **smart-config.js** — `createShield()` factory, `ShieldBuilder` fluent API with 9 presets and feature toggles
+- **ensemble.js** — 4-voter weighted majority voting (pattern, TF-IDF, entropy, IPIA)
+- **agent-intent.js** — TF-IDF purpose matching, Markov chain tool sequences, sliding-window drift detection
+- **persistent-learning.js** — Atomic JSON persistence, n-gram candidate extraction, decay + revocation
+- **cross-turn.js** — Accumulated multi-message scanning, percentile-based threshold calibration
+- **self-training.js** — 12 mutation strategies, adversarial evolution loop, pattern extraction
 
 ## Version History
 
@@ -317,4 +381,5 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v7.1** — Adaptive Defense: learning loops, agent contracts, compliance attestation, CTF challenges, adaptive detection with community patterns, MCP SDK integration, OpenClaw hooks
 - **v7.2** — IPIA Detection: joint-context embedding pipeline, TF-IDF + decision tree classifier, pluggable embedding backends, batch RAG scanning, Express middleware
 - **v7.3** — CORTEX Autonomous Defense: attack genome sequencing, adversarial evolution simulator, intent firewall, herd immunity, federated threat intel, behavioral DNA, pre-deployment audit, flight recorder, supply chain verification, SOC dashboard, compliance certification authority
-- **v8.0** — Everything Free: removed all tier gating, ML detection free for all, 400+ exports, 2,220 tests
+- **v8.0** — Intelligent Detection Engine: ensemble voting classifier, agent intent/goal drift, tool sequence modeling, persistent learning, cross-turn tracking, adversarial self-training
+- **v9.0** — Everything Free: removed all tier gating, ML detection free for all, merged Pro features into core, 400+ exports, 2,220 tests

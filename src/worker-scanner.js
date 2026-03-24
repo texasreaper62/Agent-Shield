@@ -84,9 +84,11 @@ class WorkerScanner {
       throw new Error('WorkerScanner has been terminated.');
     }
 
-    // Wait for an available slot
-    while (this._activeWorkers >= this.poolSize) {
-      await yieldToEventLoop();
+    // Wait for an available slot using a notification pattern instead of spinning
+    if (this._activeWorkers >= this.poolSize) {
+      await new Promise(resolve => {
+        this._queue.push(resolve);
+      });
     }
 
     return this._runScan(text, options);
@@ -171,6 +173,11 @@ class WorkerScanner {
       throw err;
     } finally {
       this._activeWorkers--;
+      // Notify a waiting scan that a slot is available
+      if (this._queue.length > 0) {
+        const next = this._queue.shift();
+        next();
+      }
     }
   }
 
@@ -505,7 +512,7 @@ class ThreadedWorkerScanner {
     }
 
     return new Promise((resolve, reject) => {
-      const id = ++this._completedJobs + this._errorCount + this._queue.length;
+      const id = this._completedJobs + this._errorCount + this._queue.length + 1;
       const job = { id, text, options, resolve, reject, timer: null };
 
       job.timer = setTimeout(() => {

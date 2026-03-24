@@ -59,7 +59,7 @@ class AgentFirewall {
       to: toAgent,
       trustLevel,
       timestamp: Date.now(),
-      messagePreview: message.substring(0, 100)
+      messagePreview: typeof message === 'string' ? message.substring(0, 100) : ''
     };
 
     // Block immediately

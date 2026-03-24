@@ -116,7 +116,7 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] 28 quality hardening fixes (detection engine, memory, CI, types, docs)
 - [x] Web Playground, competitive benchmark page, Claude/MCP demos
 
-## v8.0 — Everything Free (Current)
+## v9.0 — Everything Free (Current)
 
 - [x] Removed all paid tier gating — every feature is now free and open source
 - [x] ML detection available to all users (previously Pro/Enterprise only)

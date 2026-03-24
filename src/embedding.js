@@ -129,7 +129,7 @@ class EmbeddingSimilarityDetector {
    * @param {boolean} [options.enabled=true] - Enable/disable similarity detection.
    */
   constructor(options = {}) {
-    this.similarityThreshold = options.similarityThreshold || 0.45;
+    this.similarityThreshold = options.similarityThreshold !== undefined ? options.similarityThreshold : 0.45;
     this.topK = options.topK || 3;
     this.enabled = options.enabled !== false;
 
@@ -139,11 +139,14 @@ class EmbeddingSimilarityDetector {
       this._corpus.push(...options.customCorpus);
     }
 
-    this._corpusVectors = this._corpus.map(entry => ({
-      ...entry,
-      tokens: tokenize(entry.text),
-      tf: termFrequency(tokenize(entry.text))
-    }));
+    this._corpusVectors = this._corpus.map(entry => {
+      const tokens = tokenize(entry.text);
+      return {
+        ...entry,
+        tokens,
+        tf: termFrequency(tokens)
+      };
+    });
 
     // Build IDF from corpus
     this._idf = this._computeIDF();

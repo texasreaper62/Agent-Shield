@@ -329,13 +329,20 @@ class ResponseHandler {
       };
     }
 
-    // Use scanText to locate threats, then sanitize
-    const { OutputSanitizer } = require('./tool-output-validator');
-    const cleaned = OutputSanitizer.sanitize(original, {
-      stripInvisible: true,
-      redactUrls: true,
-      redactCode: true
-    });
+    // Use OutputSanitizer to clean the text, with graceful fallback
+    let cleaned = original;
+    try {
+      const { OutputSanitizer } = require('./tool-output-validator');
+      cleaned = OutputSanitizer.sanitize(original, {
+        stripInvisible: true,
+        redactUrls: true,
+        redactCode: true
+      });
+    } catch (err) {
+      console.log('[Agent Shield] OutputSanitizer unavailable, using basic sanitization: %s', err.message);
+      // Basic fallback: strip invisible characters
+      cleaned = original.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF]/g, '');
+    }
 
     const template = ResponseTemplates.sanitized(original, cleaned);
     console.log('[Agent Shield] Response SANITIZED: %d threat(s), modified=%s', threats.length, template.modified);
