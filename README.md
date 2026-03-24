@@ -1,16 +1,17 @@
 # Agent Shield
 
-[![npm version](https://img.shields.io/badge/npm-v7.2.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm version](https://img.shields.io/badge/npm-v8.0.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
-[![tests](https://img.shields.io/badge/tests-1282%20passing-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-2220%20passing-brightgreen)](#testing)
+[![free](https://img.shields.io/badge/every%20feature-free-brightgreen)](#why-free)
 
-**The security standard for MCP and AI agents.** Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
+**The complete security standard for AI agents.** 400+ exports. 94 modules. Every feature free. Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
 
-Zero dependencies. All detection runs locally. No API keys. No data ever leaves your environment.
+Zero dependencies. All detection runs locally. No API keys. No tiers. No data ever leaves your environment.
 
 Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WASM**.
 
@@ -22,7 +23,13 @@ Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WA
   <b>Try it yourself:</b> <code>npx agent-shield demo</code>
 </p>
 
-## v7.2 — Indirect Prompt Injection Detection
+## v8.0 — Everything Free, Forever
+
+Every detection pattern, every compliance module, every ML feature — all free, all local, all open source. No tiers, no license keys, no gating. We removed all paid restrictions because security shouldn't have a paywall.
+
+---
+
+## Indirect Prompt Injection Detection
 
 **Stop attacks hidden in RAG chunks, tool outputs, emails, and documents.** The IPIA detector implements the joint-context embedding + classifier pipeline to catch injections that bypass pattern matching.
 
@@ -54,7 +61,7 @@ const result2 = await detector2.scanAsync(chunk, query);
 
 ---
 
-## v7.0 — MCP Security Runtime
+## MCP Security Runtime
 
 **One line to secure any MCP server.** The unified security layer that connects per-user authorization, threat scanning, behavioral monitoring, and audit logging into a single runtime.
 
@@ -154,8 +161,8 @@ const shield = new AgentShield({ blockOnThreat: true });
 const result = shield.scanInput(userMessage); // { blocked: true, threats: [...] }
 ```
 
-- 390+ exports across 93 modules
-- 1,282 test assertions across 15 test suites, 100% pass rate
+- 400+ exports across 94 modules
+- 2,220 test assertions across 16 test suites + Python + VSCode, 100% pass rate
 - 100% red team detection rate (A+ grade)
 - Shield Score: 100/100 — fortress-grade protection
 - AES-256-GCM encryption, HMAC-SHA256 signing throughout
@@ -390,7 +397,7 @@ validator.validate(plugin);         // Safety & quality validation
 
 The `vscode-extension/` directory contains a VS Code extension that provides inline diagnostics and real-time scanning for JS/TS/Python/Markdown files with 141 detection patterns.
 
-### Enterprise Features (v2.1)
+### Distributed & Multi-Tenant (v2.1)
 
 ```javascript
 const { DistributedShield, AuditStreamManager, SSOManager, MultiTenantShield } = require('agent-shield');
@@ -902,9 +909,13 @@ npx agent-shield dashboard                          # Security dashboard
 ```bash
 npm test                 # Core + module tests (248 assertions)
 npm run test:all         # Full 40-feature suite (149 assertions)
+npm run test:ml          # ML detector tests (37 assertions)
 npm run test:ipia        # IPIA detector tests (117 assertions)
-node test/test-v6-modules.js  # v6.0 compliance & standards (122 assertions)
-node test/test-confused-deputy.js  # Confused deputy prevention (85 assertions)
+npm run test:mcp         # MCP security runtime tests (112 assertions)
+npm run test:v6          # v6.0 compliance & standards (122 assertions)
+npm run test:adaptive    # Adaptive defense tests (85 assertions)
+npm run test:deputy      # Confused deputy prevention (85 assertions)
+npm run test:fp          # False positive accuracy (99.2%)
 npm run redteam          # Attack simulation (100% detection)
 npm run score            # Shield Score (100/100 A+)
 npm run benchmark        # Performance benchmarks
@@ -915,17 +926,17 @@ Sub-project tests:
 node dashboard-live/test/test-server.js      # Dashboard (14 tests)
 node github-app/test/test-scanner.js         # GitHub App (20 tests)
 node benchmark-registry/test/test-registry.js # Benchmarks (22 tests)
-node vscode-extension/test/extension.test.js  # VS Code (167 tests)
-cd python-sdk && python -m unittest tests/test_detector.py  # Python (23 tests)
+node vscode-extension/test/extension.test.js  # VS Code (607 tests)
+cd python-sdk && python -m unittest tests/test_detector.py  # Python (32 tests)
 ```
 
-Total: **1,282 test assertions** across 15 test suites.
+Total: **2,220 test assertions** across 16 test suites + Python + VSCode.
 
 ## Project Structure
 
 ```
 /
-├── src/                        # Node.js SDK (327 exports)
+├── src/                        # Node.js SDK (400+ exports, 94 modules)
 │   ├── index.js                # AgentShield class — main entry point
 │   ├── main.js                 # Unified re-export of all modules
 │   ├── detector-core.js        # Core detection engine (patterns, scanning)
@@ -1032,6 +1043,12 @@ console.log(report.formatReport());
 ## CI/CD
 
 A GitHub Actions workflow is included at `.github/workflows/ci.yml`. It runs all tests across Node.js 18, 20, and 22 on every push and PR.
+
+## Why Free?
+
+Agent Shield started as a paid SDK with Pro and Enterprise tiers. We removed all gating in v8.0. Every feature — ML detection, compliance reporting, MCP security, CORTEX autonomous defense — is now free and open source.
+
+Security shouldn't have a paywall. If your agent is vulnerable, it doesn't matter what tier you're on.
 
 ## Privacy
 
