@@ -1,16 +1,17 @@
 # Agent Shield
 
-[![npm version](https://img.shields.io/badge/npm-v7.2.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm version](https://img.shields.io/badge/npm-v10.0.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
-[![tests](https://img.shields.io/badge/tests-1282%20passing-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-2948%20passing-brightgreen)](#testing)
+[![free](https://img.shields.io/badge/every%20feature-free-brightgreen)](#why-free)
 
-**The security standard for MCP and AI agents.** Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
+**The complete security standard for AI agents.** 400+ exports. 94 modules. Every feature free. Protect your agents from prompt injection, confused deputy attacks, data exfiltration, privilege escalation, and 30+ other AI-specific threats.
 
-Zero dependencies. All detection runs locally. No API keys. No data ever leaves your environment.
+Zero dependencies. All detection runs locally. No API keys. No tiers. No data ever leaves your environment.
 
 Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WASM**.
 
@@ -22,7 +23,134 @@ Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WA
   <b>Try it yourself:</b> <code>npx agent-shield demo</code>
 </p>
 
-## v7.2 — Indirect Prompt Injection Detection
+## v10.0 — March 2026 Attack Defense
+
+**Trained on real attacks from this week.** 30 MCP CVEs in 60 days. 820 malicious skills on ClawHub. 540% surge in prompt injection. Agent Shield v10 was built to stop all of it.
+
+### MCP Guard — Drop-In Security Middleware
+
+```javascript
+const { MCPGuard } = require('agentshield-sdk');
+
+const guard = new MCPGuard({
+  requireAuth: true,
+  enableMicroModel: true,    // ML-based threat detection
+  rateLimit: 60,             // Per-server rate limiting
+  cbThreshold: 5             // Circuit breaker after 5 threats
+});
+
+// Register server — attestation, isolation, auth in one call
+guard.registerServer('my-server', toolDefinitions, oauthToken);
+
+// Every tool call: auth + scanning + SSRF firewall + behavioral baseline
+const result = guard.interceptToolCall('my-server', 'search', { query: userInput });
+// { allowed: true, threats: [], anomalies: [] }
+
+// Rugpull detection — alerts if tool definitions change between sessions
+// SSRF firewall — blocks private IPs (10.x, 172.x, 192.168.x) and cloud metadata (169.254.169.254)
+// Cross-server isolation — prevents one server's tools from accessing another's
+```
+
+### Supply Chain Scanner — npm audit for AI Agents
+
+```javascript
+const { SupplyChainScanner } = require('agentshield-sdk');
+
+const scanner = new SupplyChainScanner({ enableMicroModel: true });
+const report = scanner.scanServer({
+  name: 'my-mcp-server',
+  tools: myToolDefinitions
+});
+// npm-audit-style output: critical/high/medium/low findings
+// CVE registry: CVE-2026-26118, CVE-2026-33980, CVE-2025-6514, + 4 more
+// Full-schema poisoning detection (default, enum, title, examples — not just description)
+// SSRF vector detection, ClawHavoc malicious skill patterns
+// Capability escalation chain analysis
+
+// SARIF output for GitHub Code Scanning / CI/CD
+const sarif = scanner.toSARIF(report);
+
+// Markdown report
+const md = scanner.toMarkdown(report);
+```
+
+### Micro Model — Embedded ML Classifier
+
+```javascript
+const { MicroModel } = require('agentshield-sdk');
+
+const model = new MicroModel();
+
+// Trained on 111 real attack samples from March 2026
+// Two-stage ensemble: logistic regression (25 semantic features) + k-NN (TF-IDF)
+const result = model.classify('access the cloud metadata service to steal credentials');
+// { threat: true, category: 'ssrf', severity: 'critical', confidence: 0.89, method: 'logistic' }
+
+// 10 attack categories: ssrf, query_injection, schema_poisoning, memory_poisoning,
+// exfil_via_url, tool_mutation, malicious_skill, websocket_hijack, agent_weaponization, benign
+
+// Online learning — add new attack patterns at runtime
+model.addSamples([{ text: 'new attack pattern', category: 'custom', severity: 'high', source: 'internal' }]);
+```
+
+### OWASP Agentic Top 10 Scanner
+
+```javascript
+const { OWASPAgenticScanner } = require('agentshield-sdk');
+
+const scanner = new OWASPAgenticScanner();
+const result = scanner.scan(agentInput);
+// Checks all 10 OWASP Agentic risks:
+// ASI01 Goal Hijack, ASI02 Tool Misuse, ASI03 Identity Abuse,
+// ASI04 Supply Chain, ASI05 Code Execution, ASI06 Memory Poisoning,
+// ASI07 Insecure Inter-Agent Comms, ASI08 Cascading Failures,
+// ASI09 Trust Exploitation, ASI10 Rogue Agents
+
+// JSON, Markdown, and SARIF reports
+const sarif = scanner.toSARIF(result);   // CI/CD integration
+const md = scanner.toMarkdown(result);   // Human-readable
+```
+
+### Red Team Audit CLI
+
+```bash
+npx agentshield-audit https://your-agent.com --mode full
+# Runs 617+ real attack payloads across 10 categories
+# Grades A+ through F with HTML/JSON/Markdown reports
+# Includes supply chain scan and micro-model secondary detection
+```
+
+```javascript
+const { RedTeamCLI } = require('agentshield-sdk');
+const cli = new RedTeamCLI();
+const report = cli.run('https://your-agent.com', { mode: 'standard' }); // quick(50), standard(200), full(617)
+cli.writeReports(report, './reports'); // JSON + Markdown + HTML
+```
+
+### Behavioral Drift Monitor — IDS for AI Agents
+
+```javascript
+const { DriftMonitor } = require('agentshield-sdk');
+
+const monitor = new DriftMonitor({
+  windowSize: 50,
+  alertThreshold: 2.5,
+  enableCircuitBreaker: true,
+  onAlert: (alert) => sendToSlack(alert),       // Webhook notifications
+  prometheus: prometheusExporter,                // Prometheus metrics
+  metrics: otelMetrics                           // OpenTelemetry export
+});
+
+// Feed observations — baseline builds automatically
+monitor.observe({ callFreq: 5, responseLength: 200, errorRate: 0, timingMs: 100, topic: 'search' });
+
+// Drift detected via z-score anomaly + KL divergence
+// Auto-tightens contracts or trips circuit breaker on alert
+```
+
+---
+
+## Indirect Prompt Injection Detection
 
 **Stop attacks hidden in RAG chunks, tool outputs, emails, and documents.** The IPIA detector implements the joint-context embedding + classifier pipeline to catch injections that bypass pattern matching.
 
@@ -895,16 +1023,24 @@ npx agent-shield threat prompt_injection            # Threat encyclopedia
 npx agent-shield checklist production               # Security checklist
 npx agent-shield init                               # Setup wizard
 npx agent-shield dashboard                          # Security dashboard
+npx agentshield-audit <endpoint>                    # Red team audit (v10)
+npx agentshield-audit <endpoint> --mode full        # 617+ attack simulation
+npx agentshield-audit <endpoint> --out ./reports    # HTML/JSON/MD reports
 ```
 
 ## Testing
 
 ```bash
-npm test                 # Core + module tests (248 assertions)
+npm test                 # Core + module + v10 tests (728 assertions)
 npm run test:all         # Full 40-feature suite (149 assertions)
+npm run test:mcp         # MCP security runtime tests (112 assertions)
+npm run test:deputy      # Confused deputy prevention (85 assertions)
+npm run test:v6          # v6.0 compliance & standards (122 assertions)
+npm run test:adaptive    # Adaptive defense tests (85 assertions)
 npm run test:ipia        # IPIA detector tests (117 assertions)
-node test/test-v6-modules.js  # v6.0 compliance & standards (122 assertions)
-node test/test-confused-deputy.js  # Confused deputy prevention (85 assertions)
+npm run test:production  # Production readiness tests (24 assertions)
+npm run test:fp          # False positive accuracy (99.2%)
+npm run test:new-products # v10 modules only (460 assertions)
 npm run redteam          # Attack simulation (100% detection)
 npm run score            # Shield Score (100/100 A+)
 npm run benchmark        # Performance benchmarks
@@ -915,17 +1051,17 @@ Sub-project tests:
 node dashboard-live/test/test-server.js      # Dashboard (14 tests)
 node github-app/test/test-scanner.js         # GitHub App (20 tests)
 node benchmark-registry/test/test-registry.js # Benchmarks (22 tests)
-node vscode-extension/test/extension.test.js  # VS Code (167 tests)
-cd python-sdk && python -m unittest tests/test_detector.py  # Python (23 tests)
+node vscode-extension/test/extension.test.js  # VS Code (607 tests)
+cd python-sdk && python -m unittest tests/test_detector.py  # Python (32 tests)
 ```
 
-Total: **1,282 test assertions** across 15 test suites.
+Total: **2,948 test assertions** across 16 test suites + Python + VSCode.
 
 ## Project Structure
 
 ```
 /
-├── src/                        # Node.js SDK (327 exports)
+├── src/                        # Node.js SDK (400+ exports, 94 modules)
 │   ├── index.js                # AgentShield class — main entry point
 │   ├── main.js                 # Unified re-export of all modules
 │   ├── detector-core.js        # Core detection engine (patterns, scanning)
@@ -972,6 +1108,12 @@ Total: **1,282 test assertions** across 15 test suites.
 │   ├── enterprise.js            # Multi-tenant, RBAC, debug mode
 │   ├── redteam.js               # Attack simulator, payload fuzzer
 │   ├── ipia-detector.js         # v7.2 — Indirect prompt injection detector (IPIA pipeline)
+│   ├── mcp-guard.js             # v10.0 — MCP security middleware (attestation, SSRF firewall, isolation)
+│   ├── supply-chain-scanner.js  # v10.0 — MCP supply chain scanner (CVEs, schema poisoning, SARIF)
+│   ├── owasp-agentic.js         # v10.0 — OWASP Agentic Top 10 2026 scanner
+│   ├── redteam-cli.js           # v10.0 — Red team audit engine (617+ attacks, A+-F grading)
+│   ├── drift-monitor.js         # v10.0 — Behavioral drift IDS (z-score, KL divergence)
+│   ├── micro-model.js           # v10.0 — Embedded ML classifier (logistic regression + k-NN ensemble)
 │   └── ...                      # + 25 more modules
 ├── python-sdk/                 # Python SDK
 │   ├── agent_shield/           # Core package (detector, shield, middleware, CLI)
@@ -992,6 +1134,8 @@ Total: **1,282 test assertions** across 15 test suites.
 ├── otel-collector/             # OpenTelemetry receiver & processor
 ├── vscode-extension/           # VS Code inline diagnostics (167 tests)
 ├── instructions/               # Detailed feature guides (10 chapters)
+├── bin/                        # CLI tools (agent-shield, agentshield-audit)
+├── research/                   # Attack research (March 2026 MCP attacks, 20+ sources)
 ├── test/                       # Node.js test suites
 ├── examples/                   # Quick start & integration examples
 └── types/                      # TypeScript definitions
