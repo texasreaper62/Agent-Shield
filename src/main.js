@@ -317,6 +317,9 @@ const { RAG_VULNERABILITY_PATTERNS, VECTOR_DB_SECURITY_CHECKLIST, RAGVulnerabili
 // Confused Deputy Prevention (Meta Incident Response)
 const { AuthorizationContext, EphemeralTokenManager, IntentValidator, ConfusedDeputyGuard } = safeRequire('./confused-deputy', 'confused-deputy');
 
+// v8.0 — MCP Guard
+const { MCPGuard, ServerAttestation, CrossServerIsolation, OAuthEnforcer, ToolBehaviorBaseline } = safeRequire('./mcp-guard', 'mcp-guard');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -878,6 +881,13 @@ const _exports = {
   extractBehavioralFeatures,
   DEFAULT_NUMERIC_FEATURES,
   DEFAULT_CATEGORICAL_FEATURES,
+
+  // v8.0 — MCP Guard
+  MCPGuard,
+  ServerAttestation,
+  CrossServerIsolation,
+  OAuthEnforcer,
+  ToolBehaviorBaseline,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
