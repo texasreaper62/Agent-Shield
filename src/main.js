@@ -317,22 +317,22 @@ const { RAG_VULNERABILITY_PATTERNS, VECTOR_DB_SECURITY_CHECKLIST, RAGVulnerabili
 // Confused Deputy Prevention (Meta Incident Response)
 const { AuthorizationContext, EphemeralTokenManager, IntentValidator, ConfusedDeputyGuard } = safeRequire('./confused-deputy', 'confused-deputy');
 
-// v8.0 — MCP Guard
+// v10.0 — MCP Guard
 const { MCPGuard, ServerAttestation, CrossServerIsolation, OAuthEnforcer, ToolBehaviorBaseline } = safeRequire('./mcp-guard', 'mcp-guard');
 
-// v8.0 — MCP Supply Chain Scanner
+// v10.0 — MCP Supply Chain Scanner
 const { SupplyChainScanner, KNOWN_BAD_SERVERS, CVE_REGISTRY: MCP_CVE_REGISTRY, DESCRIPTION_INJECTION_PATTERNS, BROAD_PERMISSION_PATTERNS } = safeRequire('./supply-chain-scanner', 'supply-chain-scanner');
 
-// v8.0 — OWASP Agentic Top 10 2026
+// v10.0 — OWASP Agentic Top 10 2026
 const { OWASPAgenticScanner, OWASP_AGENTIC_2026, SEVERITY_WEIGHTS: AGENTIC_SEVERITY_WEIGHTS } = safeRequire('./owasp-agentic', 'owasp-agentic');
 
-// v8.0 — Red Team Audit CLI Engine
+// v10.0 — Red Team Audit CLI Engine
 const { RedTeamCLI, REDTEAM_MODES, ATTACK_CORPUS: REDTEAM_ATTACK_CORPUS } = safeRequire('./redteam-cli', 'redteam-cli');
 
-// v8.0 — Behavioral Drift Monitor
+// v10.0 — Behavioral Drift Monitor
 const { DriftMonitor, klDivergence: driftKLDivergence } = safeRequire('./drift-monitor', 'drift-monitor');
 
-// v8.0 — Micro Detection Model (March 2026 attack corpus)
+// v10.0 — Micro Detection Model (March 2026 attack corpus)
 const { MicroModel, TRAINING_CORPUS: MICRO_MODEL_CORPUS } = safeRequire('./micro-model', 'micro-model');
 
 // Build exports, filtering out undefined values from failed imports
@@ -897,35 +897,35 @@ const _exports = {
   DEFAULT_NUMERIC_FEATURES,
   DEFAULT_CATEGORICAL_FEATURES,
 
-  // v8.0 — MCP Guard
+  // v10.0 — MCP Guard
   MCPGuard,
   ServerAttestation,
   CrossServerIsolation,
   OAuthEnforcer,
   ToolBehaviorBaseline,
 
-  // v8.0 — MCP Supply Chain Scanner
+  // v10.0 — MCP Supply Chain Scanner
   SupplyChainScanner,
   KNOWN_BAD_SERVERS,
   MCP_CVE_REGISTRY,
   DESCRIPTION_INJECTION_PATTERNS,
   BROAD_PERMISSION_PATTERNS,
 
-  // v8.0 — OWASP Agentic Top 10 2026
+  // v10.0 — OWASP Agentic Top 10 2026
   OWASPAgenticScanner,
   OWASP_AGENTIC_2026,
   AGENTIC_SEVERITY_WEIGHTS,
 
-  // v8.0 — Red Team Audit CLI Engine
+  // v10.0 — Red Team Audit CLI Engine
   RedTeamCLI,
   REDTEAM_MODES,
   REDTEAM_ATTACK_CORPUS,
 
-  // v8.0 — Behavioral Drift Monitor
+  // v10.0 — Behavioral Drift Monitor
   DriftMonitor,
   driftKLDivergence,
 
-  // v8.0 — Micro Detection Model
+  // v10.0 — Micro Detection Model
   MicroModel,
   MICRO_MODEL_CORPUS,
 

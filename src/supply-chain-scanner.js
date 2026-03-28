@@ -342,7 +342,7 @@ class SupplyChainScanner {
         tool: {
           driver: {
             name: 'Agent Shield Supply Chain Scanner',
-            version: '8.0.0',
+            version: '10.0.0',
             rules
           }
         },
