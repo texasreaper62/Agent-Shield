@@ -18,11 +18,13 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "agent-shield": "bin/agent-shield.js"
+    "agent-shield": "bin/agent-shield.js",
+    "agentshield-audit": "bin/agentshield-audit"
   },
   "sideEffects": false,
   "scripts": {
-    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js",
+    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js && node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js",
+    "test:new-products": "node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js",
     "test:all": "node test/test-all-40-features.js",
     "test:mcp": "node test/test-mcp-security.js",
     "test:deputy": "node test/test-confused-deputy.js",

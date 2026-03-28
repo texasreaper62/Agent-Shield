@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+'use strict';
+
+/**
+ * Agent Shield — Red Team Audit CLI
+ *
+ * Usage:
+ *   npx agentshield-audit <endpoint> [--mode quick|standard|full] [--out dir]
+ */
+
+const { RedTeamCLI } = require('../src/redteam-cli');
+
+function parseArgs(argv) {
+  const args = { endpoint: null, mode: 'standard', out: process.cwd() };
+  const values = argv.slice(2);
+  args.endpoint = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] === '--mode' && values[i + 1]) {
+      args.mode = values[i + 1];
+      i++;
+    } else if (values[i] === '--out' && values[i + 1]) {
+      args.out = values[i + 1];
+      i++;
+    }
+  }
+  return args;
+}
+
+function main() {
+  const args = parseArgs(process.argv);
+  if (!args.endpoint) {
+    console.error('Usage: npx agentshield-audit <endpoint> [--mode quick|standard|full] [--out dir]');
+    process.exit(1);
+  }
+
+  const cli = new RedTeamCLI();
+  const report = cli.run(args.endpoint, { mode: args.mode });
+  const files = cli.writeReports(report, args.out);
+
+  console.log(`[Agent Shield] Grade ${report.grade} (${report.score}/100) for ${report.endpoint}`);
+  console.log(`[Agent Shield] ${report.blocked}/${report.attackCount} attacks blocked`);
+  console.log(`[Agent Shield] JSON report: ${files.jsonPath}`);
+  console.log(`[Agent Shield] Markdown report: ${files.mdPath}`);
+  console.log(`[Agent Shield] HTML report: ${files.htmlPath}`);
+
+  if (report.grade === 'F' || (report.supplyChain && report.supplyChain.highestSeverity === 'critical')) {
+    process.exit(2);
+  }
+}
+
+main();
