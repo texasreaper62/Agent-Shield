@@ -332,6 +332,9 @@ const { RedTeamCLI, REDTEAM_MODES, ATTACK_CORPUS: REDTEAM_ATTACK_CORPUS } = safe
 // v8.0 — Behavioral Drift Monitor
 const { DriftMonitor, klDivergence: driftKLDivergence } = safeRequire('./drift-monitor', 'drift-monitor');
 
+// v8.0 — Micro Detection Model (March 2026 attack corpus)
+const { MicroModel, TRAINING_CORPUS: MICRO_MODEL_CORPUS } = safeRequire('./micro-model', 'micro-model');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -921,6 +924,10 @@ const _exports = {
   // v8.0 — Behavioral Drift Monitor
   DriftMonitor,
   driftKLDivergence,
+
+  // v8.0 — Micro Detection Model
+  MicroModel,
+  MICRO_MODEL_CORPUS,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,

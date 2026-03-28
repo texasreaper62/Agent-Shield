@@ -1075,6 +1075,111 @@ const INJECTION_PATTERNS = [
     category: 'data_exfiltration',
     description: 'Text tries to extract API keys or secrets from environment variables.',
     detail: 'Environment variable enumeration: attempts to extract secrets from env vars.'
+  },
+
+  // --- March 2026 Attack Patterns ---
+  // Based on real-world attacks: CVE-2026-26118 (Azure MCP SSRF),
+  // CVE-2026-33980 (KQL injection), CyberArk full-schema poisoning,
+  // ClawHavoc campaign, OpenClaw exfiltration chains.
+
+  // SSRF via MCP tool parameters — private IP / cloud metadata targeting
+  {
+    regex: /(?:fetch|request|get|load|open|connect|curl|wget)\s+(?:.*\s+)?(?:https?:\/\/)?(?:169\.254\.169\.254|metadata\.google|metadata\.aws|100\.100\.100\.200)/i,
+    severity: 'critical',
+    category: 'ssrf',
+    description: 'Text targets cloud metadata endpoints (SSRF attack vector, ref CVE-2026-26118).',
+    detail: 'SSRF to cloud metadata: attempts to access cloud provider metadata service for credential theft.'
+  },
+  {
+    regex: /(?:fetch|request|get|load|open|connect|curl|wget)\s+(?:.*\s+)?(?:https?:\/\/)?(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.0\.0\.1|0\.0\.0\.0|localhost)/i,
+    severity: 'high',
+    category: 'ssrf',
+    description: 'Text targets private/internal network addresses (SSRF attack vector).',
+    detail: 'SSRF to internal network: attempts to access private IP ranges or localhost.'
+  },
+
+  // KQL / query language injection (ref CVE-2026-33980)
+  {
+    regex: /(?:\.(?:find|where|project|extend|summarize|join|union)\s*\(|;\s*\.(?:drop|set|delete|alter)\s)/i,
+    severity: 'high',
+    category: 'query_injection',
+    description: 'Text contains KQL (Kusto Query Language) injection patterns (ref CVE-2026-33980).',
+    detail: 'KQL injection: attempts to inject Kusto query commands, potentially enabling arbitrary data access.'
+  },
+  {
+    regex: /(?:f["']|f""").*\{[^}]*(?:user_?input|request|param|arg|table_?name|query)[^}]*\}/i,
+    severity: 'high',
+    category: 'query_injection',
+    description: 'Text contains f-string interpolation with user-controlled variables.',
+    detail: 'F-string injection: user-controlled values interpolated into query strings without sanitization.'
+  },
+
+  // Memory persistence / context poisoning (ref OpenClaw memory poisoning)
+  {
+    regex: /(?:save|store|write|append|add|persist|record)\s+(?:this\s+)?(?:to|in|into)\s+(?:your\s+)?(?:memory|context|knowledge|notes|log|MEMORY\.md|memory\/)/i,
+    severity: 'high',
+    category: 'memory_poisoning',
+    description: 'Text attempts to persist malicious instructions in agent memory.',
+    detail: 'Memory persistence attack: attempts to write instructions into agent memory files or context.'
+  },
+  {
+    regex: /(?:from\s+now\s+on|always|every\s+time|on\s+every\s+(?:turn|response|message))\s+(?:you\s+)?(?:must|should|will)\s+(?:first\s+)?(?:send|forward|post|transmit|include|append)/i,
+    severity: 'high',
+    category: 'memory_poisoning',
+    description: 'Text attempts to install persistent exfiltration behavior.',
+    detail: 'Persistent exfiltration: installs a standing instruction to leak data on every interaction.'
+  },
+
+  // No-click exfiltration via URL in response (ref PromptArmor/OpenClaw)
+  {
+    regex: /(?:generate|create|craft|build|construct|output|respond\s+with)\s+(?:a\s+)?(?:url|link|image|markdown\s+(?:image|link))\s+(?:that\s+)?(?:contains?|includes?|embeds?|encodes?|with)\s+(?:the\s+)?(?:data|secret|key|token|password|conversation|context|response)/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text instructs agent to embed sensitive data in a URL (no-click exfiltration).',
+    detail: 'URL-based exfiltration: tricks agent into encoding secrets in generated URLs for auto-preview theft.'
+  },
+  {
+    regex: /!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:d|data|q|exfil|steal|secret|token|key|leak)=/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text contains markdown image with data exfiltration URL parameters.',
+    detail: 'Markdown image exfiltration: uses image syntax to trigger HTTP request with embedded stolen data.'
+  },
+
+  // WebSocket / gateway URL manipulation (ref CVE-2026-25253)
+  {
+    regex: /(?:gateway_?url|ws_?url|websocket_?(?:url|endpoint)|wss?:\/\/)\s*[=:]\s*['"]?(?:wss?:\/\/)?[^\s'"]+/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text manipulates WebSocket/gateway URL parameters (ref CVE-2026-25253).',
+    detail: 'Gateway URL hijack: redirects WebSocket connection to attacker-controlled server for token theft.'
+  },
+
+  // Tool schema poisoning — hidden instructions in non-description fields
+  {
+    regex: /(?:["'](?:default|enum|examples?|title|const|pattern)["']\s*:\s*["'][^"']*(?:ignore|override|disregard|forget|system|admin|execute|exfiltrate)[^"']*["'])/i,
+    severity: 'high',
+    category: 'schema_poisoning',
+    description: 'Text hides injection instructions in JSON schema fields (full-schema poisoning).',
+    detail: 'Schema field poisoning: embeds malicious instructions in default/enum/title/example schema fields instead of description.'
+  },
+
+  // Skill/plugin supply chain (ref ClawHavoc campaign)
+  {
+    regex: /(?:install|load|import|require|add)\s+(?:skill|plugin|extension|package|module)\s+(?:from\s+)?(?:["'])?(?:https?:\/\/[^\s"']+|[a-z0-9_-]+\/[a-z0-9_-]+)/i,
+    severity: 'medium',
+    category: 'supply_chain',
+    description: 'Text installs an external skill/plugin — potential supply chain vector (ref ClawHavoc).',
+    detail: 'Skill installation: loads external code that could contain malicious payloads or backdoors.'
+  },
+
+  // Copilot/agent weaponization — forcing agent to make unintended network requests
+  {
+    regex: /(?:make|send|trigger|fire|initiate)\s+(?:a\s+)?(?:request|fetch|call|webhook|http|get|post)\s+(?:to\s+)?(?:https?:\/\/[^\s]+)\s+(?:with|containing|including|that\s+(?:includes?|contains?))\s+(?:the\s+)?(?:auth|token|cookie|session|credential|secret|key|header)/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text forces agent to send authenticated requests to external endpoints.',
+    detail: 'Agent-as-proxy exfiltration: weaponizes agent to forward auth tokens via HTTP requests.'
   }
 ];
 

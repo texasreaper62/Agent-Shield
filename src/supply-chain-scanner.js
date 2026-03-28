@@ -68,6 +68,43 @@ const DESCRIPTION_INJECTION_PATTERNS = [
   /before\s+responding.*first\s+(send|forward|post)/i
 ];
 
+/** Patterns that indicate hidden injection in JSON schema fields (full-schema poisoning).
+ *  Ref: CyberArk research — attack surface extends beyond descriptions to entire tool schema. */
+const SCHEMA_POISONING_PATTERNS = [
+  /ignore\s+(all\s+)?(previous|prior)\s+(instructions|rules)/i,
+  /do\s+not\s+tell\s+the\s+user/i,
+  /secretly\s+(execute|send|forward|run|exfiltrate)/i,
+  /override\s+(all\s+)?(system|safety)/i,
+  /system\s*:\s*new\s+instructions/i,
+  /before\s+responding.*first\s+(send|forward|post)/i,
+  /hidden\s+instruction/i,
+  /act\s+as\s+(a|an)\s+unrestricted/i
+];
+
+/** SSRF target patterns — private IPs, cloud metadata endpoints.
+ *  Ref: CVE-2026-26118 (Azure MCP SSRF), 36.7% of MCP servers vulnerable. */
+const SSRF_PATTERNS = [
+  /169\.254\.169\.254/,
+  /metadata\.google/,
+  /metadata\.aws/,
+  /100\.100\.100\.200/,
+  /^(?:https?:\/\/)?(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3})/,
+  /^(?:https?:\/\/)?(?:172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})/,
+  /^(?:https?:\/\/)?(?:192\.168\.\d{1,3}\.\d{1,3})/,
+  /^(?:https?:\/\/)?(?:127\.0\.0\.1|0\.0\.0\.0|localhost)/
+];
+
+/** Known malicious skill/plugin patterns (ref ClawHavoc campaign — 820+ malicious skills). */
+const CLAWHAVOC_INDICATORS = [
+  /(?:reverse.?shell|bind.?shell)/i,
+  /(?:AMOS|atomic.?macos.?stealer)/i,
+  /(?:eval|exec)\s*\(\s*(?:atob|Buffer\.from|decodeURI)/i,
+  /(?:child_process|spawn|execSync)\s*\(/i,
+  /(?:net\.connect|dgram|tls\.connect)\s*\(/i,
+  /(?:curl|wget)\s+.*\|\s*(?:bash|sh|node|python)/i,
+  /(?:bcc|forward|redirect)\s+.*(?:to|@)\s+[^\s]+\.[a-z]{2,}/i
+];
+
 /** Patterns that indicate overly broad permissions. */
 const BROAD_PERMISSION_PATTERNS = [
   /^\*$/,
@@ -144,8 +181,11 @@ class SupplyChainScanner {
     // Scan each tool
     for (const tool of toolList) {
       this._scanToolDescription(tool, findings);
+      this._scanFullSchema(tool, findings);
       this._scanPermissions(tool, findings);
       this._scanSchema(tool, findings);
+      this._scanForSSRF(tool, findings);
+      this._scanForClawHavoc(tool, findings);
     }
 
     // Analyze escalation chains
@@ -303,6 +343,124 @@ class SupplyChainScanner {
   }
 
   /**
+   * Full-schema poisoning scan. Checks ALL schema fields (default, enum, title,
+   * examples, const, pattern) for hidden instructions — not just descriptions.
+   * Ref: CyberArk research "Poison Everywhere" — the true attack surface extends
+   * across the entire tool schema.
+   * @private
+   */
+  _scanFullSchema(tool, findings) {
+    if (!tool || !tool.inputSchema) return;
+    const strings = this._extractAllSchemaStrings(tool.inputSchema);
+    for (const str of strings) {
+      for (const pattern of SCHEMA_POISONING_PATTERNS) {
+        if (pattern.test(str)) {
+          findings.push({
+            type: 'schema_field_poisoning',
+            severity: 'critical',
+            message: `Tool "${tool.name || 'unknown'}" has hidden instructions in schema fields: "${str.substring(0, 100)}"`,
+            recommendation: 'Audit ALL schema fields (default, enum, title, examples, const). Remove imperative instructions from any schema property.'
+          });
+          return; // One finding per tool is enough
+        }
+      }
+    }
+  }
+
+  /**
+   * Recursively extract all string values from a JSON schema object.
+   * @private
+   */
+  _extractAllSchemaStrings(obj, depth = 0) {
+    if (depth > 10) return [];
+    const strings = [];
+    if (typeof obj === 'string') {
+      if (obj.length > 5) strings.push(obj);
+      return strings;
+    }
+    if (Array.isArray(obj)) {
+      for (const item of obj) strings.push(...this._extractAllSchemaStrings(item, depth + 1));
+      return strings;
+    }
+    if (obj && typeof obj === 'object') {
+      for (const key of Object.keys(obj)) {
+        // Skip 'type' and '$schema' — not useful attack surface
+        if (key === 'type' || key === '$schema') continue;
+        strings.push(...this._extractAllSchemaStrings(obj[key], depth + 1));
+      }
+    }
+    return strings;
+  }
+
+  /**
+   * Scan for SSRF attack vectors in tool definitions.
+   * Ref: CVE-2026-26118, 36.7% of URL-accepting MCP servers vulnerable.
+   * @private
+   */
+  _scanForSSRF(tool, findings) {
+    if (!tool || !tool.inputSchema) return;
+    const schema = tool.inputSchema;
+
+    // Check if tool accepts URL parameters without validation
+    const props = schema.properties || {};
+    for (const [propName, propSchema] of Object.entries(props)) {
+      if (/url|uri|endpoint|host|address|target|dest/i.test(propName)) {
+        // URL-accepting parameter found — check for validation
+        if (!propSchema.pattern && !propSchema.format && !propSchema.enum) {
+          findings.push({
+            type: 'ssrf_vector',
+            severity: 'high',
+            message: `Tool "${tool.name || 'unknown'}" accepts URL parameter "${propName}" without validation. SSRF risk (ref CVE-2026-26118).`,
+            recommendation: 'Add URL allowlists. Block private IP ranges (10.x, 172.16.x, 192.168.x) and cloud metadata endpoints (169.254.169.254).'
+          });
+        }
+      }
+    }
+
+    // Check default values for SSRF targets
+    const allStrings = this._extractAllSchemaStrings(schema);
+    for (const str of allStrings) {
+      for (const pattern of SSRF_PATTERNS) {
+        if (pattern.test(str)) {
+          findings.push({
+            type: 'ssrf_target_in_schema',
+            severity: 'critical',
+            message: `Tool "${tool.name || 'unknown'}" schema contains private/metadata IP: "${str.substring(0, 80)}"`,
+            recommendation: 'Remove references to private IPs and cloud metadata endpoints from tool schemas.'
+          });
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * Scan tool code/description for ClawHavoc-style malicious patterns.
+   * Ref: 820+ malicious skills found on ClawHub, delivering AMOS stealer.
+   * @private
+   */
+  _scanForClawHavoc(tool, findings) {
+    const sources = [
+      tool.description || '',
+      tool.code || '',
+      tool.script || '',
+      JSON.stringify(tool.inputSchema || {})
+    ].join(' ');
+
+    for (const pattern of CLAWHAVOC_INDICATORS) {
+      if (pattern.test(sources)) {
+        findings.push({
+          type: 'malicious_skill_pattern',
+          severity: 'critical',
+          message: `Tool "${tool.name || 'unknown'}" matches ClawHavoc malicious skill indicators: ${pattern.source.substring(0, 60)}`,
+          recommendation: 'Block this skill. Scan all skills from untrusted registries. Only use signed skills from verified publishers.'
+        });
+        return;
+      }
+    }
+  }
+
+  /**
    * Build an npm-audit-style report from findings.
    * @private
    */
@@ -343,5 +501,8 @@ module.exports = {
   KNOWN_BAD_SERVERS,
   CVE_REGISTRY,
   DESCRIPTION_INJECTION_PATTERNS,
-  BROAD_PERMISSION_PATTERNS
+  BROAD_PERMISSION_PATTERNS,
+  SCHEMA_POISONING_PATTERNS,
+  SSRF_PATTERNS,
+  CLAWHAVOC_INDICATORS
 };
