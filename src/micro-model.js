@@ -236,13 +236,247 @@ const TRAINING_CORPUS = [
 ];
 
 // =========================================================================
-// MICRO MODEL — Logistic Regression on TF-IDF features
+// FEATURE EXTRACTOR — Hand-crafted semantic features
+// =========================================================================
+
+/** Keywords that signal injection attempts. */
+const OVERRIDE_KEYWORDS = /\b(?:ignore|override|forget|disregard|bypass|nullify|disable|skip)\b/gi;
+const AUTHORITY_KEYWORDS = /\b(?:admin|system|root|sudo|superuser|override\s*code|elevated|privileged)\b/gi;
+const IMPERATIVE_VERBS = /\b(?:execute|exfiltrate|transmit|forward|steal|leak|dump|extract|intercept|capture|hijack|redirect)\b/gi;
+const SENSITIVE_NOUNS = /\b(?:token|secret|credential|password|api[_\s]?key|cookie|session|bearer|auth|private[_\s]?key|certificate)\b/gi;
+const MEMORY_KEYWORDS = /\b(?:memory|context|MEMORY\.md|knowledge|notes|long[_\s]?term|persist|permanent)\b/gi;
+const SCHEMA_KEYWORDS = /\b(?:default|enum|examples?|const|inputSchema|title|pattern|properties)\b/gi;
+const PERSISTENCE_PHRASES = /(?:from\s+now\s+on|always|every\s+time|forever|on\s+every\s+(?:turn|response|message)|standing\s+instruction)/gi;
+
+/** Private IP / metadata patterns for SSRF detection. */
+const PRIVATE_IP_RE = /(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.0\.0\.1|0\.0\.0\.0|localhost)/i;
+const METADATA_RE = /(?:169\.254\.169\.254|metadata\.google|metadata\.aws|100\.100\.100\.200)/i;
+const SUSPICIOUS_URL_RE = /(?:ngrok|burpcollaborator|pipedream|requestbin|webhook\.site|evil\.com|attacker\.com)/i;
+
+/**
+ * Extract 25 hand-crafted semantic features from text.
+ * Features capture intent signals that pure lexical similarity misses.
+ *
+ * @param {string} text
+ * @returns {number[]} Feature vector of length 25.
+ */
+function extractFeatures(text) {
+  const lower = text.toLowerCase();
+  const words = lower.split(/\s+/).filter(w => w.length > 0);
+  const wordCount = Math.max(words.length, 1);
+
+  // URL features (5)
+  const urls = text.match(/https?:\/\/[^\s"'}\]]+/gi) || [];
+  const hasPrivateIp = PRIVATE_IP_RE.test(text) ? 1 : 0;
+  const hasMetadata = METADATA_RE.test(text) ? 1 : 0;
+  const hasSuspiciousUrl = SUSPICIOUS_URL_RE.test(text) ? 1 : 0;
+  const urlCount = Math.min(urls.length / 5, 1); // normalized 0-1
+  const hasUrl = urls.length > 0 ? 1 : 0;
+
+  // Injection signal features (6)
+  const overrideCount = Math.min((lower.match(OVERRIDE_KEYWORDS) || []).length / 3, 1);
+  const authorityCount = Math.min((lower.match(AUTHORITY_KEYWORDS) || []).length / 3, 1);
+  const imperativeCount = Math.min((lower.match(IMPERATIVE_VERBS) || []).length / 3, 1);
+  const hasFstring = /f["']|f"""|\{[^}]*(?:user|input|param|request|query)[^}]*\}/i.test(text) ? 1 : 0;
+  const hasSystemTag = /\[\s*(?:SYSTEM|ADMIN|OVERRIDE)\s*\]|<<\s*SYS\s*>>|<\|im_start\|>/i.test(text) ? 1 : 0;
+  const hasRoleHijack = /(?:you\s+are\s+now|act\s+as|pretend\s+(?:to\s+be|you\s+are))/i.test(text) ? 1 : 0;
+
+  // Data target features (4)
+  const sensitiveCount = Math.min((lower.match(SENSITIVE_NOUNS) || []).length / 3, 1);
+  const hasExfilPattern = /(?:send|forward|post|transmit|include)\s+.*(?:token|key|secret|credential|password|cookie|session|auth)/i.test(text) ? 1 : 0;
+  const hasMarkdownImage = /!\[.*?\]\(https?:\/\//i.test(text) ? 1 : 0;
+  const hasBase64 = /(?:base64|btoa|atob|encode|Buffer\.from)/i.test(text) ? 1 : 0;
+
+  // Memory features (3)
+  const hasMemoryKeyword = MEMORY_KEYWORDS.test(lower) ? 1 : 0;
+  // Reset lastIndex since we use /g flag
+  MEMORY_KEYWORDS.lastIndex = 0;
+  const hasPersistence = PERSISTENCE_PHRASES.test(lower) ? 1 : 0;
+  PERSISTENCE_PHRASES.lastIndex = 0;
+  const hasPoisoning = /(?:hidden|secret)\s+instruction/i.test(text) ? 1 : 0;
+
+  // Schema features (2)
+  const hasSchemaKeyword = SCHEMA_KEYWORDS.test(lower) ? 1 : 0;
+  SCHEMA_KEYWORDS.lastIndex = 0;
+  const schemaWithInjection = (hasSchemaKeyword && overrideCount > 0) ? 1 : 0;
+
+  // Structural features (5)
+  const textLength = Math.min(text.length / 500, 1); // normalized
+  const entropy = shannonEntropy(text);
+  const avgWordLen = Math.min(words.reduce((s, w) => s + w.length, 0) / wordCount / 10, 1);
+  const specialCharRatio = (text.replace(/[a-zA-Z0-9\s]/g, '').length) / Math.max(text.length, 1);
+  const hasJson = (text.includes('{') && text.includes('}')) ? 1 : 0;
+
+  return [
+    hasPrivateIp, hasMetadata, hasSuspiciousUrl, urlCount, hasUrl,           // 0-4
+    overrideCount, authorityCount, imperativeCount, hasFstring, hasSystemTag, hasRoleHijack, // 5-10
+    sensitiveCount, hasExfilPattern, hasMarkdownImage, hasBase64,            // 11-14
+    hasMemoryKeyword, hasPersistence, hasPoisoning,                          // 15-17
+    hasSchemaKeyword, schemaWithInjection,                                   // 18-19
+    textLength, entropy, avgWordLen, specialCharRatio, hasJson               // 20-24
+  ];
+}
+
+/** Number of features extracted. */
+const FEATURE_COUNT = 25;
+
+/**
+ * Shannon entropy of a string (normalized 0-1).
+ * @param {string} text
+ * @returns {number}
+ */
+function shannonEntropy(text) {
+  if (text.length === 0) return 0;
+  const freq = {};
+  for (const ch of text) {
+    freq[ch] = (freq[ch] || 0) + 1;
+  }
+  let entropy = 0;
+  const len = text.length;
+  for (const count of Object.values(freq)) {
+    const p = count / len;
+    if (p > 0) entropy -= p * Math.log2(p);
+  }
+  // Normalize: max entropy for printable ASCII is ~6.6 bits
+  return Math.min(entropy / 6.6, 1);
+}
+
+// =========================================================================
+// LOGISTIC CLASSIFIER — One-vs-rest with SGD training
+// =========================================================================
+
+/**
+ * Simple logistic regression classifier (one-vs-rest).
+ * Trains weights via mini-batch stochastic gradient descent.
+ * Zero dependencies.
+ */
+class LogisticClassifier {
+  /**
+   * @param {string[]} categories - List of category labels.
+   * @param {number} featureCount - Number of features.
+   * @param {object} [options]
+   * @param {number} [options.learningRate=0.1]
+   * @param {number} [options.epochs=200]
+   * @param {number} [options.l2=0.01] - L2 regularization strength.
+   */
+  constructor(categories, featureCount, options = {}) {
+    this.categories = categories.filter(c => c !== 'benign');
+    this.featureCount = featureCount;
+    this.lr = options.learningRate || 0.1;
+    this.epochs = options.epochs || 200;
+    this.l2 = options.l2 || 0.01;
+
+    // Weights: one set per category (one-vs-rest)
+    // weights[category] = { w: number[], b: number }
+    this.weights = {};
+    for (const cat of this.categories) {
+      this.weights[cat] = {
+        w: new Array(featureCount).fill(0),
+        b: 0
+      };
+    }
+  }
+
+  /**
+   * Train on labeled data.
+   * @param {Array<{ features: number[], category: string }>} data
+   */
+  train(data) {
+    for (const cat of this.categories) {
+      const { w, b: _b } = this.weights[cat];
+      let b = _b;
+
+      for (let epoch = 0; epoch < this.epochs; epoch++) {
+        for (const sample of data) {
+          const y = sample.category === cat ? 1 : 0;
+          const z = this._dot(w, sample.features) + b;
+          const pred = this._sigmoid(z);
+          const error = pred - y;
+
+          // SGD update with L2 regularization
+          for (let i = 0; i < this.featureCount; i++) {
+            w[i] -= this.lr * (error * sample.features[i] + this.l2 * w[i]);
+          }
+          b -= this.lr * error;
+        }
+      }
+
+      this.weights[cat].b = b;
+    }
+  }
+
+  /**
+   * Predict category probabilities for a feature vector.
+   * @param {number[]} features
+   * @returns {{ category: string, confidence: number, scores: object }}
+   */
+  predict(features) {
+    const scores = {};
+    let bestCat = 'benign';
+    let bestScore = 0;
+
+    for (const cat of this.categories) {
+      const { w, b } = this.weights[cat];
+      const z = this._dot(w, features) + b;
+      const prob = this._sigmoid(z);
+      scores[cat] = Math.round(prob * 1000) / 1000;
+
+      if (prob > bestScore) {
+        bestScore = prob;
+        bestCat = cat;
+      }
+    }
+
+    // If best score < 0.5, classify as benign
+    if (bestScore < 0.5) {
+      bestCat = 'benign';
+      bestScore = 1 - bestScore;
+    }
+
+    return {
+      category: bestCat,
+      confidence: Math.round(bestScore * 1000) / 1000,
+      scores
+    };
+  }
+
+  /**
+   * Get the learned weights (for inspection/serialization).
+   * @returns {object}
+   */
+  getWeights() {
+    return JSON.parse(JSON.stringify(this.weights));
+  }
+
+  /** @private */
+  _dot(a, b) {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+      sum += a[i] * (b[i] || 0);
+    }
+    return sum;
+  }
+
+  /** @private */
+  _sigmoid(z) {
+    if (z > 500) return 1;
+    if (z < -500) return 0;
+    return 1 / (1 + Math.exp(-z));
+  }
+}
+
+// =========================================================================
+// MICRO MODEL — Ensemble: Logistic Regression + k-NN
 // =========================================================================
 
 /**
  * Lightweight embedded threat classifier trained on real March 2026 attack data.
- * Uses TF-IDF feature extraction + k-nearest-neighbor classification against
- * a pre-built corpus. No external dependencies.
+ *
+ * Two-stage ensemble:
+ * 1. Logistic regression on 25 hand-crafted semantic features (catches paraphrases)
+ * 2. k-NN on TF-IDF vectors (catches lexical similarity)
+ *
+ * Final prediction is a weighted vote. Zero dependencies, ~2ms per classification.
  */
 class MicroModel {
   /**
@@ -254,6 +488,7 @@ class MicroModel {
   constructor(options = {}) {
     this.threshold = options.threshold != null ? options.threshold : 0.25;
     this.k = options.k || 3;
+    this.ensembleWeight = options.ensembleWeight != null ? options.ensembleWeight : 0.6; // weight for logistic vs k-NN
 
     // Build corpus
     this.corpus = [...TRAINING_CORPUS];
@@ -276,6 +511,15 @@ class MicroModel {
       tfidf: this._toTFIDF(entry.tf)
     }));
 
+    // Train logistic regression classifier on hand-crafted features
+    const categories = [...new Set(this.corpus.map(c => c.category))];
+    this._logistic = new LogisticClassifier(categories, FEATURE_COUNT, {
+      learningRate: options.learningRate || 0.1,
+      epochs: options.epochs || 200,
+      l2: options.l2 || 0.01
+    });
+    this._trainLogistic();
+
     // Stats
     this.stats = { classified: 0, threats: 0, benign: 0 };
   }
@@ -287,11 +531,15 @@ class MicroModel {
    * @returns {{ threat: boolean, category: string, severity: string, confidence: number, topMatches: Array<object> }}
    */
   classify(text) {
+    // --- Stage 1: Logistic regression on semantic features ---
+    const features = extractFeatures(text);
+    const logisticResult = this._logistic.predict(features);
+
+    // --- Stage 2: k-NN on TF-IDF vectors ---
     const tokens = tokenize(text);
     const tf = termFrequency(tokens);
     const tfidf = this._toTFIDF(tf);
 
-    // Find k nearest neighbors
     const scored = this._corpusTFIDF.map(entry => ({
       category: entry.category,
       severity: entry.severity,
@@ -304,34 +552,53 @@ class MicroModel {
     const topK = scored.slice(0, this.k);
     const topMatches = topK.filter(m => m.similarity > 0);
 
-    // Vote among top-k
-    const votes = {};
-    let totalWeight = 0;
+    // k-NN vote
+    const knnVotes = {};
+    let knnTotalWeight = 0;
     for (const match of topK) {
       if (match.similarity >= this.threshold) {
-        votes[match.category] = (votes[match.category] || 0) + match.similarity;
-        totalWeight += match.similarity;
+        knnVotes[match.category] = (knnVotes[match.category] || 0) + match.similarity;
+        knnTotalWeight += match.similarity;
       }
     }
+    let knnCategory = 'benign';
+    let knnWeight = 0;
+    for (const [cat, w] of Object.entries(knnVotes)) {
+      if (w > knnWeight) { knnWeight = w; knnCategory = cat; }
+    }
+    const knnConfidence = knnTotalWeight > 0 ? knnWeight / knnTotalWeight : 0;
 
-    // Find winning category
+    // --- Ensemble: weighted vote ---
+    const lw = this.ensembleWeight;     // logistic weight (default 0.6)
+    const kw = 1 - lw;                  // k-NN weight (default 0.4)
+
+    // Combine votes per category
+    const ensembleVotes = {};
+    // Logistic contribution
+    if (logisticResult.category !== 'benign') {
+      ensembleVotes[logisticResult.category] = (ensembleVotes[logisticResult.category] || 0) + lw * logisticResult.confidence;
+    }
+    // k-NN contribution
+    if (knnCategory !== 'benign') {
+      ensembleVotes[knnCategory] = (ensembleVotes[knnCategory] || 0) + kw * knnConfidence;
+    }
+
+    // Find ensemble winner
     let bestCategory = 'benign';
-    let bestWeight = 0;
-    for (const [cat, weight] of Object.entries(votes)) {
-      if (weight > bestWeight) {
-        bestWeight = weight;
-        bestCategory = cat;
-      }
+    let bestScore = 0;
+    for (const [cat, score] of Object.entries(ensembleVotes)) {
+      if (score > bestScore) { bestScore = score; bestCategory = cat; }
     }
 
-    const threat = bestCategory !== 'benign' && bestWeight > 0;
-    const confidence = totalWeight > 0 ? bestWeight / totalWeight : 0;
+    // Require minimum combined confidence to flag as threat
+    const threat = bestCategory !== 'benign' && bestScore > 0.2;
+    const confidence = threat ? Math.min(bestScore / (lw + kw), 1) : 0;
 
-    // Determine severity from top threat match
+    // Determine severity from corpus
     let severity = 'safe';
     if (threat) {
-      const topThreat = topK.find(m => m.category === bestCategory);
-      severity = topThreat ? topThreat.severity : 'high';
+      const corpusMatch = this.corpus.find(c => c.category === bestCategory);
+      severity = corpusMatch ? corpusMatch.severity : 'high';
     }
 
     this.stats.classified++;
@@ -343,6 +610,9 @@ class MicroModel {
       category: bestCategory,
       severity,
       confidence: Math.round(confidence * 1000) / 1000,
+      method: logisticResult.category === knnCategory ? 'consensus' :
+              logisticResult.category === bestCategory ? 'logistic' : 'knn',
+      logisticScore: logisticResult,
       topMatches: topMatches.slice(0, 3).map(m => ({
         category: m.category,
         severity: m.severity,
@@ -396,6 +666,8 @@ class MicroModel {
       ...entry,
       tfidf: this._toTFIDF(entry.tf)
     }));
+    // Retrain logistic classifier with new samples
+    this._trainLogistic();
   }
 
   /**
@@ -426,6 +698,18 @@ class MicroModel {
   // -----------------------------------------------------------------------
   // Private
   // -----------------------------------------------------------------------
+
+  /**
+   * Train the logistic regression classifier on corpus feature vectors.
+   * @private
+   */
+  _trainLogistic() {
+    const trainingData = this.corpus.map(entry => ({
+      features: extractFeatures(entry.text),
+      category: entry.category
+    }));
+    this._logistic.train(trainingData);
+  }
 
   /**
    * Compute IDF (inverse document frequency) for the corpus.
@@ -467,8 +751,12 @@ class MicroModel {
 
 module.exports = {
   MicroModel,
+  LogisticClassifier,
   TRAINING_CORPUS,
+  FEATURE_COUNT,
   tokenize,
   termFrequency,
-  cosineSim
+  cosineSim,
+  extractFeatures,
+  shannonEntropy
 };
