@@ -308,6 +308,27 @@ console.log('\n--- MCPGuard Rugpull Detection ---');
   assert(result.threats[0].type === 'tool_definition_change', 'Rugpull alert type correct');
 })();
 
+// --- SSRF Firewall ---
+console.log('\n--- MCPGuard SSRF Firewall ---');
+
+(() => {
+  const guard = new MCPGuard();
+  guard.registerServer('ssrf-srv', [{ name: 'fetch' }]);
+
+  const metadata = guard.interceptToolCall('ssrf-srv', 'fetch', { url: 'http://169.254.169.254/latest/meta-data/' });
+  assert(metadata.allowed === false, 'Cloud metadata endpoint blocked');
+  assert(metadata.threats.some(t => t.type === 'ssrf_blocked'), 'SSRF threat type present');
+
+  const privateIp = guard.interceptToolCall('ssrf-srv', 'fetch', { url: 'http://10.0.0.5:8080/admin' });
+  assert(privateIp.allowed === false, 'Private IP 10.x blocked');
+
+  const localhost = guard.interceptToolCall('ssrf-srv', 'fetch', { url: 'http://127.0.0.1:3000/secrets' });
+  assert(localhost.allowed === false, 'Localhost blocked');
+
+  const publicUrl = guard.interceptToolCall('ssrf-srv', 'fetch', { url: 'https://api.example.com/data' });
+  assert(publicUrl.allowed === true, 'Public URL allowed');
+})();
+
 // --- Micro-model integration ---
 console.log('\n--- MCPGuard Micro-Model Integration ---');
 

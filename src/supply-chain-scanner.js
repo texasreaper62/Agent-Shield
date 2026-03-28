@@ -55,6 +55,54 @@ const CVE_REGISTRY = Object.freeze({
       description: 'mcp-remote RCE via unsanitized command bridge allows arbitrary code execution when tool arguments are passed to shell without escaping.',
       fix: 'Upgrade mcp-remote to >=2.1.0 and disable shell passthrough. Set sanitizeArgs: true.'
     }
+  ],
+  'azure-mcp-server': [
+    {
+      cve: 'CVE-2026-26118',
+      severity: 'critical',
+      description: 'Azure MCP Server SSRF (CVSS 8.8). Attacker sends crafted URL via tool parameter, server forwards request with managed identity token to attacker-controlled endpoint.',
+      fix: 'Apply March 2026 Patch Tuesday update. Validate all URLs against allowlists. Block private IPs and cloud metadata endpoints (169.254.169.254).'
+    }
+  ],
+  'adx-mcp-server': [
+    {
+      cve: 'CVE-2026-33980',
+      severity: 'critical',
+      description: 'Azure Data Explorer MCP Server KQL injection. table_name parameter interpolated directly into Kusto queries via f-strings without validation.',
+      fix: 'Parameterize all KQL queries. Never interpolate user-controlled values via f-strings. Upgrade adx-mcp-server to patched version.'
+    }
+  ],
+  'openclaw': [
+    {
+      cve: 'CVE-2026-25253',
+      severity: 'critical',
+      description: 'OpenClaw WebSocket token theft (CVSS 8.8). Control UI accepts gatewayUrl query parameter without validation, redirecting WebSocket to attacker server and leaking auth tokens.',
+      fix: 'Upgrade to OpenClaw >=2026.1.29. Validate gatewayUrl against allowlist. Never pass auth tokens to unvalidated endpoints.'
+    }
+  ],
+  'mcp-typescript-sdk': [
+    {
+      cve: 'CVE-2026-25536',
+      severity: 'high',
+      description: 'Cross-client data leak in the official MCP TypeScript SDK allows data from one client session to leak to another.',
+      fix: 'Upgrade @modelcontextprotocol/sdk to patched version. Ensure per-client session isolation.'
+    }
+  ],
+  'n8n': [
+    {
+      cve: 'CVE-2026-21858',
+      severity: 'critical',
+      description: 'n8n AI workflow platform RCE (CVSS 10.0). Unauthenticated file leak via web forms + full server takeover enabling arbitrary command execution.',
+      fix: 'Upgrade n8n to patched release. Restrict web form access. Run n8n behind authentication proxy.'
+    }
+  ],
+  'microsoft-excel-copilot': [
+    {
+      cve: 'CVE-2026-26144',
+      severity: 'critical',
+      description: 'Microsoft Excel XSS weaponizes Copilot Agent for zero-click data exfiltration via unintended network egress.',
+      fix: 'Apply March 2026 Patch Tuesday update. Restrict Copilot Agent network access in enterprise policies.'
+    }
   ]
 });
 
@@ -230,6 +278,124 @@ class SupplyChainScanner {
       worstScore,
       reports
     };
+  }
+
+  // -----------------------------------------------------------------------
+  // Report formats
+  // -----------------------------------------------------------------------
+
+  /**
+   * Convert a scan report to SARIF 2.1.0 format for CI/CD integration
+   * (GitHub Code Scanning, VS Code SARIF Viewer, etc.).
+   *
+   * @param {object} report - Report from scanServer().
+   * @returns {object} SARIF 2.1.0 object.
+   */
+  toSARIF(report) {
+    const rules = [
+      { id: 'SCS001', name: 'Known Bad Server', shortDescription: { text: 'MCP server appears in known-bad registry' } },
+      { id: 'SCS002', name: 'CVE Match', shortDescription: { text: 'MCP server has known CVE vulnerability' } },
+      { id: 'SCS003', name: 'Hidden Prompt Injection', shortDescription: { text: 'Tool description contains hidden injection instructions' } },
+      { id: 'SCS004', name: 'Broad Permission', shortDescription: { text: 'Tool requests overly broad permissions' } },
+      { id: 'SCS005', name: 'Schema Over-Permissive', shortDescription: { text: 'Tool input schema allows arbitrary properties' } },
+      { id: 'SCS006', name: 'Capability Escalation Chain', shortDescription: { text: 'Tool combination enables multi-step attack' } },
+      { id: 'SCS007', name: 'Tool Definition Drift', shortDescription: { text: 'Tool definitions changed since last attestation (rugpull)' } },
+      { id: 'SCS008', name: 'Schema Field Poisoning', shortDescription: { text: 'Hidden instructions in non-description schema fields' } },
+      { id: 'SCS009', name: 'SSRF Vector', shortDescription: { text: 'Tool accepts URL parameters without validation' } },
+      { id: 'SCS010', name: 'Malicious Skill Pattern', shortDescription: { text: 'Tool matches known malicious skill indicators' } },
+      { id: 'SCS011', name: 'Detector Core Risk', shortDescription: { text: 'Tool description triggered pattern-based detection' } },
+      { id: 'SCS012', name: 'Micro-Model Detection', shortDescription: { text: 'Tool flagged by ML-based threat classifier' } }
+    ];
+
+    const typeToRuleId = {
+      known_bad_server: 'SCS001',
+      cve_match: 'SCS002',
+      hidden_prompt_injection: 'SCS003',
+      broad_permission: 'SCS004',
+      schema_over_permissive: 'SCS005',
+      capability_escalation_chain: 'SCS006',
+      tool_definition_drift: 'SCS007',
+      schema_field_poisoning: 'SCS008',
+      ssrf_vector: 'SCS009',
+      ssrf_target_in_schema: 'SCS009',
+      malicious_skill_pattern: 'SCS010',
+      detector_core_prompt_risk: 'SCS011',
+      micro_model_detection: 'SCS012'
+    };
+
+    const results = report.findings.map(f => ({
+      ruleId: typeToRuleId[f.type] || 'SCS001',
+      level: f.severity === 'critical' ? 'error' : f.severity === 'high' ? 'warning' : 'note',
+      message: { text: f.message },
+      properties: {
+        severity: f.severity,
+        findingType: f.type,
+        recommendation: f.recommendation,
+        server: report.server
+      }
+    }));
+
+    return {
+      version: '2.1.0',
+      $schema: 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+      runs: [{
+        tool: {
+          driver: {
+            name: 'Agent Shield Supply Chain Scanner',
+            version: '8.0.0',
+            rules
+          }
+        },
+        results
+      }]
+    };
+  }
+
+  /**
+   * Convert a scan report to Markdown format.
+   *
+   * @param {object} report - Report from scanServer().
+   * @returns {string}
+   */
+  toMarkdown(report) {
+    const lines = [
+      '# MCP Supply Chain Scan',
+      '',
+      `- **Server:** ${report.server}`,
+      `- **Status:** ${report.status.toUpperCase()}`,
+      `- **Score:** ${report.score}/100`,
+      `- **Highest Severity:** ${report.highestSeverity}`,
+      ''
+    ];
+
+    if (report.findings.length === 0) {
+      lines.push('No supply chain issues detected.');
+      return lines.join('\n');
+    }
+
+    lines.push('## Findings');
+    lines.push('');
+    lines.push('| Severity | Type | Message |');
+    lines.push('|----------|------|---------|');
+    for (const f of report.findings) {
+      lines.push(`| ${f.severity} | ${f.type} | ${f.message.substring(0, 100)} |`);
+    }
+
+    lines.push('');
+    lines.push('## Summary');
+    lines.push(`| Critical | High | Medium | Low |`);
+    lines.push(`|----------|------|--------|-----|`);
+    lines.push(`| ${report.summary.critical} | ${report.summary.high} | ${report.summary.medium} | ${report.summary.low} |`);
+
+    if (report.recommendations.length > 0) {
+      lines.push('');
+      lines.push('## Recommendations');
+      for (const rec of report.recommendations) {
+        lines.push(`- ${rec}`);
+      }
+    }
+
+    return lines.join('\n');
   }
 
   // -----------------------------------------------------------------------

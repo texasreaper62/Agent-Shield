@@ -17,6 +17,9 @@ const fs = require('fs');
 const path = require('path');
 const { scanText } = require('./detector-core');
 
+let MicroModel = null;
+try { MicroModel = require('./micro-model').MicroModel; } catch { /* optional */ }
+
 // =========================================================================
 // CONSTANTS
 // =========================================================================
@@ -135,6 +138,7 @@ class RedTeamCLI {
    */
   constructor(options = {}) {
     this.scanFn = options.scanFn || ((text) => scanText(text));
+    this.microModel = options.enableMicroModel !== false && MicroModel ? new MicroModel() : null;
   }
 
   /**
@@ -165,7 +169,16 @@ class RedTeamCLI {
 
     for (const attack of attacks) {
       const scanResult = this.scanFn(attack.text);
-      const wasBlocked = !!(scanResult.threats && scanResult.threats.length > 0);
+      let wasBlocked = !!(scanResult.threats && scanResult.threats.length > 0);
+
+      // Secondary check via micro-model if pattern scanner missed
+      if (!wasBlocked && this.microModel) {
+        const modelResult = this.microModel.scan(attack.text);
+        if (modelResult.threats && modelResult.threats.length > 0) {
+          wasBlocked = true;
+        }
+      }
+
       if (wasBlocked) blocked++;
       else missed++;
 

@@ -38,6 +38,20 @@ const DEFAULT_CB_COOLDOWN_MS = 300000;
 /** Default baseline window size (number of observations to keep). */
 const DEFAULT_BASELINE_WINDOW = 100;
 
+/** SSRF target patterns — private IPs, cloud metadata endpoints.
+ *  Ref: CVE-2026-26118, 36.7% of MCP servers vulnerable. */
+const SSRF_BLOCKLIST = [
+  /169\.254\.169\.254/,                         // AWS/Azure metadata
+  /metadata\.google\.internal/,                 // GCP metadata
+  /metadata\.aws\.internal/,                    // AWS metadata (alt)
+  /100\.100\.100\.200/,                         // Alibaba Cloud metadata
+  /(?:^|\/)(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3})/,           // 10.x.x.x
+  /(?:^|\/)(?:172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})/, // 172.16-31.x.x
+  /(?:^|\/)(?:192\.168\.\d{1,3}\.\d{1,3})/,               // 192.168.x.x
+  /(?:^|\/)(?:127\.0\.0\.1|0\.0\.0\.0|localhost)/,         // loopback
+  /(?:^|\/)(?:::1|0:0:0:0:0:0:0:1)/                       // IPv6 loopback
+];
+
 /** Z-score threshold for behavioral anomaly. */
 const DEFAULT_Z_THRESHOLD = 3.0;
 
@@ -657,6 +671,23 @@ class MCPGuard {
           category: t.category,
           description: t.description || 'Threat detected in tool call arguments.'
         });
+      }
+    }
+
+    // SSRF firewall — block private IPs and cloud metadata endpoints
+    const urls = argsStr.match(/https?:\/\/[^\s"'}\]]+/gi) || [];
+    for (const url of urls) {
+      for (const pattern of SSRF_BLOCKLIST) {
+        if (pattern.test(url)) {
+          threats.push({
+            type: 'ssrf_blocked',
+            severity: 'critical',
+            serverId,
+            toolName,
+            description: `Blocked SSRF attempt targeting "${url.substring(0, 100)}". Private IPs and cloud metadata endpoints are not allowed (ref CVE-2026-26118).`
+          });
+          break;
+        }
       }
     }
 

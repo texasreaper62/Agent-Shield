@@ -230,6 +230,24 @@ console.log('\n--- Report Formatters ---');
 })();
 
 // =========================================================================
+// Micro-model integration
+// =========================================================================
+
+console.log('\n--- Micro-Model Integration ---');
+
+(() => {
+  const cli = new RedTeamCLI();
+  // Micro-model is enabled by default — should catch more attacks
+  const report = cli.run('https://example.com/agent', { mode: 'quick' });
+  assert(report.blocked > 0, 'Micro-model + detector-core catches attacks');
+
+  // Compare: with micro-model should catch >= without
+  const cliNoModel = new RedTeamCLI({ enableMicroModel: false });
+  const reportNoModel = cliNoModel.run('https://example.com/agent', { mode: 'quick' });
+  assert(report.blocked >= reportNoModel.blocked, 'Micro-model catches at least as many as detector-core alone');
+})();
+
+// =========================================================================
 // Error handling
 // =========================================================================
 
