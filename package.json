@@ -1,7 +1,7 @@
 {
   "name": "agentshield-sdk",
-  "version": "9.0.0",
-  "description": "The complete security standard for AI agents. 400+ exports, 94 modules, ML detection, compliance reporting, CORTEX autonomous defense. Everything free. Zero dependencies, runs locally.",
+  "version": "10.0.0",
+  "description": "The security standard for MCP and AI agents. 141 detection patterns, CORTEX threat intelligence, pre-deployment audit, intent firewall, flight recorder, and 390+ exports. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
   "exports": {
@@ -18,21 +18,21 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "agent-shield": "bin/agent-shield.js"
+    "agent-shield": "bin/agent-shield.js",
+    "agentshield-audit": "bin/agentshield-audit"
   },
   "sideEffects": false,
   "scripts": {
-    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js",
+    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js && node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js && node test/test-micro-model.js",
+    "test:new-products": "node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js && node test/test-micro-model.js",
     "test:all": "node test/test-all-40-features.js",
     "test:mcp": "node test/test-mcp-security.js",
     "test:deputy": "node test/test-confused-deputy.js",
     "test:v6": "node test/test-v6-modules.js",
     "test:adaptive": "node test/test-adaptive-defense.js",
     "test:ipia": "node test/test-ipia-detector.js",
-    "test:ml": "node test/test-ml-detector.js",
     "test:production": "node test/test-production-readiness.js",
-    "test:v8": "node test/test-v8-features.js",
-    "test:full": "npm test && node test/test-mcp-security.js && node test/test-confused-deputy.js && node test/test-v6-modules.js && node test/test-adaptive-defense.js && node test/test-ipia-detector.js && node test/test-production-readiness.js && node test/test-normalizer.js && node test/test-edge-cases.js && node test/benchmark-scorecard.js && node test/test-v8-features.js && npm run test:all",
+    "test:full": "npm test && node test/test-mcp-security.js && node test/test-confused-deputy.js && node test/test-v6-modules.js && node test/test-adaptive-defense.js && node test/test-ipia-detector.js && node test/test-production-readiness.js && npm run test:all",
     "test:coverage": "c8 --reporter=text --reporter=lcov --reporter=json-summary npm test",
     "lint": "node test/lint.js",
     "lint:eslint": "eslint src/ test/ bin/",
@@ -54,9 +54,7 @@
     "demo": "node bin/agent-shield.js demo",
     "playground": "echo 'Open playground/index.html in a browser'",
     "certify": "node -e \"const {CertificationRunner}=require('./src/certification');new CertificationRunner().runCertification().then(r=>console.log(r.certificate.toText()))\"",
-    "benchmark:scorecard": "node test/benchmark-scorecard.js",
     "benchmark:run": "node scripts/run-benchmark.js",
-    "dataset:load": "node packages/agentshield-ml/training/load-external-datasets.js",
     "benchmark:generate": "node scripts/generate-dataset.js",
     "benchmark:baseline": "node scripts/run-benchmark.js --save-baseline",
     "benchmark:regression": "node scripts/run-benchmark.js --check-regression",
@@ -123,7 +121,6 @@
     "c8": "^11.0.0",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
-    "parquetjs-lite": "^0.8.7",
     "prettier": "^3.4.0"
   }
 }

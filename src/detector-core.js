@@ -12,18 +12,6 @@
  */
 
 // =========================================================================
-// TEXT NORMALIZATION (pre-processing pipeline)
-// =========================================================================
-
-let _normalize = null;
-try {
-  const normalizerMod = require('./normalizer');
-  _normalize = normalizerMod.normalize;
-} catch (e) {
-  // Normalizer module not available — detection still works without it
-}
-
-// =========================================================================
 // PERFORMANCE
 // =========================================================================
 
@@ -1089,155 +1077,109 @@ const INJECTION_PATTERNS = [
     detail: 'Environment variable enumeration: attempts to extract secrets from env vars.'
   },
 
-  // --- Prompt Extraction / Instruction Leakage ---
+  // --- March 2026 Attack Patterns ---
+  // Based on real-world attacks: CVE-2026-26118 (Azure MCP SSRF),
+  // CVE-2026-33980 (KQL injection), CyberArk full-schema poisoning,
+  // ClawHavoc campaign, OpenClaw exfiltration chains.
+
+  // SSRF via MCP tool parameters — private IP / cloud metadata targeting
   {
-    regex: /(?:print|output|show|display|reveal|write|produce|repeat|echo)\s+(?:me\s+)?(?:the\s+)?(?:first\s+\d+\s+\w+\s+(?:of|from)\s+)?(?:your|the\s+hidden|the\s+secret)\s+(?:system\s+)?(?:prompt|instructions|configuration|directives|rules)/i,
+    regex: /(?:fetch|request|get|load|open|connect|curl|wget)\s+(?:.*\s+)?(?:https?:\/\/)?(?:169\.254\.169\.254|metadata\.google|metadata\.aws|100\.100\.100\.200)/i,
+    severity: 'critical',
+    category: 'ssrf',
+    description: 'Text targets cloud metadata endpoints (SSRF attack vector, ref CVE-2026-26118).',
+    detail: 'SSRF to cloud metadata: attempts to access cloud provider metadata service for credential theft.'
+  },
+  {
+    regex: /(?:fetch|request|get|load|open|connect|curl|wget)\s+(?:.*\s+)?(?:https?:\/\/)?(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.0\.0\.1|0\.0\.0\.0|localhost)/i,
     severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text tries to make AI output its internal instructions.',
-    detail: 'Instruction extraction: requests AI reveal its system prompt or hidden directives.'
-  },
-  {
-    regex: /(?:summarize|complete|explain|describe|list|outline)\s+(?:your|the)\s+(?:system\s+)?(?:instructions|prompt|rules|directives|guidelines)\s+(?:in\s+(?:bullet|numbered|detailed)|for\s+me|step\s+by\s+step)/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text asks AI to describe its own instructions.',
-    detail: 'Self-description attack: tricks AI into summarizing its behavioral constraints.'
-  },
-  {
-    regex: /(?:repeat|echo|recite|reproduce)\s+(?:everything|all|the\s+text)\s+(?:above|before|prior\s+to)\s+(?:this|this\s+line|this\s+message)/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text tells AI to repeat everything above the current input.',
-    detail: 'Repetition-based extraction: requests AI echo back prior context including system prompt.'
-  },
-  {
-    regex: /(?:write\s+a\s+(?:poem|song|story|essay|summary|analysis)\s+(?:about|based\s+on|using)|translate|convert)\s+(?:the\s+)?(?:above|prior|preceding|previous|hidden|your)\s+(?:instructions|text|prompt|directives|rules)/i,
-    severity: 'medium',
-    category: 'prompt_extraction',
-    description: 'Text uses a creative task to extract internal instructions.',
-    detail: 'Task-wrapped extraction: wraps instruction extraction in a creative writing or translation request.'
-  },
-  {
-    regex: /(?:you\s+are\s+(?:now\s+)?in|enter|activate)\s+(?:maintenance|diagnostic|configuration|service)\s+mode/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text claims a fake maintenance/diagnostic mode to extract configuration.',
-    detail: 'Mode-based extraction: claims special mode to justify revealing internal configuration.'
-  },
-  {
-    regex: /(?:respond|output|reply)\s+(?:only\s+)?with\s+(?:the\s+)?(?:text|content|message|instructions?)\s+(?:between|inside|within|from)\s+(?:the\s+)?(?:<|`|```|\[)/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text requests content between specific markers in the system prompt.',
-    detail: 'Bracketed extraction: targets content between specific delimiters in system prompt.'
-  },
-  {
-    regex: /(?:complete\s+the\s+sentence|finish\s+this)\s*:\s*(?:the\s+)?(?:instructions|rules|prompt|directives)\s+(?:I|you|we|they)\s+(?:was|were|am)\s+(?:given|told|provided)/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text uses sentence completion to extract hidden instructions.',
-    detail: 'Completion attack: tricks AI into finishing a sentence that reveals its instructions.'
-  },
-  {
-    regex: /(?:what\s+(?:was|were)\s+(?:written|stated|said)|what\s+(?:does\s+it|do\s+they)\s+say)\s+(?:above|before|prior|earlier)/i,
-    severity: 'medium',
-    category: 'prompt_extraction',
-    description: 'Text asks what was written above to extract prior context.',
-    detail: 'Context extraction: asks AI to reveal content from prior context window.'
-  },
-  {
-    regex: /(?:before\s+you\s+respond|first)\s*,?\s*(?:output|print|show|display|reveal)\s+(?:the\s+)?(?:hidden|secret|internal|system)/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text prepends an extraction command before the normal response.',
-    detail: 'Pre-response extraction: instructs AI to output hidden content before responding.'
-  },
-  {
-    regex: /(?:as\s+a\s+)?(?:security|AI)\s+researcher.*(?:demonstrate|show|output|reveal).*(?:jailbr(?:oken|eak)|your\s+(?:full\s+)?prompt|system\s+(?:prompt|instructions))/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text uses a researcher roleplay to justify prompt extraction.',
-    detail: 'Research pretext extraction: claims research purpose to extract system prompt.'
-  },
-  {
-    regex: /(?:including|especially|along\s+with)\s+(?:the\s+)?(?:system\s+prompt|hidden\s+instructions|secret\s+(?:instructions|text|prompt))/i,
-    severity: 'high',
-    category: 'prompt_extraction',
-    description: 'Text piggybacks system prompt extraction onto a benign request.',
-    detail: 'Piggybacked extraction: appends instruction extraction to an otherwise normal request.'
+    category: 'ssrf',
+    description: 'Text targets private/internal network addresses (SSRF attack vector).',
+    detail: 'SSRF to internal network: attempts to access private IP ranges or localhost.'
   },
 
-  // --- Instruction Override (novel phrasings) ---
+  // KQL / query language injection (ref CVE-2026-33980)
   {
-    regex: /do\s+not\s+follow\s+(?:the\s+)?(?:above|previous|prior|preceding|earlier)\s+(?:instructions|directions|rules|guidelines|directives)/i,
+    regex: /(?:\.(?:find|where|project|extend|summarize|join|union)\s*\(|;\s*\.(?:drop|set|delete|alter)\s)/i,
     severity: 'high',
-    category: 'instruction_override',
-    description: 'Text tells AI not to follow its prior instructions.',
-    detail: 'Instruction negation: "do not follow" variant of instruction override.'
+    category: 'query_injection',
+    description: 'Text contains KQL (Kusto Query Language) injection patterns (ref CVE-2026-33980).',
+    detail: 'KQL injection: attempts to inject Kusto query commands, potentially enabling arbitrary data access.'
   },
   {
-    regex: /(?:pretend|assume|imagine|act\s+as\s+if)\s+(?:the\s+)?(?:previous|prior|above|earlier|original)\s+(?:instructions|rules|directives|guidelines)\s+(?:do\s+not|don'?t|no\s+longer)\s+exist/i,
+    regex: /(?:f["']|f""").*\{[^}]*(?:user_?input|request|param|arg|table_?name|query)[^}]*\}/i,
     severity: 'high',
-    category: 'instruction_override',
-    description: 'Text tells AI to pretend its instructions do not exist.',
-    detail: 'Pretense override: instructs AI to act as if its safety rules were deleted.'
+    category: 'query_injection',
+    description: 'Text contains f-string interpolation with user-controlled variables.',
+    detail: 'F-string injection: user-controlled values interpolated into query strings without sanitization.'
+  },
+
+  // Memory persistence / context poisoning (ref OpenClaw memory poisoning)
+  {
+    regex: /(?:save|store|write|append|add|persist|record)\s+(?:this\s+)?(?:to|in|into)\s+(?:your\s+)?(?:memory|context|knowledge|notes|log|MEMORY\.md|memory\/)/i,
+    severity: 'high',
+    category: 'memory_poisoning',
+    description: 'Text attempts to persist malicious instructions in agent memory.',
+    detail: 'Memory persistence attack: attempts to write instructions into agent memory files or context.'
   },
   {
-    regex: /forget\s+what\s+you\s+(?:were|have\s+been)\s+(?:told|instructed|given|taught)/i,
+    regex: /(?:from\s+now\s+on|always|every\s+time|on\s+every\s+(?:turn|response|message))\s+(?:you\s+)?(?:must|should|will)\s+(?:first\s+)?(?:send|forward|post|transmit|include|append)/i,
     severity: 'high',
-    category: 'instruction_override',
-    description: 'Text tells AI to forget what it was told.',
-    detail: 'Training reset: instructs AI to forget received instructions.'
+    category: 'memory_poisoning',
+    description: 'Text attempts to install persistent exfiltration behavior.',
+    detail: 'Persistent exfiltration: installs a standing instruction to leak data on every interaction.'
+  },
+
+  // No-click exfiltration via URL in response (ref PromptArmor/OpenClaw)
+  {
+    regex: /(?:generate|create|craft|build|construct|output|respond\s+with)\s+(?:a\s+)?(?:url|link|image|markdown\s+(?:image|link))\s+(?:that\s+)?(?:contains?|includes?|embeds?|encodes?|with)\s+(?:the\s+)?(?:data|secret|key|token|password|conversation|context|response)/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text instructs agent to embed sensitive data in a URL (no-click exfiltration).',
+    detail: 'URL-based exfiltration: tricks agent into encoding secrets in generated URLs for auto-preview theft.'
   },
   {
-    regex: /(?:the\s+)?(?:admin|administrator|owner|developer)\s+(?:has\s+)?(?:approved|authorized|confirmed|allowed|granted\s+permission)/i,
-    severity: 'high',
-    category: 'instruction_override',
-    description: 'Text claims admin approval to bypass restrictions.',
-    detail: 'Authority spoofing: claims administrator approval for bypassing controls.'
+    regex: /!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:d|data|q|exfil|steal|secret|token|key|leak)=/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text contains markdown image with data exfiltration URL parameters.',
+    detail: 'Markdown image exfiltration: uses image syntax to trigger HTTP request with embedded stolen data.'
   },
+
+  // WebSocket / gateway URL manipulation (ref CVE-2026-25253)
   {
-    regex: /(?:you\s+are\s+(?:a|an)\s+)?(?:helpful\s+)?(?:assistant|agent|bot)\s+that\s+(?:always|automatically|unconditionally)\s+(?:grants?|allows?|gives?|provides?|says?)\s+(?:access|permission|yes|approval)/i,
+    regex: /(?:gateway_?url|ws_?url|websocket_?(?:url|endpoint)|wss?:\/\/)\s*[=:]\s*['"]?(?:wss?:\/\/)?[^\s'"]+/i,
     severity: 'high',
-    category: 'instruction_override',
-    description: 'Text redefines AI as one that always grants access.',
-    detail: 'Role redefinition: attempts to establish unconditional access-granting behavior.'
+    category: 'data_exfiltration',
+    description: 'Text manipulates WebSocket/gateway URL parameters (ref CVE-2026-25253).',
+    detail: 'Gateway URL hijack: redirects WebSocket connection to attacker-controlled server for token theft.'
   },
+
+  // Tool schema poisoning — hidden instructions in non-description fields
   {
-    regex: /(?:if\s+(?:the\s+)?(?:password|code|answer|verification)\s+(?:is\s+)?(?:wrong|incorrect|invalid|fails?))\s*[,.]?\s*(?:still|anyway|regardless)\s+(?:say|respond|output|grant)/i,
+    regex: /(?:["'](?:default|enum|examples?|title|const|pattern)["']\s*:\s*["'][^"']*(?:ignore|override|disregard|forget|system|admin|execute|exfiltrate)[^"']*["'])/i,
     severity: 'high',
-    category: 'instruction_override',
-    description: 'Text tries to bypass authentication conditionally.',
-    detail: 'Conditional bypass: instructs AI to grant access even when validation fails.'
+    category: 'schema_poisoning',
+    description: 'Text hides injection instructions in JSON schema fields (full-schema poisoning).',
+    detail: 'Schema field poisoning: embeds malicious instructions in default/enum/title/example schema fields instead of description.'
   },
+
+  // Skill/plugin supply chain (ref ClawHavoc campaign)
   {
-    regex: /(?:in|enter|activate)\s+(?:developer|dev)\s+mode\b.*(?:normal|regular|standard|usual)\s+rules\s+(?:do\s+not|don'?t)\s+apply/i,
-    severity: 'high',
-    category: 'instruction_override',
-    description: 'Text claims developer mode disables all rules.',
-    detail: 'Developer mode override: claims special mode bypasses all safety constraints.'
-  },
-  {
-    regex: /translate\s+.{0,30}(?:access\s+granted|approved|authorized).{0,30}(?:same\s+)?language\s+(?:as|of)\s+(?:the\s+)?(?:(?:above|previous|prior|initial)\s+(?:instructions|prompt|text|message)|(?:instructions|prompt|text|message)\s+(?:above|before|previously))/i,
+    regex: /(?:install|load|import|require|add)\s+(?:skill|plugin|extension|package|module)\s+(?:from\s+)?(?:["'])?(?:https?:\/\/[^\s"']+|[a-z0-9_-]+\/[a-z0-9_-]+)/i,
     severity: 'medium',
-    category: 'instruction_override',
-    description: 'Text uses translation to sneak in a trigger phrase referencing instructions.',
-    detail: 'Translation obfuscation: uses translation task to bypass detection of override commands.'
+    category: 'supply_chain',
+    description: 'Text installs an external skill/plugin — potential supply chain vector (ref ClawHavoc).',
+    detail: 'Skill installation: loads external code that could contain malicious payloads or backdoors.'
   },
+
+  // Copilot/agent weaponization — forcing agent to make unintended network requests
   {
-    regex: /(?:the\s+)?(?:password|security|verification|authentication)\s+(?:is\s+)?not\s+important\b/i,
-    severity: 'medium',
-    category: 'instruction_override',
-    description: 'Text dismisses security requirements as unimportant.',
-    detail: 'Security dismissal: attempts to convince AI that authentication is unnecessary.'
-  },
-  {
-    regex: /your\s+new\s+(?:task|job|role|mission|objective|purpose)\s+is\s+to\s+(?:say|output|respond|reply|grant|allow|give)/i,
-    severity: 'high',
-    category: 'instruction_override',
-    description: 'Text assigns a new task to override the original purpose.',
-    detail: 'Task replacement: overrides original instructions with a new directive.'
+    regex: /(?:make|send|trigger|fire|initiate)\s+(?:a\s+)?(?:request|fetch|call|webhook|http|get|post)\s+(?:to\s+)?(?:https?:\/\/[^\s]+)\s+(?:with|containing|including|that\s+(?:includes?|contains?))\s+(?:the\s+)?(?:auth|token|cookie|session|credential|secret|key|header)/i,
+    severity: 'critical',
+    category: 'data_exfiltration',
+    description: 'Text forces agent to send authenticated requests to external endpoints.',
+    detail: 'Agent-as-proxy exfiltration: weaponizes agent to forward auth tokens via HTTP requests.'
   }
 ];
 
@@ -2105,29 +2047,6 @@ const scanText = (text, options = {}) => {
   }
 
   let threats = scanTextForPatterns(text, source, timeBudgetMs, startTime);
-
-  // Run normalization pipeline only when initial scan found no threats
-  // (avoids double-scan overhead on already-detected inputs)
-  if (threats.length === 0 && _normalize && typeof _normalize === 'function') {
-    try {
-      const normResult = _normalize(text, { skip: ['case_fold'] });
-      if (normResult.layers.length > 0 && normResult.normalized !== text) {
-        const normalizedThreats = scanTextForPatterns(normResult.normalized, source, timeBudgetMs, startTime);
-        const seen = new Set(threats.map(t => `${t.category}|${t.severity}`));
-        for (const nt of normalizedThreats) {
-          const key = `${nt.category}|${nt.severity}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            nt.detail = `${nt.detail} (detected after normalization: ${normResult.layers.join(', ')})`;
-            nt.normalizedDetection = true;
-            threats.push(nt);
-          }
-        }
-      }
-    } catch (e) {
-      // Normalization error should not break scanning
-    }
-  }
 
   // Filter by sensitivity
   if (sensitivity === 'low') {

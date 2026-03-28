@@ -341,6 +341,24 @@ const { RAG_VULNERABILITY_PATTERNS, VECTOR_DB_SECURITY_CHECKLIST, RAGVulnerabili
 // Confused Deputy Prevention (Meta Incident Response)
 const { AuthorizationContext, EphemeralTokenManager, IntentValidator, ConfusedDeputyGuard } = safeRequire('./confused-deputy', 'confused-deputy');
 
+// v10.0 — MCP Guard
+const { MCPGuard, ServerAttestation, CrossServerIsolation, OAuthEnforcer, ToolBehaviorBaseline } = safeRequire('./mcp-guard', 'mcp-guard');
+
+// v10.0 — MCP Supply Chain Scanner
+const { SupplyChainScanner, KNOWN_BAD_SERVERS, CVE_REGISTRY: MCP_CVE_REGISTRY, DESCRIPTION_INJECTION_PATTERNS, BROAD_PERMISSION_PATTERNS } = safeRequire('./supply-chain-scanner', 'supply-chain-scanner');
+
+// v10.0 — OWASP Agentic Top 10 2026
+const { OWASPAgenticScanner, OWASP_AGENTIC_2026, SEVERITY_WEIGHTS: AGENTIC_SEVERITY_WEIGHTS } = safeRequire('./owasp-agentic', 'owasp-agentic');
+
+// v10.0 — Red Team Audit CLI Engine
+const { RedTeamCLI, REDTEAM_MODES, ATTACK_CORPUS: REDTEAM_ATTACK_CORPUS } = safeRequire('./redteam-cli', 'redteam-cli');
+
+// v10.0 — Behavioral Drift Monitor
+const { DriftMonitor, klDivergence: driftKLDivergence } = safeRequire('./drift-monitor', 'drift-monitor');
+
+// v10.0 — Micro Detection Model (March 2026 attack corpus)
+const { MicroModel, TRAINING_CORPUS: MICRO_MODEL_CORPUS } = safeRequire('./micro-model', 'micro-model');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -910,6 +928,38 @@ const _exports = {
   extractBehavioralFeatures,
   DEFAULT_NUMERIC_FEATURES,
   DEFAULT_CATEGORICAL_FEATURES,
+
+  // v10.0 — MCP Guard
+  MCPGuard,
+  ServerAttestation,
+  CrossServerIsolation,
+  OAuthEnforcer,
+  ToolBehaviorBaseline,
+
+  // v10.0 — MCP Supply Chain Scanner
+  SupplyChainScanner,
+  KNOWN_BAD_SERVERS,
+  MCP_CVE_REGISTRY,
+  DESCRIPTION_INJECTION_PATTERNS,
+  BROAD_PERMISSION_PATTERNS,
+
+  // v10.0 — OWASP Agentic Top 10 2026
+  OWASPAgenticScanner,
+  OWASP_AGENTIC_2026,
+  AGENTIC_SEVERITY_WEIGHTS,
+
+  // v10.0 — Red Team Audit CLI Engine
+  RedTeamCLI,
+  REDTEAM_MODES,
+  REDTEAM_ATTACK_CORPUS,
+
+  // v10.0 — Behavioral Drift Monitor
+  DriftMonitor,
+  driftKLDivergence,
+
+  // v10.0 — Micro Detection Model
+  MicroModel,
+  MICRO_MODEL_CORPUS,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
