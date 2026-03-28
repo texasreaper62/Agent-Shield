@@ -23,9 +23,7 @@ Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WA
   <b>Try it yourself:</b> <code>npx agent-shield demo</code>
 </p>
 
-## v9.0 — Everything Free, Forever
 
-Every detection pattern, every compliance module, every ML feature — all free, all local, all open source. No tiers, no license keys, no gating. We removed all paid restrictions because security shouldn't have a paywall.
 
 ---
 
