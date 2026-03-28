@@ -195,11 +195,10 @@ class MicroModel {
     }
 
     // Pre-compute TF vectors for all corpus entries
-    this._corpusVectors = this.corpus.map(entry => ({
-      ...entry,
-      tokens: tokenize(entry.text),
-      tf: termFrequency(tokenize(entry.text))
-    }));
+    this._corpusVectors = this.corpus.map(entry => {
+      const tokens = tokenize(entry.text);
+      return { ...entry, tokens, tf: termFrequency(tokens) };
+    });
 
     // Build IDF from corpus
     this._idf = this._computeIDF();

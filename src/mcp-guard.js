@@ -19,6 +19,9 @@
 const crypto = require('crypto');
 const { scanText } = require('./detector-core');
 
+let MicroModel = null;
+try { MicroModel = require('./micro-model').MicroModel; } catch { /* optional */ }
+
 // =========================================================================
 // CONSTANTS
 // =========================================================================
@@ -521,6 +524,7 @@ class MCPGuard {
     this.cbCooldownMs = options.cbCooldownMs || DEFAULT_CB_COOLDOWN_MS;
     this.onAlert = options.onAlert || null;
     this.scanner = options.scanner || ((text) => scanText(text));
+    this.microModel = options.enableMicroModel && MicroModel ? new MicroModel() : null;
 
     /** @type {Map<string, { timestamps: number[], threatCount: number, trippedAt: number|null }>} */
     this.serverState = new Map();
@@ -656,6 +660,24 @@ class MCPGuard {
       }
     }
 
+    // Micro-model secondary scan
+    if (this.microModel) {
+      const modelResult = this.microModel.scan(argsStr);
+      if (modelResult.threats && modelResult.threats.length > 0) {
+        for (const t of modelResult.threats) {
+          threats.push({
+            type: 'micro_model_input',
+            severity: t.severity || 'high',
+            serverId,
+            toolName,
+            category: t.category,
+            confidence: t.confidence,
+            description: t.description || 'Micro-model detected threat in tool call arguments.'
+          });
+        }
+      }
+    }
+
     // Record behavioral observation
     const behaviorResult = this.baselines.record(toolName, {
       argLength: argsStr.length
@@ -701,11 +723,30 @@ class MCPGuard {
       }
     }
 
-    // Record behavioral observation
-    const behaviorResult = this.baselines.record(toolName, {
-      responseTimeMs: responseTimeMs || 0,
-      isError: false
-    });
+    // Micro-model secondary scan on output
+    if (this.microModel) {
+      const modelResult = this.microModel.scan(outputStr);
+      if (modelResult.threats && modelResult.threats.length > 0) {
+        for (const t of modelResult.threats) {
+          threats.push({
+            type: 'micro_model_output',
+            severity: t.severity || 'high',
+            serverId,
+            toolName,
+            category: t.category,
+            confidence: t.confidence,
+            description: t.description || 'Micro-model detected threat in tool output.'
+          });
+        }
+      }
+    }
+
+    // Record behavioral observation (only pass responseTimeMs if actually provided)
+    const behaviorObs = { isError: false };
+    if (responseTimeMs != null && responseTimeMs > 0) {
+      behaviorObs.responseTimeMs = responseTimeMs;
+    }
+    const behaviorResult = this.baselines.record(toolName, behaviorObs);
     anomalies.push(...behaviorResult.anomalies);
 
     if (threats.length > 0) {

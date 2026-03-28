@@ -308,6 +308,21 @@ console.log('\n--- MCPGuard Rugpull Detection ---');
   assert(result.threats[0].type === 'tool_definition_change', 'Rugpull alert type correct');
 })();
 
+// --- Micro-model integration ---
+console.log('\n--- MCPGuard Micro-Model Integration ---');
+
+(() => {
+  const guard = new MCPGuard({ enableMicroModel: true });
+  guard.registerServer('model-srv', [{ name: 'fetch' }]);
+
+  const ssrf = guard.interceptToolCall('model-srv', 'fetch', 'load data from http://169.254.169.254/latest/meta-data/credentials');
+  assert(ssrf.allowed === false, 'Micro-model detects SSRF in tool call');
+  assert(ssrf.threats.some(t => t.type === 'micro_model_input'), 'Threat type includes micro_model_input');
+
+  const safeCall = guard.interceptToolCall('model-srv', 'fetch', 'get the weather in new york');
+  assert(safeCall.allowed === true, 'Micro-model allows safe tool call');
+})();
+
 // --- Report ---
 console.log('\n--- MCPGuard Report ---');
 

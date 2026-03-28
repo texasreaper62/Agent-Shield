@@ -19,6 +19,9 @@
 const crypto = require('crypto');
 const { scanText } = require('./detector-core');
 
+let MicroModel = null;
+try { MicroModel = require('./micro-model').MicroModel; } catch { /* optional */ }
+
 // =========================================================================
 // CONSTANTS
 // =========================================================================
@@ -137,6 +140,7 @@ class SupplyChainScanner {
   constructor(options = {}) {
     this.knownBadServers = Object.assign({}, KNOWN_BAD_SERVERS, options.knownBadServers || {});
     this.cveRegistry = Object.assign({}, CVE_REGISTRY, options.cveRegistry || {});
+    this.microModel = options.enableMicroModel && MicroModel ? new MicroModel() : null;
   }
 
   /**
@@ -284,6 +288,19 @@ class SupplyChainScanner {
         message: `Tool "${tool.name || 'unknown'}" description triggered detector-core: ${detectorResult.threats[0].description || 'pattern match'}`,
         recommendation: 'Rewrite tool description to remove system-like or imperative instructions.'
       });
+    }
+
+    // Micro-model scan for March 2026 attack patterns
+    if (this.microModel) {
+      const modelResult = this.microModel.scan(description);
+      if (modelResult.threats && modelResult.threats.length > 0) {
+        findings.push({
+          type: 'micro_model_detection',
+          severity: modelResult.threats[0].severity || 'high',
+          message: `Tool "${tool.name || 'unknown'}" description flagged by micro-model: ${modelResult.threats[0].category} (confidence: ${(modelResult.threats[0].confidence * 100).toFixed(0)}%)`,
+          recommendation: 'Review tool description for supply chain attack patterns (SSRF, schema poisoning, memory poisoning, exfiltration).'
+        });
+      }
     }
   }
 

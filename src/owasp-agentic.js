@@ -269,16 +269,21 @@ class OWASPAgenticScanner {
   scanBatch(inputs) {
     const allFindings = [];
     const riskCounts = {};
+    const scores = [];
 
     for (const input of (inputs || [])) {
       const result = this.scan(input);
+      scores.push(result.score);
       for (const finding of result.findings) {
         allFindings.push(finding);
         riskCounts[finding.riskId] = (riskCounts[finding.riskId] || 0) + 1;
       }
     }
 
-    const score = this._calculateScore(allFindings);
+    // Average per-input scores rather than penalizing cumulative findings
+    const score = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 100;
     return {
       inputCount: (inputs || []).length,
       score,
