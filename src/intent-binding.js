@@ -104,6 +104,11 @@ class IntentBinder {
     this.stats.intentsBound++;
     this._log('intent_bound', { intentHash, allowedActions, metadata });
 
+    // Auto-purge if map grows too large
+    if (this.activeIntents.size > 10000) {
+      this.purgeExpired();
+    }
+
     return { intentHash, allowedActions };
   }
 

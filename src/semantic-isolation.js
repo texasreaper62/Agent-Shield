@@ -177,6 +177,9 @@ class SemanticIsolationEngine {
     }
 
     this.context.push(content);
+    if (this.context.length > 10000) {
+      this.context = this.context.slice(-10000);
+    }
     return content;
   }
 

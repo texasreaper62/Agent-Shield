@@ -157,9 +157,10 @@ class IntentGraph {
       timestamp: Date.now()
     });
 
-    // Link to previous node
-    if (this.nodes.length > 1) {
-      this.edges.push({ from: nodeId - 1, to: nodeId, type: 'sequence' });
+    // Link to previous node (use actual array index, not assumed sequential)
+    const prevIdx = nodeId > 0 ? nodeId - 1 : (this.nodes.length > 1 ? this.nodes.length - 2 : -1);
+    if (prevIdx >= 0 && prevIdx < this.nodes.length) {
+      this.edges.push({ from: prevIdx, to: nodeId, type: 'sequence' });
     }
 
     // Analyze causal connection to intent
@@ -197,9 +198,12 @@ class IntentGraph {
       }
     }
 
-    // Record anomalies
+    // Record anomalies (bounded)
     for (const v of violations) {
       this.anomalies.push({ ...v, nodeId, timestamp: Date.now() });
+    }
+    if (this.anomalies.length > 1000) {
+      this.anomalies = this.anomalies.slice(-1000);
     }
 
     return {
@@ -227,8 +231,9 @@ class IntentGraph {
       timestamp: Date.now()
     });
 
-    if (this.nodes.length > 1) {
-      this.edges.push({ from: nodeId - 1, to: nodeId, type: 'output' });
+    const prevIdx = nodeId > 0 ? nodeId - 1 : (this.nodes.length > 1 ? this.nodes.length - 2 : -1);
+    if (prevIdx >= 0 && prevIdx < this.nodes.length) {
+      this.edges.push({ from: prevIdx, to: nodeId, type: 'output' });
     }
 
     return { nodeId };
@@ -296,15 +301,29 @@ class IntentGraph {
     node.id = id;
     this.nodes.push(node);
     if (this.nodes.length > this.maxNodes) {
+      const offset = this.nodes.length - this.maxNodes;
       this.nodes = this.nodes.slice(-this.maxNodes);
-      this.edges = this.edges.filter(e => e.from >= 0 && e.to >= 0);
+      // Reindex nodes
+      for (let i = 0; i < this.nodes.length; i++) {
+        this.nodes[i].id = i;
+      }
+      // Reindex edges — shift indices and drop edges referencing pruned nodes
+      this.edges = this.edges
+        .filter(e => e.from >= offset && e.to >= offset)
+        .map(e => ({ ...e, from: e.from - offset, to: e.to - offset }));
+      // Update currentIntent reference
+      if (this.currentIntent) {
+        const found = this.nodes.find(n => n.type === 'intent');
+        this.currentIntent = found || null;
+      }
+      return this.nodes.length - 1; // Return corrected index
     }
     return id;
   }
 
   /** @private */
-  _findPreviousToolNode(beforeId) {
-    for (let i = beforeId - 1; i >= 0; i--) {
+  _findPreviousToolNode(currentIdx) {
+    for (let i = currentIdx - 1; i >= 0; i--) {
       if (this.nodes[i] && this.nodes[i].type === 'tool_call') return this.nodes[i];
     }
     return null;

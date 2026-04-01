@@ -598,8 +598,9 @@ class AutonomousHardener {
       return result;
     }
 
-    // Apply samples to model
-    this._trainer.applyToModel();
+    // Apply only the truncated set (not all generated samples)
+    this.microModel.addSamples(toAdd);
+    this._trainer.generatedSamples = []; // Clear trainer's pending list
     this._totalSamplesAdded += toAdd.length;
 
     // Measure FP rate AFTER
@@ -607,9 +608,16 @@ class AutonomousHardener {
 
     // Rollback if FP rate degraded beyond threshold
     if (fpAfter > this.maxFPRate && fpAfter > fpBefore) {
-      // Rollback: remove the samples we just added
-      this.microModel.corpus.splice(this.microModel.corpus.length - toAdd.length, toAdd.length);
-      this._totalSamplesAdded -= toAdd.length;
+      // Rollback: remove from corpus AND internal vectors, then rebuild
+      const count = toAdd.length;
+      this.microModel.corpus.splice(this.microModel.corpus.length - count, count);
+      this.microModel._corpusVectors.splice(this.microModel._corpusVectors.length - count, count);
+      this.microModel._idf = this.microModel._computeIDF();
+      this.microModel._corpusTFIDF = this.microModel._corpusVectors.map(entry => ({
+        ...entry,
+        tfidf: this.microModel._toTFIDF(entry.tf)
+      }));
+      this._totalSamplesAdded -= count;
 
       const result = {
         timestamp: Date.now(),

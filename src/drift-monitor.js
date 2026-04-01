@@ -241,9 +241,17 @@ class DriftMonitor {
       timingMs: Math.abs(zScore(event.timingMs, this.baseline.timingMean, this.baseline.timingStd))
     };
 
-    // KL divergence for topic distribution
+    // KL divergence for topic distribution — use sliding window, not single event
+    // Single-event distributions cause extreme KL values for any new topic
+    const recentTopics = this.current.slice(-Math.max(10, Math.floor(this.windowSize / 2)));
     const currentDist = {};
-    currentDist[event.topic] = 1;
+    for (const obs of recentTopics) {
+      currentDist[obs.topic] = (currentDist[obs.topic] || 0) + 1;
+    }
+    const recentTotal = recentTopics.length || 1;
+    for (const key of Object.keys(currentDist)) {
+      currentDist[key] = currentDist[key] / recentTotal;
+    }
     const kl = klDivergence(currentDist, this.baseline.topicDistribution || {});
 
     const maxZ = Math.max(...Object.values(zScores));

@@ -163,6 +163,7 @@ class ServerAttestation {
       description: `Server "${serverId}" tool definitions changed. Previous hash: ${existing.hash.substring(0, 12)}... Current: ${hash.substring(0, 12)}... Possible rugpull attack.`
     };
     this.alerts.push(alert);
+    if (this.alerts.length > 1000) this.alerts = this.alerts.slice(-1000);
 
     return { trusted: false, hash, changed: true, alert };
   }
@@ -349,8 +350,11 @@ class OAuthEnforcer {
       }
     }
 
-    // Check issuer
-    if (this.allowedIssuers.size > 0 && token.iss) {
+    // Check issuer — reject tokens without iss when issuer enforcement is on
+    if (this.allowedIssuers.size > 0) {
+      if (!token.iss) {
+        return { authenticated: false, reason: 'Token missing issuer claim. Issuer enforcement is enabled.' };
+      }
       if (!this.allowedIssuers.has(token.iss)) {
         return { authenticated: false, reason: `Issuer "${token.iss}" is not allowed.` };
       }
