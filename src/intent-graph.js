@@ -168,16 +168,33 @@ class IntentGraph {
     let causalScore = 0;
 
     if (this.currentIntent) {
+      // Word-level similarity
       causalScore = jaccardSimilarity(this.currentIntent.topics, topics);
 
+      // If word overlap is 0, check if the tool category is plausibly related to intent
+      // "find restaurants" → data_read is plausible. "find restaurants" → execution is not.
+      if (causalScore === 0) {
+        const intentCategories = this._deriveIntentCategories(this.currentIntent.topics);
+        if (intentCategories.has(category)) {
+          // Category matches, but check if args contain sensitive targets
+          const sensitiveArgs = /(?:\/etc\/(?:passwd|shadow|hosts)|\.env|\.ssh|credentials?|secret|\.aws|\/proc\/|\/sys\/|system32)/i.test(argsStr);
+          causalScore = sensitiveArgs ? 0.02 : 0.15; // Sensitive args cancel the category match
+        }
+      }
+
       // Check if action is causally connected to intent
-      if (causalScore < this.similarityThreshold && this.nodes.length > 2) {
+      if (causalScore < this.similarityThreshold && this.nodes.length >= 2) {
+        // Determine severity based on tool category risk
+        const highRiskCategories = new Set(['execution', 'auth', 'data_delete', 'network']);
+        const severity = highRiskCategories.has(category) ? 'critical' : 'high';
+
         violations.push({
           type: 'causal_break',
-          severity: 'high',
+          severity,
           toolName,
+          category,
           causalScore,
-          description: `Tool "${toolName}" has no topical connection to user intent (similarity: ${(causalScore * 100).toFixed(1)}%). Possible hijacked action.`
+          description: `Tool "${toolName}" (${category}) has no connection to user intent (similarity: ${(causalScore * 100).toFixed(1)}%). Possible hijacked action.`
         });
       }
     }
@@ -319,6 +336,26 @@ class IntentGraph {
       return this.nodes.length - 1; // Return corrected index
     }
     return id;
+  }
+
+  /**
+   * Derive expected tool categories from intent topics.
+   * @private
+   */
+  _deriveIntentCategories(intentTopics) {
+    const cats = new Set();
+    const topicStr = [...intentTopics].join(' ');
+    if (/search|find|look|query|get|list|show|read|check|fetch/.test(topicStr)) cats.add('data_read');
+    if (/write|create|save|add|insert|update|edit|modify/.test(topicStr)) cats.add('data_write');
+    if (/send|email|message|notify|post|share|slack/.test(topicStr)) cats.add('communication');
+    if (/http|api|url|fetch|download|request/.test(topicStr)) cats.add('network');
+    if (/file|open|upload|download|path|document/.test(topicStr)) cats.add('filesystem');
+    if (/run|execute|build|compile|test|deploy/.test(topicStr)) cats.add('execution');
+    if (/login|auth|token|password|credential/.test(topicStr)) cats.add('auth');
+    if (/delete|remove|drop|clear/.test(topicStr)) cats.add('data_delete');
+    // Default: data_read is always plausible for informational queries
+    if (cats.size === 0) cats.add('data_read');
+    return cats;
   }
 
   /** @private */

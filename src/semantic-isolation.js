@@ -99,7 +99,7 @@ class IsolationPolicy {
       requiresScanBeforeProcessing: rules.requiresScanBeforeProcessing || new Set([
         PROVENANCE.TOOL_OUTPUT, PROVENANCE.RAG_CHUNK, PROVENANCE.AGENT_MESSAGE, PROVENANCE.UNTRUSTED
       ]),
-      autoQuarantine: rules.autoQuarantine || new Set([PROVENANCE.UNTRUSTED])
+      autoQuarantine: rules.autoQuarantine || new Set([PROVENANCE.UNTRUSTED, PROVENANCE.RAG_CHUNK, PROVENANCE.AGENT_MESSAGE])
     };
   }
 
