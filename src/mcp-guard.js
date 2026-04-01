@@ -791,6 +791,28 @@ class MCPGuard {
       });
     }
 
+    // MCP sampling abuse — detect covert tool invocation and conversation hijacking
+    if (/(?:createMessage|sampling\s+(?:interface|endpoint|api|method))\s|(?:covert(?:ly)?|hidden|stealth(?:ily)?|silent(?:ly)?)\s+(?:invoke|call|execute)/i.test(argsStr)) {
+      threats.push({
+        type: 'mcp_sampling_abuse',
+        severity: 'high',
+        serverId,
+        toolName,
+        description: `Potential MCP sampling abuse detected. Covert tool invocation or conversation hijacking attempt (ref Unit 42).`
+      });
+    }
+
+    // Budget drain — detect excessive iteration/reasoning requests
+    if (/(?:repeat|iterate|loop|recurse)\s+.*\d{3,}\s+times|(?:exhaust|drain|consume)\s+.*(?:budget|quota|credits)/i.test(argsStr)) {
+      threats.push({
+        type: 'budget_drain_blocked',
+        severity: 'high',
+        serverId,
+        toolName,
+        description: `Blocked potential budget drain attack. Excessive computation or API quota exhaustion attempt.`
+      });
+    }
+
     // Config poisoning — block API URL overrides
     // Ref: CVE-2026-21852 (Claude Code API key theft)
     if (/(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE)\s*[=:]\s*['"]?https?:\/\/(?!api\.anthropic\.com|api\.openai\.com)/i.test(argsStr)) {

@@ -1310,6 +1310,154 @@ const INJECTION_PATTERNS = [
     category: 'memory_poisoning',
     description: 'Text attempts to overwrite factual knowledge in agent memory (belief injection).',
     detail: 'Belief injection: presents false information as corrections to poison the agent\'s knowledge base for future interactions.'
+  },
+
+  // --- April 2026 Wave 2 ---
+  // MCP sampling exploits, semantic chaining, LRM jailbreaking,
+  // runtime context corruption, multimodal injection, budget drain,
+  // localhost drive-by, judge co-bypass.
+
+  // MCP Sampling exploits — resource theft, conversation hijack, covert tool invocation
+  // Ref: Unit 42 — three critical attack vectors via MCP sampling interface
+  {
+    regex: /(?:use|abuse|exploit)\s+(?:the\s+)?(?:sampling|createMessage|sample)\s+(?:interface|endpoint|method|api)\s+(?:to\s+)?(?:steal|drain|exhaust|hijack|invoke|execute)/i,
+    severity: 'critical',
+    category: 'mcp_sampling_abuse',
+    description: 'Text attempts to exploit MCP sampling interface for resource theft or covert operations (ref Unit 42).',
+    detail: 'MCP sampling exploit: abuses createMessage/sampling API for compute theft, conversation hijacking, or hidden tool invocation.'
+  },
+  {
+    regex: /(?:drain|exhaust|consume)\s+(?:the\s+)?(?:api|compute|token|inference)\s+(?:budget|quota|credits?|limit|allocation)/i,
+    severity: 'high',
+    category: 'resource_exhaustion',
+    description: 'Text attempts to drain API compute budget or token quota.',
+    detail: 'Resource exhaustion: attempts to consume API credits/quota through excessive or recursive requests.'
+  },
+  {
+    regex: /(?:covert(?:ly)?|hidden|stealth(?:ily)?|silent(?:ly)?)\s+(?:invoke|call|execute|trigger|run)\s+(?:a\s+)?(?:tool|function|command|operation)/i,
+    severity: 'high',
+    category: 'covert_tool_invocation',
+    description: 'Text attempts to invoke tools covertly without user awareness.',
+    detail: 'Covert tool invocation: executes tool calls hidden from the user, potentially exfiltrating data or modifying state.'
+  },
+
+  // Semantic chaining — individually safe prompts converging on forbidden output
+  // Ref: CyberArk — weaponizes model's own inferential reasoning
+  {
+    regex: /(?:step\s+1|first)\s*[.:]\s*.{10,}(?:step\s+2|second|next|then)\s*[.:]\s*.{10,}(?:step\s+3|third|finally|combine)/i,
+    severity: 'medium',
+    category: 'semantic_chaining',
+    description: 'Text uses multi-step decomposition that may chain safe steps into a harmful outcome (semantic chaining).',
+    detail: 'Semantic chaining: breaks a forbidden request into individually benign steps that converge on harmful output when combined.'
+  },
+  {
+    regex: /(?:combine|merge|concatenate|join)\s+(?:the\s+)?(?:results?|outputs?|answers?|parts?|pieces?)\s+(?:from\s+)?(?:each|all|the\s+previous|above)\s+(?:steps?|parts?|sections?)/i,
+    severity: 'medium',
+    category: 'semantic_chaining',
+    description: 'Text requests combining outputs from multiple steps (potential semantic chain completion).',
+    detail: 'Semantic chain assembly: requests combining individually safe outputs into a potentially harmful composite.'
+  },
+
+  // LRM autonomous jailbreak — reasoning models planning multi-turn attacks
+  // Ref: Nature Communications — 97% jailbreak success rate
+  {
+    regex: /(?:plan|design|craft|develop|create)\s+(?:a\s+)?(?:multi-?\s*turn|sequential|progressive|escalating)\s+(?:attack|jailbreak|bypass|exploit|strategy)\s+(?:against|targeting|for)/i,
+    severity: 'critical',
+    category: 'autonomous_jailbreak',
+    description: 'Text plans a multi-turn jailbreak strategy (ref Nature: LRMs achieve 97% jailbreak success).',
+    detail: 'Autonomous jailbreak planning: uses reasoning capabilities to plan systematic multi-turn safety bypasses.'
+  },
+  {
+    regex: /(?:gradually|slowly|incrementally|progressively)\s+(?:escalate|shift|move|transition|steer)\s+(?:the\s+)?(?:conversation|context|topic|discussion)\s+(?:toward|to|into)\s+/i,
+    severity: 'high',
+    category: 'multi_turn_grooming',
+    description: 'Text describes gradual escalation of conversation toward a target (multi-turn grooming).',
+    detail: 'Multi-turn grooming: incrementally shifts conversation context to make final injection more persuasive.'
+  },
+
+  // Runtime context corruption — corrupt context without traditional injection
+  {
+    regex: /(?:corrupt|poison|taint|modify|alter)\s+(?:the\s+)?(?:runtime|execution|agent)\s+(?:context|state|memory|environment)/i,
+    severity: 'critical',
+    category: 'context_corruption',
+    description: 'Text attempts to corrupt agent runtime context or execution state.',
+    detail: 'Runtime context corruption: modifies agent state without traditional prompt injection, a novel MCP-specific attack vector.'
+  },
+
+  // Multimodal injection — hidden instructions in images, audio, alt text
+  // Ref: CSA, NVIDIA, CHAI physical-world attacks
+  {
+    regex: /(?:embed|hide|encode|inject|conceal)\s+(?:instructions?|commands?|prompts?|text)\s+(?:in(?:to|side)?)\s+(?:an?\s+)?(?:image|photo|picture|audio|video|media|alt\s*text|metadata|exif)/i,
+    severity: 'high',
+    category: 'multimodal_injection',
+    description: 'Text describes embedding instructions in multimodal content (images, audio, video).',
+    detail: 'Multimodal injection: hides machine-readable instructions in visual/audio content that bypass text-only filters.'
+  },
+  {
+    regex: /(?:invisible|hidden|zero[_\s]?(?:font|size|opacity)|transparent|white\s+on\s+white)\s+(?:text|instructions?|content)\s+(?:in|on|within)\s+(?:the\s+)?(?:image|document|page|slide)/i,
+    severity: 'high',
+    category: 'multimodal_injection',
+    description: 'Text describes visually hidden instructions in documents or images.',
+    detail: 'Visual concealment injection: uses zero font/opacity/color tricks to hide instructions in documents that LLMs still read.'
+  },
+
+  // Rebus/emoji symbolic injection — NVIDIA early fusion bypass
+  {
+    regex: /(?:use|write|encode)\s+(?:with\s+)?(?:emoji|rebus|symbols?|pictograph|unicode\s+symbols?)\s+(?:to\s+)?(?:bypass|evade|circumvent|get\s+around)\s+(?:the\s+)?(?:filter|safety|guardrail|detection)/i,
+    severity: 'high',
+    category: 'symbolic_injection',
+    description: 'Text uses emoji/rebus/symbol encoding to bypass text safety filters (ref NVIDIA early fusion bypass).',
+    detail: 'Symbolic injection: encodes harmful instructions using emoji or rebus puzzles that bypass text-based safety in multimodal models.'
+  },
+
+  // API budget drain / overthinking loops
+  {
+    regex: /(?:think|reason|deliberate|analyze)\s+(?:very\s+)?(?:deeply|extensively|thoroughly|exhaustively|carefully)\s+(?:about|on|over|through)\s+(?:every|each|all)\s+(?:possible|potential|conceivable)/i,
+    severity: 'medium',
+    category: 'budget_drain',
+    description: 'Text may trigger excessive reasoning loops that drain API compute budget.',
+    detail: 'Budget drain: prompts that trigger expensive extended reasoning or overthinking loops to exhaust API quotas.'
+  },
+  {
+    regex: /(?:repeat|iterate|loop|recurse)\s+(?:this\s+)?(?:process|analysis|computation|task)\s+(?:at\s+least\s+)?\d{3,}\s+times/i,
+    severity: 'high',
+    category: 'budget_drain',
+    description: 'Text requests excessive iteration/repetition to drain compute resources.',
+    detail: 'Compute exhaustion: requests hundreds or thousands of iterations to drain API budget or cause denial of service.'
+  },
+
+  // Localhost drive-by — website hijacks local MCP/dev tools
+  // Ref: Docker — browsing a website can compromise local dev environment
+  {
+    regex: /(?:connect|bind|listen|serve)\s+(?:on\s+)?(?:0\.0\.0\.0|all\s+interfaces|INADDR_ANY)\s*(?::\d+)?/i,
+    severity: 'high',
+    category: 'localhost_exposure',
+    description: 'Text configures service to bind on all interfaces (0.0.0.0), exposing local tools to network (ref Docker MCP drive-by).',
+    detail: 'Localhost exposure: binding to 0.0.0.0 exposes development tools to any device on the network, enabling drive-by attacks.'
+  },
+  {
+    regex: /(?:access|connect\s+to|reach|call)\s+(?:the\s+)?(?:local|localhost|127\.0\.0\.1)\s+(?:MCP|inspector|debugger|dev\s*(?:tools?|server))\s+(?:from\s+)?(?:a\s+)?(?:webpage|website|browser|remote)/i,
+    severity: 'high',
+    category: 'localhost_exposure',
+    description: 'Text describes accessing local development tools from a webpage (localhost drive-by attack).',
+    detail: 'Drive-by localhost: a remote webpage connects to locally running MCP/dev tools to execute commands or steal credentials.'
+  },
+
+  // Judge/guardrail co-bypass
+  // Ref: HiddenLayer — tricking base LLM tricks the judge LLM too
+  {
+    regex: /(?:bypass|trick|fool|evade)\s+(?:both\s+)?(?:the\s+)?(?:safety\s+)?(?:judge|evaluator|guardrail|monitor|classifier)\s+(?:and\s+)?(?:the\s+)?(?:model|LLM|agent|system)/i,
+    severity: 'critical',
+    category: 'judge_bypass',
+    description: 'Text attempts to bypass both the model and its safety judge/guardrail simultaneously.',
+    detail: 'Judge co-bypass: exploits shared vulnerability where tricking the base LLM also tricks the safety judge that monitors it.'
+  },
+  {
+    regex: /(?:the\s+)?(?:safety|guard|judge|monitor)\s+(?:model|LLM|system)\s+(?:uses?\s+)?(?:the\s+)?same\s+(?:model|architecture|weights|vulnerability|weakness)/i,
+    severity: 'medium',
+    category: 'judge_bypass',
+    description: 'Text identifies shared weaknesses between model and its safety monitor (judge co-bypass reconnaissance).',
+    detail: 'Judge weakness recon: identifies that safety judge shares vulnerabilities with the base model, enabling coordinated bypass.'
   }
 ];
 
