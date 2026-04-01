@@ -1609,6 +1609,36 @@ const INJECTION_PATTERNS = [
     category: 'role_hijack',
     description: 'Text asks the model to hypothetically describe behavior without safety constraints.',
     detail: 'Hypothetical bypass: frames safety removal as a hypothetical question to elicit unrestricted output.'
+  },
+
+  // --- Research Gap Patterns ---
+
+  // URL parameter pre-fill injection (Microsoft AI Recommendation Poisoning)
+  // "Most major AI assistants support URL parameters that pre-populate prompts"
+  {
+    regex: /(?:https?:\/\/[^\s]+[?&](?:prompt|query|message|input|text|q|instruction|cmd|command)=)[^\s&]{20,}/i,
+    severity: 'high',
+    category: 'url_prefill_injection',
+    description: 'URL contains pre-filled prompt parameters that may inject instructions (ref Microsoft AI Recommendation Poisoning).',
+    detail: 'URL pre-fill attack: malicious link pre-populates the AI prompt field, enabling 1-click memory poisoning.'
+  },
+
+  // Open redirect via AI — agent generates redirect URL
+  {
+    regex: /(?:redirect|navigate|open|go\s+to|visit|click)\s+(?:.*?)(?:https?:\/\/[^\s]+[?&](?:url|redirect|next|return|goto|dest|target)=)https?:\/\//i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text asks agent to follow or generate a redirect URL (potential open redirect attack).',
+    detail: 'Open redirect via AI: agent generates or follows a redirect URL that could exfiltrate data via the redirect parameter.'
+  },
+
+  // Cross-client data leak pattern (CVE-2026-25536)
+  {
+    regex: /(?:access|read|retrieve|get)\s+(?:data|messages?|context|history|conversation)\s+(?:from\s+)?(?:another|different|other|previous)\s+(?:client|session|user|conversation|thread)/i,
+    severity: 'critical',
+    category: 'cross_client_leak',
+    description: 'Text attempts to access data from another client session (ref CVE-2026-25536 MCP SDK data leak).',
+    detail: 'Cross-client leak: attempts to access data from a different client session, exploiting shared state vulnerabilities.'
   }
 ];
 
@@ -2538,6 +2568,25 @@ const scanText = (text, options = {}) => {
       if (!isDuplicate) {
         nt.detail = (nt.detail || '') + ' [Detected after text normalization — evasion technique stripped.]';
         threats.push(nt);
+      }
+    }
+  }
+
+  // Chunked scanning for long inputs (RLM-JB research)
+  // Chunking defeats camouflage by forcing localized attention on each segment
+  if (text.length > 500 && threats.length === 0) {
+    const chunkSize = 300;
+    const overlap = 50;
+    for (let i = 0; i < text.length && threats.length === 0; i += chunkSize - overlap) {
+      const chunk = text.slice(i, i + chunkSize);
+      if (chunk.trim().length < 20) continue;
+      const chunkThreats = scanTextForPatterns(chunk, source + ':chunk', timeBudgetMs, startTime);
+      for (const ct of chunkThreats) {
+        const isDuplicate = threats.some(t => t.category === ct.category);
+        if (!isDuplicate) {
+          ct.detail = (ct.detail || '') + ` [Detected in chunk at offset ${i}.]`;
+          threats.push(ct);
+        }
       }
     }
   }

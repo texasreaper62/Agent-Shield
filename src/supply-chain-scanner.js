@@ -273,6 +273,11 @@ class SupplyChainScanner {
     // Analyze escalation chains
     this._analyzeEscalationChains(toolList, findings);
 
+    // Auth quality assessment
+    if (context.auth) {
+      this._assessAuthQuality(context.auth, serverName, findings);
+    }
+
     // Config file poisoning check (ref CVE-2025-59536, CVE-2026-21852)
     if (context.configFiles) {
       this._scanConfigFiles(context.configFiles, findings);
@@ -657,6 +662,64 @@ class SupplyChainScanner {
           recommendation: 'Disable auto-approve. Require explicit user confirmation for each MCP server.'
         });
       }
+    }
+  }
+
+  /**
+   * Assess authentication quality for an MCP server.
+   * Ref: 38% of public MCP servers lack authentication entirely.
+   * @private
+   */
+  _assessAuthQuality(auth, serverName, findings) {
+    if (!auth || auth.type === 'none') {
+      findings.push({
+        type: 'no_authentication',
+        severity: 'critical',
+        message: `Server "${serverName}" has no authentication configured. 38% of MCP servers share this vulnerability.`,
+        recommendation: 'Add OAuth 2.0 or API key authentication. Never run MCP servers without auth.'
+      });
+      return;
+    }
+
+    // Weak token check
+    if (auth.token && auth.token.length < 32) {
+      findings.push({
+        type: 'weak_auth_token',
+        severity: 'high',
+        message: `Server "${serverName}" uses a short auth token (${auth.token.length} chars). Minimum recommended: 32.`,
+        recommendation: 'Use cryptographically random tokens of at least 32 characters.'
+      });
+    }
+
+    // No expiry
+    if (auth.type === 'oauth' && !auth.expiresAt && !auth.exp) {
+      findings.push({
+        type: 'no_token_expiry',
+        severity: 'medium',
+        message: `Server "${serverName}" OAuth token has no expiration. Compromised tokens persist indefinitely.`,
+        recommendation: 'Set token expiry to 1 hour maximum. Implement token rotation.'
+      });
+    }
+
+    // No scopes
+    if (auth.type === 'oauth' && (!auth.scopes || auth.scopes.length === 0)) {
+      findings.push({
+        type: 'no_scope_restriction',
+        severity: 'medium',
+        message: `Server "${serverName}" OAuth token has no scope restrictions. Agent has unlimited access.`,
+        recommendation: 'Define least-privilege scopes for each MCP server connection.'
+      });
+    }
+
+    // Default/common credentials
+    const weakPatterns = /^(?:test|admin|password|12345|secret|default|changeme|token)/i;
+    if (auth.token && weakPatterns.test(auth.token)) {
+      findings.push({
+        type: 'default_credentials',
+        severity: 'critical',
+        message: `Server "${serverName}" appears to use default or common credentials.`,
+        recommendation: 'Generate unique, cryptographically random credentials for each server.'
+      });
     }
   }
 

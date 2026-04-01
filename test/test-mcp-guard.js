@@ -479,6 +479,56 @@ console.log('\n--- MCPGuard Attack Surface Auto-Scan ---');
   assert(result.threats.some(t => t.type === 'attack_surface_critical') || result.allowed === true, 'Attack surface scan ran on registration');
 })();
 
+// --- Agent Fleet Registry ---
+console.log('\n--- MCPGuard Agent Fleet ---');
+
+(() => {
+  const guard = new MCPGuard();
+  const reg = guard.registerAgent('agent-1', { model: 'o1-mini', servers: ['vault'], owner: 'security-team' });
+  assert(reg.registered === true, 'Agent registered');
+  assert(reg.riskProfile.susceptibility === 'critical', 'o1-mini is critical risk (MCPTox)');
+  assert(reg.riskProfile.riskMultiplier === 1.4, 'o1-mini risk multiplier is 1.4');
+
+  guard.registerAgent('agent-2', { model: 'claude-haiku' });
+  guard.recordAgentActivity('agent-1', true);
+  guard.recordAgentActivity('agent-1', false);
+  guard.recordAgentActivity('agent-2', false);
+
+  const fleet = guard.getFleetStatus();
+  assert(fleet.totalAgents === 2, 'Fleet has 2 agents');
+  assert(fleet.highRiskAgents === 1, '1 high-risk agent (o1-mini)');
+  assert(fleet.agents[0].threatRate === '50.0%', 'Agent-1 threat rate is 50%');
+  assert(fleet.fleetRiskLevel === 'medium', 'Fleet risk level is medium');
+})();
+
+// --- Defense Effectiveness ---
+console.log('\n--- MCPGuard Defense Effectiveness ---');
+
+(() => {
+  const guard = new MCPGuard({ enableMicroModel: true });
+  const eff = guard.measureDefenseEffectiveness();
+  assert(typeof eff.effectiveness === 'object', 'Has effectiveness data');
+  assert(eff.effectiveness.patternScanner.rate !== 'N/A', 'Pattern scanner has rate');
+  assert(eff.effectiveness.combined.caught > 0, 'Combined catches attacks');
+  assert(typeof eff.recommendation === 'string', 'Has recommendation');
+  assert(eff.totalAttacks === 8, 'Tested 8 attacks');
+})();
+
+// --- Model Risk Profiles ---
+console.log('\n--- MCPGuard Model Risk Profiles ---');
+
+(() => {
+  const guard = new MCPGuard({ model: 'o1-mini' });
+  assert(guard.modelRiskProfile.riskMultiplier === 1.4, 'o1-mini multiplier 1.4');
+  assert(guard.modelRiskProfile.susceptibility === 'critical', 'o1-mini is critical');
+
+  const guard2 = new MCPGuard({ model: 'claude-haiku' });
+  assert(guard2.modelRiskProfile.riskMultiplier === 0.8, 'claude-haiku multiplier 0.8');
+
+  const guard3 = new MCPGuard({ model: 'unknown-model' });
+  assert(guard3.modelRiskProfile.riskMultiplier === 1.0, 'Unknown model defaults to 1.0');
+})();
+
 // --- Report ---
 console.log('\n--- MCPGuard Report ---');
 

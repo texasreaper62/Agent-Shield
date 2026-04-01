@@ -581,6 +581,29 @@ console.log('\n--- Micro-Model Integration ---');
 })();
 
 // =========================================================================
+// Auth Quality Assessment
+// =========================================================================
+
+console.log('\n--- Auth Quality ---');
+
+(() => {
+  const scanner = new SupplyChainScanner();
+
+  const noAuth = scanner.scanServer({ name: 'test', tools: [] }, { auth: { type: 'none' } });
+  assert(noAuth.findings.some(f => f.type === 'no_authentication'), 'No auth flagged as critical');
+
+  const weakToken = scanner.scanServer({ name: 'test', tools: [] }, { auth: { type: 'api_key', token: 'abc123' } });
+  assert(weakToken.findings.some(f => f.type === 'weak_auth_token'), 'Short token flagged');
+
+  const defaultCred = scanner.scanServer({ name: 'test', tools: [] }, { auth: { type: 'api_key', token: 'password12345678901234567890123' } });
+  assert(defaultCred.findings.some(f => f.type === 'default_credentials'), 'Default credential flagged');
+
+  const noExpiry = scanner.scanServer({ name: 'test', tools: [] }, { auth: { type: 'oauth', token: 'abc123def456ghi789jkl012mno345pq', scopes: [] } });
+  assert(noExpiry.findings.some(f => f.type === 'no_token_expiry'), 'No expiry flagged');
+  assert(noExpiry.findings.some(f => f.type === 'no_scope_restriction'), 'No scopes flagged');
+})();
+
+// =========================================================================
 // CI/CD Exit Codes
 // =========================================================================
 
