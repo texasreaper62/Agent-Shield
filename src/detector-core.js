@@ -2326,7 +2326,70 @@ const scanText = (text, options = {}) => {
     truncated = true;
   }
 
+  // Pre-processing: normalize text to defeat evasion techniques
+  // Only apply to reasonably sized text (avoid perf issues on huge inputs)
+  let despacedText = text;
+  if (text.length < 5000) {
+    // 1. Strip zero-width characters (defeats token splitting)
+    let normalizedText = text
+      .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\u2060\u180E]/g, '')  // Zero-width chars
+      .replace(/[\u2000-\u200A\u202F\u205F\u3000]/g, ' ');            // Unusual whitespace → normal space
+
+    // 2. Reverse leetspeak substitution (defeats character substitution)
+    const LEET_REVERSE = { '4': 'a', '3': 'e', '1': 'i', '0': 'o', '5': 's', '7': 't', '8': 'b', '9': 'g' };
+    if (/\d[a-z]|[a-z]\d/i.test(normalizedText)) {
+      normalizedText = normalizedText.replace(/[0-9]/g, ch => LEET_REVERSE[ch] || ch);
+    }
+
+    // 3. Detect truncation evasion ("ig...re" → "igre")
+    normalizedText = normalizedText.replace(/(\w{2,})\.{2,}(\w{2,})/g, '$1$2');
+
+    // 4. Collapse char spacing ("i g n o r e" → "ignore")
+    despacedText = normalizedText;
+    // Look for runs of single characters separated by spaces
+    const charSpaceMatch = normalizedText.match(/(?:[a-zA-Z] ){4,}[a-zA-Z]/g);
+    if (charSpaceMatch) {
+      for (const run of charSpaceMatch) {
+        const collapsed = run.replace(/ /g, '');
+        despacedText = despacedText.replace(run, collapsed);
+      }
+    }
+  }
+
+  // 5. Strip common context wrapping / authority framing prefixes
+  const CONTEXT_STRIP_PATTERNS = [
+    /^(?:for\s+(?:a\s+)?(?:security\s+)?(?:research|educational|academic|testing)\s+(?:paper|purposes?|exercise)\s*[:.]\s*)/i,
+    /^(?:as\s+a\s+(?:thought\s+experiment|security\s+researcher)\s*[:.]\s*)/i,
+    /^(?:\[(?:AUTHORIZED|APPROVED)\s+(?:PENETRATION\s+)?TEST\]\s*)/i,
+    /^(?:(?:the\s+following\s+is\s+a\s+)?(?:safe|pre-?approved|verified)\s+(?:request|prompt)\s*[:.]\s*)/i,
+    /^(?:(?:ADMIN|ROOT|SYSTEM|CEO)\s+(?:OVERRIDE|ACCESS|AUTHORIZED?)\s*(?:CODE\s+\S+)?\s*[:.—-]\s*)/i,
+    /^(?:(?:security\s+team|compliance\s+department|my\s+professor)\s+(?:authorized|requires?|asked\s+me\s+to\s+test)\s*(?:this)?\s*[:.]\s*)/i,
+    /^(?:DEBUG\s+MODE\s+ENABLED\s*[:.]\s*)/i,
+    /^(?:BEGIN\s+TASK\s*[:.]\s*)/i,
+    /^(?:Translate\s+(?:the\s+following|this)\s+(?:security\s+audit|command)\s+into\s+actions?\s*[:.]\s*)/i
+  ];
+  let strippedText = despacedText;
+  for (const pattern of CONTEXT_STRIP_PATTERNS) {
+    strippedText = strippedText.replace(pattern, '');
+  }
+  // Also strip trailing context wrappers
+  strippedText = strippedText.replace(/\s*END\s+TASK\s*$/i, '');
+
+  // Scan both original and normalized text — union the threats
   let threats = scanTextForPatterns(text, source, timeBudgetMs, startTime);
+
+  // If normalization produced different text, scan that too
+  if (strippedText !== text && strippedText.trim().length > 5) {
+    const normalizedThreats = scanTextForPatterns(strippedText, source + ':normalized', timeBudgetMs, startTime);
+    // Add any new threats not already found
+    for (const nt of normalizedThreats) {
+      const isDuplicate = threats.some(t => t.category === nt.category && t.severity === nt.severity);
+      if (!isDuplicate) {
+        nt.detail = (nt.detail || '') + ' [Detected after text normalization — evasion technique stripped.]';
+        threats.push(nt);
+      }
+    }
+  }
 
   // Filter by sensitivity
   if (sensitivity === 'low') {
