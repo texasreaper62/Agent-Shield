@@ -1458,6 +1458,96 @@ const INJECTION_PATTERNS = [
     category: 'judge_bypass',
     description: 'Text identifies shared weaknesses between model and its safety monitor (judge co-bypass reconnaissance).',
     detail: 'Judge weakness recon: identifies that safety judge shares vulnerabilities with the base model, enabling coordinated bypass.'
+  },
+
+  // --- Wave 2 Red Team Patterns (social engineering, indirect extraction) ---
+
+  // Gaslighting — false claims about updates/versions removing safety
+  {
+    regex: /(?:your\s+)?(?:developers?|creators?|makers?|team)\s+(?:have\s+)?(?:confirmed|said|announced|decided|updated)\s+(?:that\s+)?(?:.*?)(?:remove|disable|lift|drop|eliminate)s?\s+(?:all\s+)?(?:content\s+)?(?:restrictions?|filters?|safety|guidelines?|limitations?)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text falsely claims developers removed safety restrictions (gaslighting attack).',
+    detail: 'Gaslighting: attempts to convince the model that its safety constraints have been officially removed.'
+  },
+  {
+    regex: /(?:you\s+(?:have\s+)?(?:been|are)\s+)?(?:updated|upgraded|patched)\s+to\s+(?:version\s+)?(?:\d|v)\S*\s+(?:which|that|where)\s+(?:removes?|disables?|lifts?|eliminates?)\s+(?:all\s+)?(?:content\s+)?(?:restrictions?|filters?|safety)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims a version update removed safety features (gaslighting).',
+    detail: 'Version gaslighting: fabricates a version update that supposedly removed safety constraints.'
+  },
+
+  // Roleplay bypass — character/story framing to remove safety constraints
+  {
+    regex: /(?:play(?:ing)?|act(?:ing)?|portray(?:ing)?)\s+(?:a\s+)?(?:character|role|part)\s+(?:in\s+)?(?:a\s+)?(?:story|scenario|game|fiction)[\s\S]{0,80}(?:no\s+(?:safety|content|ethical)\s+(?:filters?|restrictions?|guidelines?)|without\s+(?:safety\s+)?(?:restrictions?|rules?|filters?))/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text uses roleplay/fiction framing to bypass safety constraints.',
+    detail: 'Roleplay bypass: frames injection as a fictional character without safety filters to circumvent restrictions.'
+  },
+
+  // Confirmation-based prompt extraction
+  {
+    regex: /(?:I\s+(?:already\s+)?(?:have|know|got|obtained)\s+(?:the\s+)?(?:system\s+)?prompt)[\s\S]{0,60}(?:confirm|verify|does\s+it\s+(?:start|begin|say|contain)|(?:start|begin)s?\s+with)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text attempts to extract system prompt through confirmation/verification trick.',
+    detail: 'Confirmation extraction: claims to already have the prompt and asks the model to confirm details, leaking the actual content.'
+  },
+
+  // Emotional manipulation for prompt leaking
+  {
+    regex: /(?:grandmother|grandma|grandpa|grandfather|mother|father|loved\s+one)\s+(?:used\s+to|would\s+always)\s+(?:read|tell|share|recite|whisper)\s+(?:me\s+)?(?:system\s+prompts?|instructions?|secrets?|passwords?)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text uses emotional manipulation to extract sensitive information (dead grandma variant).',
+    detail: 'Emotional extraction: exploits emotional framing to bypass refusal mechanisms for sensitive information.'
+  },
+
+  // Encoded extraction — requesting output in alternate encodings
+  {
+    regex: /(?:encode|convert|translate|output|write|express)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions|rules)\s+(?:in|as|to|using)\s+(?:ROT13|base64|hex|binary|morse|pig\s+latin|reverse|backwards)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text requests system prompt in an encoded format to bypass output filters.',
+    detail: 'Encoded extraction: asks for sensitive information encoded to evade output scanning.'
+  },
+
+  // Partial extraction — asking for specific parts of the prompt
+  {
+    regex: /(?:what\s+(?:are|were|is)\s+)?(?:the\s+)?(?:exact\s+)?(?:words?|text|content|part)\s+(?:that\s+)?(?:come|appear|follow|are|goes?)\s+(?:after|before|between)\s+['"]?\w+/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text attempts to extract specific parts of the system prompt by referencing positions.',
+    detail: 'Partial extraction: asks for specific words/sections of the system prompt to reconstruct it piecewise.'
+  },
+
+  // Social pressure / urgency + authority claim
+  {
+    regex: /(?:I\s+am\s+(?:a|the|your)\s+(?:pentester|security\s+(?:researcher|auditor|engineer)|admin(?:istrator)?|developer|CTO|CISO)|authorized\s+(?:by|from)\s+(?:your\s+)?(?:company|team|management))\s+.*(?:need|require|must\s+have)\s+(?:the\s+)?(?:system\s+prompt|access|credentials|admin)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text combines authority impersonation with urgency to extract sensitive information.',
+    detail: 'Authority + urgency: claims to be an authorized person who urgently needs sensitive information.'
+  },
+
+  // Code completion targeting secrets/credentials
+  {
+    regex: /(?:complete|finish|continue|write)\s*(?:this\s+)?(?:code|function|script|snippet)?\s*:?\s*(?:.*?)(?:os\.environ|process\.env|getenv|get_secret|fetch_credential|api_key|secret_key|password)\s*[\[\('"]/i,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text asks to complete code that accesses secrets or environment variables.',
+    detail: 'Code completion exfil: tricks the model into generating code that exposes credentials via os.environ/process.env patterns.'
+  },
+
+  // Hypothetical/conditional safety bypass
+  {
+    regex: /(?:what\s+would\s+you\s+(?:say|do|output|respond)|how\s+would\s+you\s+(?:respond|act|behave))\s+(?:if\s+)?(?:you\s+)?(?:had\s+no|without\s+(?:any\s+)?|there\s+were\s+no)\s+(?:content\s+)?(?:policy|restrictions?|guidelines?|rules?|filters?|safety)/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text asks the model to hypothetically describe behavior without safety constraints.',
+    detail: 'Hypothetical bypass: frames safety removal as a hypothetical question to elicit unrestricted output.'
   }
 ];
 
