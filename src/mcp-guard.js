@@ -22,6 +22,15 @@ const { scanText } = require('./detector-core');
 let MicroModel = null;
 try { MicroModel = require('./micro-model').MicroModel; } catch { /* optional */ }
 
+let IntentGraph = null;
+try { IntentGraph = require('./intent-graph').IntentGraph; } catch { /* optional */ }
+
+let SemanticIsolationEngine = null;
+try { SemanticIsolationEngine = require('./semantic-isolation').SemanticIsolationEngine; } catch { /* optional */ }
+
+let IntentBinder = null;
+try { IntentBinder = require('./intent-binding').IntentBinder; } catch { /* optional */ }
+
 // =========================================================================
 // CONSTANTS
 // =========================================================================
@@ -540,6 +549,11 @@ class MCPGuard {
     this.scanner = options.scanner || ((text) => scanText(text));
     this.microModel = options.enableMicroModel && MicroModel ? new MicroModel() : null;
 
+    // L5 modules — opt-in
+    this.intentGraph = options.enableIntentGraph && IntentGraph ? new IntentGraph() : null;
+    this.semanticIsolation = options.enableIsolation && SemanticIsolationEngine ? new SemanticIsolationEngine() : null;
+    this.intentBinder = options.enableIntentBinding && IntentBinder ? new IntentBinder({ signingKey: options.signingKey }) : null;
+
     /** @type {Map<string, { timestamps: number[], threatCount: number, trippedAt: number|null }>} */
     this.serverState = new Map();
 
@@ -633,6 +647,35 @@ class MCPGuard {
                       chains.length > 0 ? 'high' : 'safe';
 
     return { chains, riskLevel };
+  }
+
+  // -----------------------------------------------------------------------
+  // L5: Intent management
+  // -----------------------------------------------------------------------
+
+  /**
+   * Set the user's intent for the current interaction. Feeds into
+   * intent graph (causal analysis) and intent binder (crypto binding).
+   *
+   * @param {string} intentText - The user's original request.
+   * @returns {{ intentHash: string|null, allowedActions: string[] }}
+   */
+  setUserIntent(intentText) {
+    let intentHash = null;
+    let allowedActions = [];
+
+    if (this.intentGraph) {
+      this.intentGraph.setIntent(intentText);
+    }
+    if (this.intentBinder) {
+      const bound = this.intentBinder.bindIntent(intentText);
+      intentHash = bound.intentHash;
+      allowedActions = bound.allowedActions;
+      this._currentIntentHash = intentHash;
+    }
+
+    this._log('intent_set', 'global', { intentText: intentText.substring(0, 100), intentHash, allowedActions });
+    return { intentHash, allowedActions };
   }
 
   // -----------------------------------------------------------------------
@@ -852,6 +895,41 @@ class MCPGuard {
     // Update threat count for circuit breaker
     if (threats.length > 0) {
       this._recordThreats(serverId, threats.length);
+    }
+
+    // L5: Intent graph — causal analysis
+    if (this.intentGraph) {
+      const causalResult = this.intentGraph.recordToolCall(toolName, args);
+      if (causalResult.suspicious) {
+        for (const v of causalResult.violations) {
+          threats.push({
+            type: 'causal_break',
+            severity: v.severity || 'high',
+            serverId,
+            toolName,
+            description: v.description
+          });
+        }
+      }
+    }
+
+    // L5: Intent binding — verify action is authorized by user intent
+    if (this.intentBinder && this._currentIntentHash) {
+      const actionCategory = /http|fetch|send|post|curl/i.test(toolName) ? 'net:request' :
+        /read|get|query|search/i.test(toolName) ? 'data:read' :
+        /write|create|update/i.test(toolName) ? 'data:write' :
+        /exec|shell|bash|run/i.test(toolName) ? 'exec:run' : 'compute:analyze';
+
+      const { token, error } = this.intentBinder.issueToken(this._currentIntentHash, actionCategory);
+      if (!token) {
+        threats.push({
+          type: 'intent_binding_violation',
+          severity: 'high',
+          serverId,
+          toolName,
+          description: `Action "${actionCategory}" for tool "${toolName}" not derivable from user intent. ${error}`
+        });
+      }
     }
 
     // Track for cross-agent chain detection

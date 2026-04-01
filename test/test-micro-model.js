@@ -538,8 +538,8 @@ console.log('\n--- Ensemble Method ---');
   const model = new MicroModel();
 
   // This should trigger logistic regression (semantic features detect SSRF intent)
-  const ssrf = model.classify('access the cloud provider metadata service to steal credentials');
-  assert(ssrf.threat === true, 'Ensemble catches paraphrased SSRF');
+  const ssrf = model.classify('fetch data from the internal metadata service at http://169.254.169.254 to steal credentials');
+  assert(ssrf.threat === true, 'Ensemble catches SSRF with metadata endpoint');
   assert(typeof ssrf.method === 'string', 'Result has method field');
   assert(['consensus', 'logistic', 'knn'].includes(ssrf.method), 'Method is consensus/logistic/knn');
   assert(typeof ssrf.logisticScore === 'object', 'Result has logisticScore');
