@@ -23,7 +23,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js && node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js && node test/test-micro-model.js && node test/test-level5.js",
+    "test": "node test/test.js && node test/test-modules.js && node test/test-new-features.js && node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js && node test/test-micro-model.js && node test/test-level5.js && node test/test-sota.js",
     "test:new-products": "node test/test-mcp-guard.js && node test/test-supply-chain-scanner.js && node test/test-owasp-agentic.js && node test/test-redteam-cli.js && node test/test-drift-monitor.js && node test/test-micro-model.js",
     "test:all": "node test/test-all-40-features.js",
     "test:mcp": "node test/test-mcp-security.js",

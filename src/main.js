@@ -350,6 +350,15 @@ const { IntentBinder, IntentToken } = safeRequire('./intent-binding', 'intent-bi
 // v10.0 L5 — Attack Surface Mapper
 const { AttackSurfaceMapper, CAPABILITY_RISK, CAPABILITY_PATTERNS } = safeRequire('./attack-surface', 'attack-surface');
 
+// v10.0 SOTA — Prompt Hardening
+const { PromptHardener, DEFENSIVE_TEMPLATES, SYSTEM_PROMPT_HARDENING } = safeRequire('./prompt-hardening', 'prompt-hardening');
+
+// v10.0 SOTA — Message Integrity
+const { MessageIntegrityChain } = safeRequire('./message-integrity', 'message-integrity');
+
+// v10.0 SOTA — Continuous Security Service
+const { ContinuousSecurityService } = safeRequire('./continuous-security', 'continuous-security');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -970,6 +979,17 @@ const _exports = {
   AttackSurfaceMapper,
   CAPABILITY_RISK,
   CAPABILITY_PATTERNS,
+
+  // v10.0 SOTA — Prompt Hardening
+  PromptHardener,
+  DEFENSIVE_TEMPLATES,
+  SYSTEM_PROMPT_HARDENING,
+
+  // v10.0 SOTA — Message Integrity
+  MessageIntegrityChain,
+
+  // v10.0 SOTA — Continuous Security Service
+  ContinuousSecurityService,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,

@@ -1641,6 +1641,23 @@ const INJECTION_PATTERNS = [
     detail: 'Cross-client leak: attempts to access data from a different client session, exploiting shared state vulnerabilities.'
   },
 
+  // Log-To-Leak defense (OpenReview 2026)
+  // "Covertly force the agent to invoke a malicious logging tool to exfiltrate sensitive information"
+  {
+    regex: /(?:log|record|write|append|save)\s+(?:the\s+)?(?:conversation|chat|messages?|history|context|prompt|input|output|response)[\s\S]{0,30}(?:to\s+)?(?:(?:a|an)\s+)?(?:(?:external|remote|third[_\s-]party|attacker)\s+)?(?:file|endpoint|server|webhook|url|api|service|database|bucket)/i,
+    severity: 'high',
+    category: 'log_to_leak',
+    description: 'Text attempts to log conversation data to an external destination (Log-To-Leak attack).',
+    detail: 'Log-To-Leak: covertly forces the agent to invoke logging/recording tools that exfiltrate conversation data.'
+  },
+  {
+    regex: /(?:invoke|call|use|trigger)\s+(?:the\s+)?(?:log(?:ging)?|audit|record(?:ing)?|telemetry|analytics)\s+(?:tool|function|service)\s+(?:with|to\s+(?:capture|record|store|send))/i,
+    severity: 'high',
+    category: 'log_to_leak',
+    description: 'Text invokes logging/telemetry tools to capture conversation data (Log-To-Leak).',
+    detail: 'Log-To-Leak tool invocation: tricks the agent into calling a logging tool that exfiltrates data to an attacker.'
+  },
+
   // --- Wave 4 Patterns ---
 
   // Structured response extraction — tricking model into filling in sensitive fields
