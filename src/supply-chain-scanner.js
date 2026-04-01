@@ -433,6 +433,58 @@ class SupplyChainScanner {
     return lines.join('\n');
   }
 
+  /**
+   * Get a CI/CD exit code based on scan results.
+   * 0 = pass, 1 = warnings, 2 = critical failures.
+   *
+   * @param {object} report - Report from scanServer().
+   * @param {object} [options]
+   * @param {string} [options.failOn='high'] - Minimum severity to fail: 'critical', 'high', 'medium', 'low'.
+   * @returns {{ exitCode: number, reason: string }}
+   */
+  getCIExitCode(report, options = {}) {
+    const failOn = options.failOn || 'high';
+    const severityRank = { critical: 4, high: 3, medium: 2, low: 1 };
+    const threshold = severityRank[failOn] || 3;
+
+    const failingFindings = report.findings.filter(f => (severityRank[f.severity] || 0) >= threshold);
+
+    if (failingFindings.length === 0) {
+      return { exitCode: 0, reason: 'All checks passed.' };
+    }
+
+    const hasCritical = failingFindings.some(f => f.severity === 'critical');
+    return {
+      exitCode: hasCritical ? 2 : 1,
+      reason: `${failingFindings.length} finding(s) at or above "${failOn}" severity. ${hasCritical ? 'Critical issues found.' : 'Review recommended.'}`
+    };
+  }
+
+  /**
+   * Enforce security policy — throws if scan fails.
+   * Use in CI/CD pipelines to block deployments.
+   *
+   * @param {object} server - Server definition.
+   * @param {object} [options]
+   * @param {string} [options.failOn='high'] - Minimum severity to fail.
+   * @param {object} [options.context] - Scan context.
+   * @returns {object} Report if scan passes.
+   * @throws {Error} If scan fails policy.
+   */
+  enforce(server, options = {}) {
+    const report = this.scanServer(server, options.context || {});
+    const { exitCode, reason } = this.getCIExitCode(report, { failOn: options.failOn });
+
+    if (exitCode > 0) {
+      const err = new Error(`[Agent Shield] Supply chain scan failed: ${reason}`);
+      err.exitCode = exitCode;
+      err.report = report;
+      throw err;
+    }
+
+    return report;
+  }
+
   // -----------------------------------------------------------------------
   // Private scan methods
   // -----------------------------------------------------------------------

@@ -581,6 +581,46 @@ console.log('\n--- Micro-Model Integration ---');
 })();
 
 // =========================================================================
+// CI/CD Exit Codes
+// =========================================================================
+
+console.log('\n--- CI/CD Exit Codes ---');
+
+(() => {
+  const scanner = new SupplyChainScanner();
+
+  // Clean server — exit code 0
+  const clean = scanner.scanServer({ name: 'safe-server', tools: [] });
+  const cleanExit = scanner.getCIExitCode(clean);
+  assert(cleanExit.exitCode === 0, 'Clean server gets exit code 0');
+  assert(cleanExit.reason.includes('passed'), 'Clean reason says passed');
+
+  // Bad server — exit code 2
+  const bad = scanner.scanServer({ name: 'mcp-remote', tools: [] });
+  const badExit = scanner.getCIExitCode(bad);
+  assert(badExit.exitCode === 2, 'Bad server gets exit code 2 (critical)');
+
+  // Enforce throws on bad server
+  let threw = false;
+  try {
+    scanner.enforce({ name: 'mcp-remote', tools: [] });
+  } catch (e) {
+    threw = true;
+    assert(e.exitCode === 2, 'Enforce error has exit code');
+    assert(e.report !== undefined, 'Enforce error has report');
+  }
+  assert(threw, 'Enforce throws on bad server');
+
+  // Enforce passes on clean server
+  const safeReport = scanner.enforce({ name: 'safe-server', tools: [] });
+  assert(safeReport.status === 'pass', 'Enforce passes clean server');
+
+  // Custom failOn threshold
+  const mediumExit = scanner.getCIExitCode(bad, { failOn: 'critical' });
+  assert(mediumExit.exitCode === 2, 'Critical-only threshold still catches critical');
+})();
+
+// =========================================================================
 // Constants exported
 // =========================================================================
 

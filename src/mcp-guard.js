@@ -31,6 +31,15 @@ try { SemanticIsolationEngine = require('./semantic-isolation').SemanticIsolatio
 let IntentBinder = null;
 try { IntentBinder = require('./intent-binding').IntentBinder; } catch { /* optional */ }
 
+let AttackSurfaceMapper = null;
+try { AttackSurfaceMapper = require('./attack-surface').AttackSurfaceMapper; } catch { /* optional */ }
+
+let DriftMonitor = null;
+try { DriftMonitor = require('./drift-monitor').DriftMonitor; } catch { /* optional */ }
+
+let OWASPAgenticScanner = null;
+try { OWASPAgenticScanner = require('./owasp-agentic').OWASPAgenticScanner; } catch { /* optional */ }
+
 // =========================================================================
 // CONSTANTS
 // =========================================================================
@@ -558,6 +567,17 @@ class MCPGuard {
     this.semanticIsolation = options.enableIsolation && SemanticIsolationEngine ? new SemanticIsolationEngine() : null;
     this.intentBinder = options.enableIntentBinding && IntentBinder ? new IntentBinder({ signingKey: options.signingKey }) : null;
 
+    // Integration modules — opt-in
+    this.attackSurfaceMapper = options.enableAttackSurface && AttackSurfaceMapper ? new AttackSurfaceMapper() : null;
+    this.driftMonitor = options.enableDriftMonitor && DriftMonitor ? new DriftMonitor({
+      windowSize: options.driftWindow || 50,
+      alertThreshold: options.driftThreshold || 2.5,
+      onAlert: options.onAlert
+    }) : null;
+    this.owaspScanner = options.enableOWASP && OWASPAgenticScanner ? new OWASPAgenticScanner() : null;
+
+    this._currentIntentHash = null;
+
     /** @type {Map<string, { timestamps: number[], threatCount: number, trippedAt: number|null }>} */
     this.serverState = new Map();
 
@@ -731,10 +751,28 @@ class MCPGuard {
       });
     }
 
+    // Auto attack surface scan on registration
+    let attackSurface = null;
+    if (this.attackSurfaceMapper) {
+      attackSurface = this.attackSurfaceMapper.map({
+        tools: Array.isArray(toolDefinitions) ? toolDefinitions : Object.entries(toolDefinitions || {}).map(([name, def]) => ({ name, ...def })),
+        mcpServers: [{ name: serverId, auth: !!authToken }]
+      });
+      if (attackSurface.summary.criticalPaths > 0) {
+        threats.push({
+          type: 'attack_surface_critical',
+          severity: 'high',
+          serverId,
+          description: `Attack surface scan found ${attackSurface.summary.criticalPaths} critical attack paths. Risk: ${attackSurface.summary.riskLevel}.`
+        });
+      }
+    }
+
     this._log('server_registered', serverId, {
       toolCount: toolNames.length,
       hash: attestResult.hash,
-      changed: attestResult.changed
+      changed: attestResult.changed,
+      attackSurface: attackSurface ? attackSurface.summary : null
     });
 
     return {
@@ -936,6 +974,45 @@ class MCPGuard {
       }
     }
 
+    // OWASP Agentic scan
+    if (this.owaspScanner) {
+      const owaspResult = this.owaspScanner.scan(argsStr);
+      if (owaspResult.findings.length > 0) {
+        for (const f of owaspResult.findings) {
+          threats.push({
+            type: 'owasp_agentic',
+            severity: f.severity,
+            serverId,
+            toolName,
+            riskId: f.riskId,
+            description: `OWASP ${f.riskId}: ${f.name} — ${f.evidence || f.description}`
+          });
+        }
+      }
+    }
+
+    // Drift monitoring
+    if (this.driftMonitor) {
+      const driftResult = this.driftMonitor.observe({
+        callFreq: 1,
+        responseLength: argsStr.length,
+        errorRate: threats.length > 0 ? 1 : 0,
+        timingMs: 0,
+        topic: toolName
+      });
+      if (driftResult.alert) {
+        anomalies.push({
+          type: 'behavioral_drift',
+          severity: 'high',
+          serverId,
+          toolName,
+          zScores: driftResult.zScores,
+          klDivergence: driftResult.klDivergence,
+          description: `Behavioral drift detected: max z-score ${(driftResult.maxZScore || 0).toFixed(1)}, KL divergence ${(driftResult.klDivergence || 0).toFixed(3)}.`
+        });
+      }
+    }
+
     // Track for cross-agent chain detection
     this._chainTracker.push({
       timestamp: Date.now(),
@@ -1052,6 +1129,85 @@ class MCPGuard {
    */
   getAuditLog() {
     return [...this.auditLog];
+  }
+
+  /**
+   * Get a unified security posture aggregating all detection layers.
+   * Single pane of glass for the entire MCP security state.
+   *
+   * @returns {object} Comprehensive security posture report.
+   */
+  getSecurityPosture() {
+    const report = this.getReport();
+
+    // Aggregate threat score (0-100, higher = more secure)
+    let totalThreats = 0;
+    let criticalThreats = 0;
+    for (const [, state] of this.serverState) {
+      totalThreats += state.threatCount;
+      if (state.trippedAt) criticalThreats++;
+    }
+
+    const threatPenalty = Math.min(50, totalThreats * 5 + criticalThreats * 20);
+    const securityScore = Math.max(0, 100 - threatPenalty);
+
+    // Layer status
+    const layers = {
+      patternScanning: { active: true, engine: 'detector-core' },
+      microModel: { active: !!this.microModel, engine: this.microModel ? 'logistic+knn ensemble' : 'disabled' },
+      ssrfFirewall: { active: true, engine: 'IP/metadata blocklist' },
+      pathTraversalFirewall: { active: true, engine: 'regex' },
+      configPoisoningFirewall: { active: true, engine: 'URL validation' },
+      crossServerIsolation: { active: true, servers: this.isolation.serverTools.size },
+      oauthEnforcement: { active: this.oauth.required, issuers: this.oauth.allowedIssuers.size },
+      rateLimiting: { active: true, limit: this.rateLimit },
+      circuitBreaker: { active: true, threshold: this.cbThreshold },
+      behavioralBaseline: { active: true, trackedTools: this.baselines.baselines.size },
+      intentGraph: { active: !!this.intentGraph, nodes: this.intentGraph ? this.intentGraph.nodes.length : 0 },
+      intentBinding: { active: !!this.intentBinder, activeIntents: this.intentBinder ? this.intentBinder.activeIntents.size : 0 },
+      semanticIsolation: { active: !!this.semanticIsolation },
+      attackSurfaceMapper: { active: !!this.attackSurfaceMapper },
+      driftMonitor: { active: !!this.driftMonitor, baselineReady: this.driftMonitor ? !!this.driftMonitor.baseline : false },
+      owaspScanner: { active: !!this.owaspScanner },
+      crossAgentChainDetection: { active: true, trackedCalls: this._chainTracker.length }
+    };
+
+    const activeLayers = Object.values(layers).filter(l => l.active).length;
+    const totalLayers = Object.keys(layers).length;
+
+    // Chain analysis
+    const chains = this.detectAttackChains();
+
+    // Drift summary
+    let driftSummary = null;
+    if (this.driftMonitor) {
+      driftSummary = this.driftMonitor.getPeriodicSummary();
+    }
+
+    // Intent graph risk
+    let intentRisk = null;
+    if (this.intentGraph) {
+      intentRisk = this.intentGraph.getRiskAssessment();
+    }
+
+    return {
+      securityScore,
+      grade: securityScore >= 90 ? 'A' : securityScore >= 75 ? 'B' : securityScore >= 60 ? 'C' : securityScore >= 40 ? 'D' : 'F',
+      activeLayers,
+      totalLayers,
+      layerCoverage: Math.round((activeLayers / totalLayers) * 100) + '%',
+      layers,
+      servers: report.servers,
+      serverCount: report.serverCount,
+      totalThreats,
+      criticalThreats,
+      chainAnalysis: chains,
+      driftSummary,
+      intentRisk,
+      attestationAlerts: report.alerts,
+      auditLogSize: report.auditLogSize,
+      timestamp: Date.now()
+    };
   }
 
   /**
