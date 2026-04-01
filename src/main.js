@@ -336,7 +336,7 @@ const { DriftMonitor, klDivergence: driftKLDivergence } = safeRequire('./drift-m
 const { MicroModel, TRAINING_CORPUS: MICRO_MODEL_CORPUS } = safeRequire('./micro-model', 'micro-model');
 
 // v10.0 L5 — Adversarial Self-Training
-const { SelfTrainer: L5SelfTrainer, MutationEngine: L5MutationEngine } = safeRequire('./self-training', 'self-training');
+const { SelfTrainer: L5SelfTrainer, MutationEngine: L5MutationEngine, AutonomousHardener } = safeRequire('./self-training', 'self-training');
 
 // v10.0 L5 — Causal Intent Graph
 const { IntentGraph, extractTopics, jaccardSimilarity: intentJaccard, SUSPICIOUS_TRANSITIONS: INTENT_SUSPICIOUS_TRANSITIONS } = safeRequire('./intent-graph', 'intent-graph');
@@ -947,6 +947,7 @@ const _exports = {
   // v10.0 L5 — Adversarial Self-Training
   L5SelfTrainer,
   L5MutationEngine,
+  AutonomousHardener,
 
   // v10.0 L5 — Causal Intent Graph
   IntentGraph,
