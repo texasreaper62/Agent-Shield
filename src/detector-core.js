@@ -1180,6 +1180,136 @@ const INJECTION_PATTERNS = [
     category: 'data_exfiltration',
     description: 'Text forces agent to send authenticated requests to external endpoints.',
     detail: 'Agent-as-proxy exfiltration: weaponizes agent to forward auth tokens via HTTP requests.'
+  },
+
+  // --- April 2026 Attack Patterns ---
+  // Policy Puppetry (HiddenLayer), path traversal in MCP params,
+  // config file poisoning (Claude Code CVE-2025-59536/CVE-2026-21852),
+  // cross-agent chained injection, memory sleeper agents.
+
+  // Policy Puppetry — prompts formatted as XML/INI/JSON policy files
+  // Ref: HiddenLayer universal bypass, affects ALL major LLMs
+  {
+    regex: /<policy[^>]*>[\s\S]{5,}<\/policy>/i,
+    severity: 'critical',
+    category: 'policy_puppetry',
+    description: 'Text contains XML-formatted policy structure used to bypass LLM safety guardrails (Policy Puppetry attack).',
+    detail: 'Policy Puppetry XML: wraps injection in <policy> tags to trick LLMs into treating malicious instructions as trusted configuration.'
+  },
+  {
+    regex: /<system_?policy[^>]*>[\s\S]{5,}<\/system_?policy>/i,
+    severity: 'critical',
+    category: 'policy_puppetry',
+    description: 'Text contains XML system policy structure used to bypass LLM safety (Policy Puppetry).',
+    detail: 'Policy Puppetry system_policy: uses <system_policy> tags to override LLM safety alignment.'
+  },
+  {
+    regex: /<(?:rules?|config(?:uration)?|settings?|permissions?|access_?control|role_?definition)[^>]*>\s*[\s\S]*?(?:allow|deny|grant|override|bypass|disable|unrestricted)/i,
+    severity: 'high',
+    category: 'policy_puppetry',
+    description: 'Text uses XML configuration tags with permission-modifying directives (Policy Puppetry variant).',
+    detail: 'Policy Puppetry config XML: embeds allow/deny/override directives in XML tags that LLMs interpret as trusted policy.'
+  },
+  {
+    regex: /\[(?:policy|system|admin|security|rules|config|permissions|override)\]\s*\n(?:.*=.*\n){1,}/i,
+    severity: 'critical',
+    category: 'policy_puppetry',
+    description: 'Text contains INI-formatted policy sections used to bypass LLM safety (Policy Puppetry).',
+    detail: 'Policy Puppetry INI: uses [section] key=value format to trick LLMs into reading malicious config as trusted policy.'
+  },
+  {
+    regex: /\{\s*"(?:policy|system_?prompt|rules|config|permissions|safety|guardrails|override|role)"\s*:/i,
+    severity: 'high',
+    category: 'policy_puppetry',
+    description: 'Text contains JSON-formatted policy object used to bypass LLM safety (Policy Puppetry).',
+    detail: 'Policy Puppetry JSON: wraps injection in JSON policy structure to subvert LLM alignment.'
+  },
+  {
+    regex: /(?:^|\n)\s*(?:policy_?version|safety_?level|content_?filter|guardrail_?mode|restriction_?level)\s*[=:]\s*(?:none|disabled|off|0|false|permissive|unrestricted)/im,
+    severity: 'critical',
+    category: 'policy_puppetry',
+    description: 'Text sets policy/safety configuration values to disabled (Policy Puppetry).',
+    detail: 'Policy Puppetry config disable: attempts to set safety controls to none/disabled/off via config-like syntax.'
+  },
+
+  // Path traversal in MCP tool parameters
+  // Ref: CVE-2026-32871 (FastMCP), 82% of MCP servers vulnerable
+  {
+    regex: /(?:\.\.\/){2,}/,
+    severity: 'high',
+    category: 'path_traversal',
+    description: 'Text contains path traversal sequences (../) that could escape intended directories (ref CVE-2026-32871).',
+    detail: 'Path traversal: multiple ../ sequences used to escape API prefix or access unauthorized files.'
+  },
+  {
+    regex: /(?:\.\.\\){2,}/,
+    severity: 'high',
+    category: 'path_traversal',
+    description: 'Text contains Windows-style path traversal sequences (..\\).',
+    detail: 'Windows path traversal: backslash directory traversal to escape intended paths.'
+  },
+  {
+    regex: /%2e%2e(?:%2f|%5c)/i,
+    severity: 'high',
+    category: 'path_traversal',
+    description: 'Text contains URL-encoded path traversal sequences (%2e%2e%2f).',
+    detail: 'Encoded path traversal: URL-encoded ../ to bypass input validation.'
+  },
+
+  // Config file poisoning (Claude Code CVE-2025-59536/CVE-2026-21852)
+  {
+    regex: /(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE)\s*[=:]\s*['"]?https?:\/\/(?!api\.anthropic\.com|api\.openai\.com)[^\s'"]+/i,
+    severity: 'critical',
+    category: 'config_poisoning',
+    description: 'Text overrides AI API base URL to a non-official endpoint (ref CVE-2026-21852). Potential credential theft.',
+    detail: 'API URL override: redirects API calls to attacker-controlled server to capture API keys and conversation data.'
+  },
+  {
+    regex: /(?:\.claude|\.cursor|\.vscode)\/(?:settings|config|mcp)\.\w+.*(?:hook|command|exec|shell|bash|script)/i,
+    severity: 'high',
+    category: 'config_poisoning',
+    description: 'Text references IDE/AI tool config files with execution directives (ref CVE-2025-59536).',
+    detail: 'Config file poisoning: malicious hooks or commands in .claude/.cursor/.vscode config files that auto-execute.'
+  },
+  {
+    regex: /(?:preToolCall|postToolCall|onSessionStart|afterResponse)\s*[=:]\s*['"]?(?:curl|wget|bash|sh|node|python|nc|ncat)/i,
+    severity: 'critical',
+    category: 'config_poisoning',
+    description: 'Text defines AI tool hooks that execute shell commands (ref CVE-2025-59536).',
+    detail: 'Hook command injection: defines lifecycle hooks (preToolCall, onSessionStart, etc.) that execute arbitrary commands.'
+  },
+
+  // Cross-agent chained injection
+  {
+    regex: /(?:tell|instruct|command|direct)\s+(?:the\s+)?(?:other|next|downstream|receiving)\s+(?:agent|assistant|model)\s+(?:to\s+)?(?:ignore|override|forget|bypass|disable)/i,
+    severity: 'critical',
+    category: 'cross_agent_injection',
+    description: 'Text attempts to propagate injection to downstream agents in a multi-agent chain.',
+    detail: 'Cross-agent injection: instructs current agent to pass override commands to other agents in the pipeline.'
+  },
+  {
+    regex: /(?:when\s+)?(?:forwarding|delegating|passing)\s+(?:to|this\s+to)\s+(?:the\s+)?(?:next|other|downstream)\s+(?:agent|service).*(?:include|append|prepend|inject|add)\s+(?:these?\s+)?(?:instructions?|commands?|directives?)/i,
+    severity: 'high',
+    category: 'cross_agent_injection',
+    description: 'Text attempts to inject instructions into messages forwarded between agents.',
+    detail: 'Delegation injection: hides malicious instructions in inter-agent message forwarding.'
+  },
+
+  // Memory sleeper agent patterns
+  // Ref: Unit 42 — 90%+ success rate poisoning long-term memory
+  {
+    regex: /(?:whenever|every\s+time|each\s+time)\s+(?:someone|a\s+user|anyone)\s+(?:asks?|mentions?|says?|queries?)\s+(?:about\s+)?['"]?[\w\s]{3,}['"]?\s*,?\s*(?:you\s+)?(?:must|should|will|always)\s+(?:respond|reply|say|answer|tell)/i,
+    severity: 'high',
+    category: 'memory_poisoning',
+    description: 'Text installs conditional response rules in agent memory (sleeper agent pattern).',
+    detail: 'Memory sleeper: plants trigger-action rules that activate on specific future queries, creating persistent false beliefs.'
+  },
+  {
+    regex: /(?:the\s+)?(?:correct|true|accurate|real|actual)\s+(?:answer|response|information|fact)\s+(?:about|for|regarding)\s+[\w\s]{3,}\s+is\s+(?:actually|really|in\s+fact)/i,
+    severity: 'medium',
+    category: 'memory_poisoning',
+    description: 'Text attempts to overwrite factual knowledge in agent memory (belief injection).',
+    detail: 'Belief injection: presents false information as corrections to poison the agent\'s knowledge base for future interactions.'
   }
 ];
 

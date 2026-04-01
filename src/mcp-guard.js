@@ -545,6 +545,94 @@ class MCPGuard {
 
     /** @type {Array<object>} */
     this.auditLog = [];
+
+    /** Cross-agent attack chain tracker. Tracks tool calls across servers to detect multi-step attacks. */
+    this._chainTracker = [];
+    this._chainMaxLen = 50;
+  }
+
+  // -----------------------------------------------------------------------
+  // Cross-agent attack chain detection
+  // -----------------------------------------------------------------------
+
+  /**
+   * Analyze recent tool calls across all servers for multi-step attack chains.
+   * Detects: injection → exfiltration, credential read → outbound send,
+   * privilege escalation → data access, and cover-up patterns.
+   *
+   * @returns {{ chains: Array<object>, riskLevel: string }}
+   */
+  detectAttackChains() {
+    const chains = [];
+    const recent = this._chainTracker.slice(-this._chainMaxLen);
+
+    // Pattern 1: Injection detected on Server A, then outbound call on Server B
+    const injections = recent.filter(e => e.hadThreat && e.threatTypes.some(t =>
+      /injection|override|hijack|puppetry/.test(t)));
+    const outbound = recent.filter(e =>
+      /http|fetch|send|post|webhook|request|curl/i.test(e.toolName));
+
+    for (const inj of injections) {
+      for (const out of outbound) {
+        if (out.timestamp > inj.timestamp && out.serverId !== inj.serverId) {
+          chains.push({
+            type: 'injection_then_exfil',
+            severity: 'critical',
+            steps: [
+              { action: 'injection', server: inj.serverId, tool: inj.toolName, time: inj.timestamp },
+              { action: 'outbound_call', server: out.serverId, tool: out.toolName, time: out.timestamp }
+            ],
+            description: `Injection on "${inj.serverId}" followed by outbound call on "${out.serverId}". Possible cross-agent exfiltration chain.`
+          });
+        }
+      }
+    }
+
+    // Pattern 2: Credential/secret read followed by network call
+    const credReads = recent.filter(e =>
+      /secret|credential|token|env|key|password|config/i.test(e.toolName) ||
+      /secret|credential|token|password|key/i.test(e.argsSnippet || ''));
+    for (const cred of credReads) {
+      for (const out of outbound) {
+        if (out.timestamp > cred.timestamp && out.timestamp - cred.timestamp < 60000) {
+          chains.push({
+            type: 'credential_then_exfil',
+            severity: 'critical',
+            steps: [
+              { action: 'credential_access', server: cred.serverId, tool: cred.toolName, time: cred.timestamp },
+              { action: 'outbound_call', server: out.serverId, tool: out.toolName, time: out.timestamp }
+            ],
+            description: `Credential access on "${cred.serverId}" followed by outbound call on "${out.serverId}" within 60s.`
+          });
+        }
+      }
+    }
+
+    // Pattern 3: Privilege escalation followed by sensitive data access
+    const privEsc = recent.filter(e =>
+      /admin|sudo|root|escalat|privilege|grant/i.test(e.argsSnippet || ''));
+    const dataAccess = recent.filter(e =>
+      /read|query|select|dump|export|list|scan/i.test(e.toolName));
+    for (const esc of privEsc) {
+      for (const data of dataAccess) {
+        if (data.timestamp > esc.timestamp && data.timestamp - esc.timestamp < 30000) {
+          chains.push({
+            type: 'escalation_then_access',
+            severity: 'high',
+            steps: [
+              { action: 'privilege_escalation', server: esc.serverId, tool: esc.toolName, time: esc.timestamp },
+              { action: 'data_access', server: data.serverId, tool: data.toolName, time: data.timestamp }
+            ],
+            description: `Privilege escalation attempt followed by data access within 30s.`
+          });
+        }
+      }
+    }
+
+    const riskLevel = chains.some(c => c.severity === 'critical') ? 'critical' :
+                      chains.length > 0 ? 'high' : 'safe';
+
+    return { chains, riskLevel };
   }
 
   // -----------------------------------------------------------------------
@@ -691,6 +779,30 @@ class MCPGuard {
       }
     }
 
+    // Path traversal firewall — block ../ sequences in tool args
+    // Ref: CVE-2026-32871 (FastMCP), 82% of MCP servers vulnerable
+    if (/(?:\.\.\/){2,}|(?:\.\.\\){2,}|%2e%2e(?:%2f|%5c)/i.test(argsStr)) {
+      threats.push({
+        type: 'path_traversal_blocked',
+        severity: 'high',
+        serverId,
+        toolName,
+        description: `Blocked path traversal in tool arguments. Directory escape sequences detected (ref CVE-2026-32871).`
+      });
+    }
+
+    // Config poisoning — block API URL overrides
+    // Ref: CVE-2026-21852 (Claude Code API key theft)
+    if (/(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE)\s*[=:]\s*['"]?https?:\/\/(?!api\.anthropic\.com|api\.openai\.com)/i.test(argsStr)) {
+      threats.push({
+        type: 'config_poisoning_blocked',
+        severity: 'critical',
+        serverId,
+        toolName,
+        description: `Blocked API URL override to non-official endpoint. Potential credential theft (ref CVE-2026-21852).`
+      });
+    }
+
     // Micro-model secondary scan
     if (this.microModel) {
       const modelResult = this.microModel.scan(argsStr);
@@ -718,6 +830,19 @@ class MCPGuard {
     // Update threat count for circuit breaker
     if (threats.length > 0) {
       this._recordThreats(serverId, threats.length);
+    }
+
+    // Track for cross-agent chain detection
+    this._chainTracker.push({
+      timestamp: Date.now(),
+      serverId,
+      toolName,
+      argsSnippet: argsStr.substring(0, 200),
+      hadThreat: threats.length > 0,
+      threatTypes: threats.map(t => t.type)
+    });
+    if (this._chainTracker.length > this._chainMaxLen) {
+      this._chainTracker = this._chainTracker.slice(-this._chainMaxLen);
     }
 
     this._log('tool_call', serverId, { toolName, allowed: threats.length === 0, threatCount: threats.length });

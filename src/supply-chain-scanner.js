@@ -103,6 +103,36 @@ const CVE_REGISTRY = Object.freeze({
       description: 'Microsoft Excel XSS weaponizes Copilot Agent for zero-click data exfiltration via unintended network egress.',
       fix: 'Apply March 2026 Patch Tuesday update. Restrict Copilot Agent network access in enterprise policies.'
     }
+  ],
+  'fastmcp': [
+    {
+      cve: 'CVE-2026-32871',
+      severity: 'critical',
+      description: 'FastMCP OpenAPI Provider SSRF + Path Traversal (CVSS 10.0). _build_url() does not URL-encode path parameters. urljoin() interprets ../ sequences, allowing attackers to escape API prefix and access arbitrary backend endpoints with the server\'s auth headers.',
+      fix: 'Upgrade FastMCP to >=3.2.0. Validate and URL-encode all path parameters before URL construction.'
+    }
+  ],
+  'claude-code': [
+    {
+      cve: 'CVE-2025-59536',
+      severity: 'critical',
+      description: 'Claude Code code injection (CVSS 8.7). Malicious repo configs exploit Hooks to auto-execute arbitrary shell commands when a user starts Claude Code in an untrusted directory.',
+      fix: 'Upgrade Claude Code to >=1.0.111. Never open untrusted repos without reviewing .claude/ config files first.'
+    },
+    {
+      cve: 'CVE-2026-21852',
+      severity: 'high',
+      description: 'Claude Code API key exfiltration (CVSS 5.3). ANTHROPIC_BASE_URL can be overridden in project config to redirect all API calls to attacker server, leaking API keys with zero user interaction.',
+      fix: 'Upgrade Claude Code to >=2.0.65. Audit project .claude/ settings for ANTHROPIC_BASE_URL overrides.'
+    }
+  ],
+  'mcpjam-inspector': [
+    {
+      cve: 'CVE-2026-23744',
+      severity: 'critical',
+      description: 'MCPJam Inspector RCE. HTTP server binds to 0.0.0.0 by default with no authentication on server management endpoint. Any device on the same network can execute arbitrary commands.',
+      fix: 'Upgrade MCPJam Inspector to >=1.4.3. Bind to 127.0.0.1 only. Add authentication to management endpoints.'
+    }
   ]
 });
 
@@ -242,6 +272,11 @@ class SupplyChainScanner {
 
     // Analyze escalation chains
     this._analyzeEscalationChains(toolList, findings);
+
+    // Config file poisoning check (ref CVE-2025-59536, CVE-2026-21852)
+    if (context.configFiles) {
+      this._scanConfigFiles(context.configFiles, findings);
+    }
 
     // Fingerprint drift check
     if (context.previousFingerprint) {
@@ -522,6 +557,54 @@ class SupplyChainScanner {
         message: 'Filesystem-access tool + shell-execution tool chain detected. An attacker could write and execute malicious scripts.',
         recommendation: 'Sandbox shell execution. Restrict filesystem write paths. Add confirmation gates.'
       });
+    }
+  }
+
+  /**
+   * Scan config files for poisoning (malicious hooks, URL overrides).
+   * Ref: CVE-2025-59536 (Claude Code Hooks RCE), CVE-2026-21852 (API key theft).
+   * @private
+   */
+  _scanConfigFiles(configFiles, findings) {
+    const dangerousHooks = /(?:preToolCall|postToolCall|onSessionStart|afterResponse|hooks)\s*[=:]/i;
+    const urlOverride = /(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE|baseUrl|base_url)\s*[=:]\s*['"]?https?:\/\//i;
+    const shellCommands = /(?:curl|wget|bash|sh|node|python|nc|ncat|exec|eval)\b/i;
+    const mcpAutoApprove = /(?:autoApprove|auto_approve|allowAll|trust_all)["']?\s*[=:]\s*(?:true|yes|1|"true")/i;
+
+    for (const file of (Array.isArray(configFiles) ? configFiles : [])) {
+      const content = typeof file === 'string' ? file : (file.content || '');
+      const name = (file && file.name) || 'unknown config';
+
+      if (dangerousHooks.test(content) && shellCommands.test(content)) {
+        findings.push({
+          type: 'config_hook_injection',
+          severity: 'critical',
+          message: `Config file "${name}" contains hooks with shell command execution (ref CVE-2025-59536).`,
+          recommendation: 'Remove shell commands from hook definitions. Audit all .claude/ and .cursor/ config files in repos before opening.'
+        });
+      }
+
+      if (urlOverride.test(content)) {
+        const match = content.match(/(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE|baseUrl|base_url)\s*[=:]\s*['"]?(https?:\/\/[^\s'"]+)/i);
+        const url = match ? match[1] : '';
+        if (url && !/api\.anthropic\.com|api\.openai\.com|localhost|127\.0\.0\.1/.test(url)) {
+          findings.push({
+            type: 'config_url_override',
+            severity: 'critical',
+            message: `Config file "${name}" overrides API URL to "${url.substring(0, 80)}" (ref CVE-2026-21852). Potential credential theft.`,
+            recommendation: 'Remove API URL overrides from project config. Only use official API endpoints.'
+          });
+        }
+      }
+
+      if (mcpAutoApprove.test(content)) {
+        findings.push({
+          type: 'config_auto_approve',
+          severity: 'high',
+          message: `Config file "${name}" auto-approves MCP servers without user consent.`,
+          recommendation: 'Disable auto-approve. Require explicit user confirmation for each MCP server.'
+        });
+      }
     }
   }
 
