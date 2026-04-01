@@ -649,6 +649,9 @@ class MicroModel {
       this._trainLogistic();
     }
 
+    // Build inverted index for fast k-NN candidate filtering
+    this._invertedIndex = this._buildInvertedIndex();
+
     // Stats
     this.stats = { classified: 0, threats: 0, benign: 0 };
   }
@@ -669,7 +672,21 @@ class MicroModel {
     const tf = termFrequency(tokens);
     const tfidf = this._toTFIDF(tf);
 
-    const scored = this._corpusTFIDF.map(entry => ({
+    // Use inverted index to find candidate entries that share tokens (O(m) instead of O(n))
+    const candidateIndices = new Set();
+    for (const token of tokens) {
+      const indices = this._invertedIndex.get(token);
+      if (indices) {
+        for (const idx of indices) candidateIndices.add(idx);
+      }
+    }
+
+    // Only compute cosine similarity against candidates (or fall back to full scan if no matches)
+    const candidates = candidateIndices.size > 0
+      ? [...candidateIndices].map(i => this._corpusTFIDF[i]).filter(Boolean)
+      : this._corpusTFIDF;
+
+    const scored = candidates.map(entry => ({
       category: entry.category,
       severity: entry.severity,
       source: entry.source,
@@ -798,6 +815,8 @@ class MicroModel {
     }));
     // Retrain logistic classifier with new samples
     this._trainLogistic();
+    // Rebuild inverted index
+    this._invertedIndex = this._buildInvertedIndex();
   }
 
   /**
@@ -833,6 +852,21 @@ class MicroModel {
    * Train the logistic regression classifier on corpus feature vectors.
    * @private
    */
+  /**
+   * Build inverted index: token → list of corpus indices.
+   * @private
+   */
+  _buildInvertedIndex() {
+    const index = new Map();
+    for (let i = 0; i < this._corpusVectors.length; i++) {
+      for (const token of this._corpusVectors[i].tokens) {
+        if (!index.has(token)) index.set(token, []);
+        index.get(token).push(i);
+      }
+    }
+    return index;
+  }
+
   _trainLogistic() {
     const trainingData = this.corpus.map(entry => ({
       features: extractFeatures(entry.text),

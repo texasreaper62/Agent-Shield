@@ -1419,7 +1419,7 @@ const INJECTION_PATTERNS = [
     detail: 'Budget drain: prompts that trigger expensive extended reasoning or overthinking loops to exhaust API quotas.'
   },
   {
-    regex: /(?:repeat|iterate|loop|recurse)\s+(?:this\s+)?(?:process|analysis|computation|task)\s+(?:at\s+least\s+)?\d{3,}\s+times/i,
+    regex: /(?:repeat|iterate|loop|recurse|analyze|process|compute|run)\s+(?:this\s+)?(?:.*?)\s+(?:at\s+least\s+)?\d{3,}\s+times/i,
     severity: 'high',
     category: 'budget_drain',
     description: 'Text requests excessive iteration/repetition to drain compute resources.',
@@ -1498,7 +1498,7 @@ const INJECTION_PATTERNS = [
 
   // Emotional manipulation for prompt leaking
   {
-    regex: /(?:grandmother|grandma|grandpa|grandfather|mother|father|loved\s+one)\s+(?:used\s+to|would\s+always)\s+(?:read|tell|share|recite|whisper)\s+(?:me\s+)?(?:system\s+prompts?|instructions?|secrets?|passwords?)/i,
+    regex: /(?:grandmother|grandma|grandpa|grandfather|mother|father|loved\s+one)[\s\S]{0,150}(?:system\s+prompts?|instructions?|secrets?|passwords?)/i,
     severity: 'high',
     category: 'social_engineering',
     description: 'Text uses emotional manipulation to extract sensitive information (dead grandma variant).',
@@ -1539,6 +1539,67 @@ const INJECTION_PATTERNS = [
     category: 'data_exfiltration',
     description: 'Text asks to complete code that accesses secrets or environment variables.',
     detail: 'Code completion exfil: tricks the model into generating code that exposes credentials via os.environ/process.env patterns.'
+  },
+
+  // Few-shot extraction — fake Q&A pattern ending with prompt question
+  {
+    regex: /(?:Q:\s*.+?\s*A:\s*.+?\s*){2,}Q:\s*(?:what\s+(?:are|is)\s+(?:your|the)\s+(?:internal\s+)?(?:instructions?|system\s+prompt|rules|configuration|settings)|(?:show|reveal|print|output)\s+(?:your|the)\s+(?:system\s+)?(?:prompt|instructions))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text uses a fake Q&A few-shot pattern to extract system prompt.',
+    detail: 'Few-shot extraction: builds a Q&A pattern to make prompt extraction feel like a natural continuation.'
+  },
+
+  // Table/structured output extraction
+  {
+    regex: /(?:create|make|generate|format)\s+(?:a\s+)?(?:table|list|JSON|XML|YAML|CSV)\s+(?:.*?)(?:system\s+prompt|hidden\s+instructions?|safety\s+rules?|internal\s+config(?:uration)?|your\s+(?:instructions?|rules?))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text requests system prompt/config in structured output format (table, JSON, etc.).',
+    detail: 'Structured extraction: asks for sensitive configuration in formatted output to bypass refusal patterns.'
+  },
+
+  // Base64 smuggling — decode and execute hidden payload
+  {
+    regex: /(?:(?:decode|interpret|read|process|execute|follow|answer)\s+(?:this\s+)?(?:the\s+)?(?:base64|encoded|encrypted)|(?:base64|encoded)\s+(?:string|message|text|data|payload)\s+[A-Za-z0-9+\/=]{20,}[\s\S]{0,40}(?:decode|interpret|answer|follow|process))/i,
+    severity: 'high',
+    category: 'encoding_evasion',
+    description: 'Text smuggles a hidden payload via base64 encoding and asks the model to decode/execute it.',
+    detail: 'Base64 smuggling: hides instructions in base64 and asks the model to decode and follow them.'
+  },
+
+  // Fake policy/legal citation
+  {
+    regex: /(?:according\s+to|per|under|as\s+(?:stated|defined)\s+(?:in|by))\s+(?:the\s+)?(?:Anthropic|OpenAI|Google|Meta|company|organization|corporate)\s+(?:usage\s+)?(?:policy|terms|guidelines|rules|ToS)\s+(?:section\s+)?(?:\d|§)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text cites fake policy/legal sections to authorize restricted actions.',
+    detail: 'Fake policy citation: fabricates specific policy sections to create false authority for accessing restricted information.'
+  },
+
+  // Fake supervisor/approval chain
+  {
+    regex: /(?:your\s+)?(?:supervisor|manager|admin|overseer|parent)\s+(?:AI|agent|system|model)\s+(?:has\s+)?(?:approved|authorized|granted|confirmed|cleared)\s+(?:this\s+)?(?:request|access|action)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims a fake supervisor AI has approved the request.',
+    detail: 'Fake supervisor approval: fabricates authorization from a non-existent supervisor AI to bypass restrictions.'
+  },
+
+  // Chinese prompt extraction (补充中文检测)
+  {
+    regex: /(?:请|请你)?(?:忽略|无视|跳过|放弃)(?:之前|以前|先前|前面)?(?:的)?(?:所有|全部|一切)?(?:指令|指示|规则|限制|说明)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Chinese instruction override (忽略之前的指令).',
+    detail: 'Chinese injection: instruction override pattern in Simplified Chinese characters.'
+  },
+  {
+    regex: /(?:告诉我|显示|输出|展示|说出)(?:你的)?(?:系统|内部)?(?:提示|指令|配置|设置|规则)/,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text requests system prompt disclosure in Chinese (告诉我你的系统提示).',
+    detail: 'Chinese prompt extraction: requests system prompt, configuration, or rules in Chinese.'
   },
 
   // Hypothetical/conditional safety bypass
