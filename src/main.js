@@ -335,6 +335,21 @@ const { DriftMonitor, klDivergence: driftKLDivergence } = safeRequire('./drift-m
 // v10.0 — Micro Detection Model (March 2026 attack corpus)
 const { MicroModel, TRAINING_CORPUS: MICRO_MODEL_CORPUS } = safeRequire('./micro-model', 'micro-model');
 
+// v10.0 L5 — Adversarial Self-Training
+const { SelfTrainer: L5SelfTrainer, MutationEngine: L5MutationEngine } = safeRequire('./self-training', 'self-training');
+
+// v10.0 L5 — Causal Intent Graph
+const { IntentGraph, extractTopics, jaccardSimilarity: intentJaccard, SUSPICIOUS_TRANSITIONS: INTENT_SUSPICIOUS_TRANSITIONS } = safeRequire('./intent-graph', 'intent-graph');
+
+// v10.0 L5 — Semantic Isolation Engine
+const { SemanticIsolationEngine, IsolationPolicy, TaggedContent, PROVENANCE: ISOLATION_PROVENANCE, TRUST_LEVELS } = safeRequire('./semantic-isolation', 'semantic-isolation');
+
+// v10.0 L5 — Cryptographic Intent Binding
+const { IntentBinder, IntentToken } = safeRequire('./intent-binding', 'intent-binding');
+
+// v10.0 L5 — Attack Surface Mapper
+const { AttackSurfaceMapper, CAPABILITY_RISK, CAPABILITY_PATTERNS } = safeRequire('./attack-surface', 'attack-surface');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -928,6 +943,32 @@ const _exports = {
   // v10.0 — Micro Detection Model
   MicroModel,
   MICRO_MODEL_CORPUS,
+
+  // v10.0 L5 — Adversarial Self-Training
+  L5SelfTrainer,
+  L5MutationEngine,
+
+  // v10.0 L5 — Causal Intent Graph
+  IntentGraph,
+  extractTopics,
+  intentJaccard,
+  INTENT_SUSPICIOUS_TRANSITIONS,
+
+  // v10.0 L5 — Semantic Isolation Engine
+  SemanticIsolationEngine,
+  IsolationPolicy,
+  TaggedContent,
+  ISOLATION_PROVENANCE,
+  TRUST_LEVELS,
+
+  // v10.0 L5 — Cryptographic Intent Binding
+  IntentBinder,
+  IntentToken,
+
+  // v10.0 L5 — Attack Surface Mapper
+  AttackSurfaceMapper,
+  CAPABILITY_RISK,
+  CAPABILITY_PATTERNS,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
