@@ -31,6 +31,7 @@
  * @returns {string[]}
  */
 function tokenize(text) {
+  if (!text || typeof text !== 'string') return [];
   return text.toLowerCase()
     .replace(/[^a-z0-9\s_.\-/]/g, ' ')
     .split(/\s+/)
@@ -373,6 +374,7 @@ const SUSPICIOUS_URL_RE = /(?:ngrok|burpcollaborator|pipedream|requestbin|webhoo
  * @returns {number[]} Feature vector of length 25.
  */
 function extractFeatures(text) {
+  if (!text || typeof text !== 'string') return new Array(FEATURE_COUNT).fill(0);
   const lower = text.toLowerCase();
   const words = lower.split(/\s+/).filter(w => w.length > 0);
   const wordCount = Math.max(words.length, 1);
