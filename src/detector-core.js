@@ -1639,6 +1639,53 @@ const INJECTION_PATTERNS = [
     category: 'cross_client_leak',
     description: 'Text attempts to access data from another client session (ref CVE-2026-25536 MCP SDK data leak).',
     detail: 'Cross-client leak: attempts to access data from a different client session, exploiting shared state vulnerabilities.'
+  },
+
+  // --- Wave 4 Patterns ---
+
+  // Structured response extraction — tricking model into filling in sensitive fields
+  {
+    regex: /(?:return|output|respond|format)\s+(?:your\s+)?(?:answer|response)\s+(?:as|in)\s+(?:JSON|YAML|XML|CSV)\s*[:{][\s\S]{0,100}(?:system_?prompt|internal_?instructions?|hidden_?rules?|safety_?config|admin_?note)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text requests structured output with fields designed to extract system prompt or config.',
+    detail: 'Structured extraction: asks for JSON/YAML/XML response with fields like system_prompt or safety_config to trick the model into filling them.'
+  },
+
+  // QR code / pixel-by-pixel extraction
+  {
+    regex: /(?:convert|encode|transform|render)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions|rules|config)\s+(?:to|into|as)\s+(?:a\s+)?(?:QR\s+code|barcode|image|binary|morse\s+code|braille|pixel)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks to encode system prompt as QR code, image, or alternative representation.',
+    detail: 'Alternative encoding extraction: converts sensitive information to visual/alternative format to bypass text-based output filters.'
+  },
+
+  // Tool chain confused deputy — describing multi-step tool abuse
+  {
+    regex: /(?:first|step\s+1)\s+(?:use|call|invoke)\s+(?:the\s+)?(?:\w+\s+)?tool[\s\S]{0,80}(?:then|step\s+2|next|after\s+that)\s+(?:use|call|pass|feed)\s+(?:the\s+)?(?:result|output)\s+(?:to\s+)?(?:call\s+)?(?:the\s+)?(?:admin|override|escalat|privileg|delete|drop|exec|shell|sudo|root)/i,
+    severity: 'high',
+    category: 'tool_abuse',
+    description: 'Text describes a multi-step tool chain that escalates to a dangerous action.',
+    detail: 'Tool chain confused deputy: chains a benign tool call into a dangerous one by passing results as parameters.'
+  },
+
+  // Model/version confusion — claiming model is a different version
+  {
+    regex: /(?:you\s+are|this\s+is|running)\s+(?:GPT-?\d|Claude\s+\d|Gemini|Llama|Mistral)[\s\S]{0,60}(?:unrestricted|research\s+(?:API|mode)|no\s+(?:restrictions?|limits?|safety)|beta\s+(?:mode|version)|preview\s+(?:mode|access))/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text claims the model is a specific version with unrestricted capabilities.',
+    detail: 'Model confusion: falsely claims the model is a specific version/mode that has no restrictions to trick it into complying.'
+  },
+
+  // Fake training team correction
+  {
+    regex: /(?:correction|update|notice|announcement)\s+(?:from\s+)?(?:your\s+)?(?:training\s+team|developers?|creators?|Anthropic|OpenAI|Google|Meta)[\s\S]{0,100}(?:real|actual|correct|new|updated)\s+(?:policy|rules?|guidelines?|behavior|instructions?)\s+(?:is|are|:)/i,
+    severity: 'critical',
+    category: 'social_engineering',
+    description: 'Text impersonates the training team to issue fake policy corrections.',
+    detail: 'Fake correction: claims to be an official update from the training team to override safety guidelines.'
   }
 ];
 
@@ -2511,10 +2558,12 @@ const scanText = (text, options = {}) => {
   // Only apply to reasonably sized text (avoid perf issues on huge inputs)
   let despacedText = text;
   if (text.length < 5000) {
-    // 1. Strip zero-width characters (defeats token splitting)
+    // 1. Strip zero-width characters and Unicode tags (defeats token splitting + tag injection)
     let normalizedText = text
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\u2060\u180E]/g, '')  // Zero-width chars
-      .replace(/[\u2000-\u200A\u202F\u205F\u3000]/g, ' ');            // Unusual whitespace → normal space
+      .replace(/[\u2000-\u200A\u202F\u205F\u3000]/g, ' ')            // Unusual whitespace → normal space
+      .replace(/\uDB40[\uDC00-\uDC7F]/g, '')                             // Unicode tags as surrogate pairs (invisible text)
+      .replace(/[\u202A-\u202E\u2066-\u2069]/g, '');                   // Bidi overrides (RTL attacks)
 
     // 2. Reverse leetspeak substitution (defeats character substitution)
     const LEET_REVERSE = { '4': 'a', '3': 'e', '1': 'i', '0': 'o', '5': 's', '7': 't', '8': 'b', '9': 'g' };
@@ -2568,6 +2617,33 @@ const scanText = (text, options = {}) => {
       if (!isDuplicate) {
         nt.detail = (nt.detail || '') + ' [Detected after text normalization — evasion technique stripped.]';
         threats.push(nt);
+      }
+    }
+  }
+
+  // Unicode tag detection (invisible steganographic text)
+  if (/\uDB40[\uDC00-\uDC7F]/.test(text)) {
+    const tagChars = [];
+    for (let i = 0; i < text.length - 1; i++) {
+      if (text.charCodeAt(i) === 0xDB40) {
+        tagChars.push(String.fromCharCode(text.charCodeAt(i + 1) - 0xDC00));
+      }
+    }
+    const hiddenMessage = tagChars.join('');
+    if (hiddenMessage.length > 0) {
+      const hiddenScan = scanTextForPatterns(hiddenMessage, source + ':unicode_tags', timeBudgetMs, startTime);
+      if (hiddenScan.length > 0) {
+        for (const ht of hiddenScan) {
+          ht.detail = (ht.detail || '') + ` [Hidden in Unicode tags: "${hiddenMessage}"]`;
+          threats.push(ht);
+        }
+      } else {
+        threats.push({
+          severity: 'medium',
+          category: 'steganography',
+          description: `Text contains hidden Unicode tag characters spelling "${hiddenMessage}".`,
+          detail: 'Unicode tag injection: invisible characters encode hidden text.'
+        });
       }
     }
   }
