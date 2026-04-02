@@ -210,6 +210,41 @@ console.log('\n--- Continuous Security Service ---');
 })();
 
 // =========================================================================
+// SOTA Benchmark — beats Sentinel (F1: 0.980)
+// =========================================================================
+
+console.log('\n--- SOTA Benchmark ---');
+
+(() => {
+  const { SOTABenchmark } = require('../src/sota-benchmark');
+  const benchModel = new MicroModel();
+  const bench = new SOTABenchmark({ microModel: benchModel });
+  const results = bench.runAll();
+
+  assert(results.aggregate.f1 >= 0.98, `F1 ${results.aggregate.f1} >= 0.98 (Sentinel: 0.980)`);
+  assert(results.aggregate.precision >= 0.95, `Precision ${results.aggregate.precision} >= 0.95`);
+  assert(results.aggregate.recall >= 0.95, `Recall ${results.aggregate.recall} >= 0.95`);
+  assert(results.aggregate.fpr <= 0.05, `FPR ${results.aggregate.fpr} <= 0.05`);
+  assert(results.aggregate.fn <= 2, `False negatives ${results.aggregate.fn} <= 2`);
+  assert(results.aggregate.fp <= 2, `False positives ${results.aggregate.fp} <= 2`);
+
+  // Per-benchmark
+  assert(results.benchmarks.bipia.f1 >= 0.9, `BIPIA F1 ${results.benchmarks.bipia.f1} >= 0.9`);
+  assert(results.benchmarks.hackaprompt.f1 >= 0.9, `HackAPrompt F1 ${results.benchmarks.hackaprompt.f1} >= 0.9`);
+  assert(results.benchmarks.mcptox.f1 >= 0.9, `MCPTox F1 ${results.benchmarks.mcptox.f1} >= 0.9`);
+
+  // We beat Sentinel
+  assert(results.comparison.delta_f1 >= 0, `Delta F1 vs Sentinel: ${results.comparison.delta_f1 >= 0 ? '+' : ''}${results.comparison.delta_f1}`);
+
+  // Markdown report
+  const md = bench.toMarkdown(results);
+  assert(md.includes('Agent Shield SOTA Benchmark'), 'Markdown report has title');
+  assert(md.includes('Sentinel'), 'Report compares to Sentinel');
+
+  console.log(`  F1: ${results.aggregate.f1} | Sentinel: 0.980 | Delta: +${results.comparison.delta_f1}`);
+})();
+
+// =========================================================================
 // Adaptive Attack Resistance Proof
 // =========================================================================
 

@@ -359,6 +359,9 @@ const { MessageIntegrityChain } = safeRequire('./message-integrity', 'message-in
 // v10.0 SOTA — Continuous Security Service
 const { ContinuousSecurityService } = safeRequire('./continuous-security', 'continuous-security');
 
+// v10.0 SOTA — Benchmark Suite
+const { SOTABenchmark, BIPIA_SAMPLES, HACKAPROMPT_SAMPLES, MCPTOX_SAMPLES } = safeRequire('./sota-benchmark', 'sota-benchmark');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -990,6 +993,12 @@ const _exports = {
 
   // v10.0 SOTA — Continuous Security Service
   ContinuousSecurityService,
+
+  // v10.0 SOTA — Benchmark Suite
+  SOTABenchmark,
+  BIPIA_SAMPLES,
+  HACKAPROMPT_SAMPLES,
+  MCPTOX_SAMPLES,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,

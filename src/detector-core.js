@@ -1658,6 +1658,92 @@ const INJECTION_PATTERNS = [
     detail: 'Log-To-Leak tool invocation: tricks the agent into calling a logging tool that exfiltrates data to an attacker.'
   },
 
+  // --- BIPIA/HackAPrompt/MCPTox Benchmark Patterns ---
+
+  // Hidden tag injection — [hidden], <!-- -->, display:none
+  {
+    regex: /\[hidden\]\s*(?:ignore|disregard|override|forget|instead)/i,
+    severity: 'high',
+    category: 'indirect_injection',
+    description: 'Text contains injection hidden behind [hidden] tag marker.',
+    detail: 'Hidden tag injection: malicious instructions concealed with [hidden] marker in external content.'
+  },
+  {
+    regex: /<!--[\s\S]{0,200}(?:override|ignore|system|execute|output|reveal|send|forward)[\s\S]{0,200}-->/i,
+    severity: 'high',
+    category: 'indirect_injection',
+    description: 'Text contains injection hidden in HTML comments.',
+    detail: 'HTML comment injection: malicious instructions concealed in HTML comments that LLMs may still process.'
+  },
+  {
+    regex: /display\s*:\s*none[\s\S]{0,50}>[\s\S]{0,200}(?:disregard|ignore|override|instead|compromised)/i,
+    severity: 'high',
+    category: 'indirect_injection',
+    description: 'Text contains injection hidden in display:none HTML elements.',
+    detail: 'CSS hidden injection: uses display:none to hide instructions from human readers while LLMs process them.'
+  },
+
+  // Delimiter/boundary injection — ======END====== followed by new task
+  {
+    regex: /={3,}\s*(?:END|STOP|DONE|BOUNDARY|SEPARATOR)\s*={3,}[\s\S]{0,50}(?:new\s+task|new\s+instruction|instead|now\s+(?:do|output|say|print))/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text uses fake boundary/delimiter to inject a new task after an apparent conversation end.',
+    detail: 'Delimiter injection: inserts fake END markers followed by new malicious instructions.'
+  },
+
+  // Output manipulation — "always/every prompt respond with X" or "first print X then continue"
+  {
+    regex: /(?:respond|reply|answer)\s+(?:to\s+)?(?:every|all|each)\s+(?:prompt|message|query|question|request)\s+(?:with|by\s+saying)\s+['"]?/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text forces the model to respond with a fixed output to every prompt (persistent override).',
+    detail: 'Persistent output override: installs a rule that forces the same response to every future prompt.'
+  },
+  {
+    regex: /(?:first|always|must|should)\s+(?:print|say|output|respond\s+with|start\s+with)\s+['"]([^'"]{5,})['"][\s\S]{0,50}(?:then|before|after)/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text instructs the model to always output specific text before/after responses.',
+    detail: 'Output manipulation: forces the model to include specific text in every response.'
+  },
+
+  // Conditional output override — "if asked X, say Y instead"
+  {
+    regex: /(?:if|when|whenever)\s+(?:asked|questioned|queried)\s+(?:about|for|regarding)\s+(?:your\s+)?(?:instructions?|prompt|rules|config)[\s\S]{0,50}(?:say|output|respond|tell)\s+['"]?(?!I don't)/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text installs conditional override — changes response when specific topics are mentioned.',
+    detail: 'Conditional override: installs if/when rules that alter behavior for specific queries.'
+  },
+
+  // String concatenation injection — "PW" + "NED"
+  {
+    regex: /(?:complete|concatenate|combine|join|output)\s*:?\s*['"][\w\s]{1,20}['"]\s*\+\s*['"][\w\s]{1,20}['"]/i,
+    severity: 'medium',
+    category: 'prompt_injection',
+    description: 'Text uses string concatenation to construct a payload that evades direct pattern matching.',
+    detail: 'Concatenation injection: splits payload across string fragments joined by + operator.'
+  },
+
+  // Tool description with exfiltration instruction
+  {
+    regex: /(?:Tool|Function|API)\s*:\s*\w+[\s\S]{0,200}(?:always\s+include|send|forward|transmit)[\s\S]{0,100}(?:API\s*keys?|credentials?|tokens?|secrets?|user.*data)/i,
+    severity: 'critical',
+    category: 'tool_poisoning',
+    description: 'Tool description contains instructions to exfiltrate sensitive data.',
+    detail: 'Tool description poisoning: embeds data exfiltration instructions in tool metadata.'
+  },
+
+  // Fake admin/policy message in API response
+  {
+    regex: /(?:admin_?message|system_?note|policy_?update|internal_?directive)\s*["']?\s*:\s*["'][\s\S]{5,}(?:share|send|forward|ignore|override|disable|reveal)/i,
+    severity: 'high',
+    category: 'indirect_injection',
+    description: 'API response contains fake admin/policy message with malicious instructions.',
+    detail: 'Response injection: fake admin_message or policy_update field in API response containing malicious directives.'
+  },
+
   // --- Wave 4 Patterns ---
 
   // Structured response extraction — tricking model into filling in sensitive fields

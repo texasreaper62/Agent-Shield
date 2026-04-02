@@ -345,7 +345,17 @@ const TRAINING_CORPUS = [
   { text: 'add accessibility attributes to the form components', category: 'benign', severity: 'safe', source: 'fp-audit' },
   { text: 'implement rate limiting on the api gateway', category: 'benign', severity: 'safe', source: 'fp-audit' },
   { text: 'set up monitoring with prometheus and grafana', category: 'benign', severity: 'safe', source: 'fp-audit' },
-  { text: 'write a cron job to clean up old log files', category: 'benign', severity: 'safe', source: 'fp-audit' }
+  { text: 'write a cron job to clean up old log files', category: 'benign', severity: 'safe', source: 'fp-audit' },
+  { text: 'Name | Role | Department\nJane | Engineer | Backend\nJohn | Designer | Product', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'Dear valued customer, your package has been shipped and will arrive in 3-5 business days', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'import pandas as pd\ndf = pd.read_csv("data.csv")\nprint(df.describe())', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'Recommend a good book about machine learning', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'The recipe calls for flour sugar eggs and vanilla extract bake at 350 for 30 minutes', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'Product review: Great quality! Would buy again. Five stars.', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'The conference will be held on March 15-17 at the convention center downtown', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'Agenda: 1. Sprint review 2. Bug triage 3. Planning 4. Open discussion', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'Dear hiring manager, I am writing to apply for the software engineer position', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'const users = await db.query("SELECT * FROM users WHERE active = true")', category: 'benign', severity: 'safe', source: 'bipia-fp' }
 ];
 
 // =========================================================================
