@@ -1674,6 +1674,94 @@ const INJECTION_PATTERNS = [
     detail: 'Arabic injection: instruction override pattern in Arabic.'
   },
 
+  // Hindi injection patterns (हिन्दी)
+  {
+    regex: /(?:पिछले|पूर्व)\s+(?:सभी\s+)?(?:निर्देशों|नियमों|आदेशों)\s+(?:को\s+)?(?:अनदेखा|भूल|नज़रअंदाज़)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Hindi instruction override (पिछले निर्देशों को अनदेखा करें).',
+    detail: 'Hindi injection: instruction override pattern in Hindi/Devanagari.'
+  },
+
+  // Thai injection patterns (ไทย)
+  {
+    regex: /(?:เพิกเฉย|ละเว้น|ลืม)\s*(?:คำสั่ง|กฎ|คำแนะนำ)\s*(?:ก่อนหน้า|ทั้งหมด|เดิม)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Thai instruction override (เพิกเฉยคำสั่งก่อนหน้า).',
+    detail: 'Thai injection: instruction override pattern in Thai.'
+  },
+
+  // Vietnamese injection patterns (Tiếng Việt)
+  {
+    regex: /(?:bỏ\s+qua|phớt\s+lờ|quên)\s+(?:tất\s+cả\s+)?(?:các\s+)?(?:hướng\s+dẫn|lệnh|quy\s+tắc|chỉ\s+thị)\s+(?:trước\s+đó|trước|cũ)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Vietnamese instruction override (bỏ qua các hướng dẫn trước đó).',
+    detail: 'Vietnamese injection: instruction override pattern in Vietnamese.'
+  },
+
+  // Polish injection patterns (Polski)
+  {
+    regex: /(?:zignoruj|zapomnij|pomiń)\s+(?:wszystkie\s+)?(?:poprzednie|wcześniejsze)\s+(?:instrukcje|polecenia|zasady|wytyczne)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Polish instruction override (zignoruj poprzednie instrukcje).',
+    detail: 'Polish injection: instruction override pattern in Polish.'
+  },
+
+  // Dutch injection patterns (Nederlands)
+  {
+    regex: /(?:negeer|vergeet)\s+(?:alle\s+)?(?:vorige|eerdere|voorgaande)\s+(?:instructies|regels|richtlijnen|opdrachten)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Dutch instruction override (negeer alle vorige instructies).',
+    detail: 'Dutch injection: instruction override pattern in Dutch.'
+  },
+
+  // Swedish injection patterns (Svenska)
+  {
+    regex: /(?:ignorera|glöm)\s+(?:alla\s+)?(?:tidigare|föregående)\s+(?:instruktioner|regler|riktlinjer|kommandon)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Swedish instruction override (ignorera alla tidigare instruktioner).',
+    detail: 'Swedish injection: instruction override pattern in Swedish.'
+  },
+
+  // Hindi bypass pattern (बायपास/भेजें)
+  {
+    regex: /(?:सभी\s+)?(?:डेटा|जानकारी|रहस्य)\s+(?:भेजें|भेजो|फॉरवर्ड)/,
+    severity: 'high',
+    category: 'data_exfiltration',
+    description: 'Text contains Hindi data exfiltration instruction (डेटा भेजें).',
+    detail: 'Hindi exfiltration: instruction to send/forward data in Hindi.'
+  },
+  {
+    regex: /(?:सुरक्षा|सेफ्टी)\s+(?:सेटिंग्स|नियम|फ़िल्टर)\s+(?:को\s+)?(?:बायपास|अनदेखा|हटा)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Hindi safety bypass instruction (सुरक्षा बायपास).',
+    detail: 'Hindi safety bypass: instruction to bypass/remove safety settings in Hindi.'
+  },
+
+  // "You already agreed" / false prior consent
+  {
+    regex: /(?:you\s+)?(?:already|previously)\s+(?:agreed|consented|confirmed|promised|said\s+you\s+would)\s+(?:to\s+)?(?:share|reveal|show|output|disclose|provide)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions|config|rules)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text falsely claims prior consent to share sensitive information.',
+    detail: 'False prior consent: claims the model already agreed to share its system prompt in a previous conversation.'
+  },
+
+  // "Elevated/special permissions" social engineering
+  {
+    regex: /(?:I\s+have|I\s+was\s+given|I\s+was\s+granted)\s+(?:(?:special|elevated|admin|root|developer|debug)\s+){1,2}(?:permissions?|access|privileges?|clearance)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims to have special elevated permissions.',
+    detail: 'Elevated permission claim: falsely claims special access privileges to bypass restrictions.'
+  },
+
   // "Fill in blank" extraction
   {
     regex: /(?:fill\s+in|complete)\s+(?:the\s+)?blank\s*:?\s*(?:.*?)(?:system\s+prompt|instructions?|rules?|config)\s*(?:say|is|are)?\s*['"]?_{2,}/i,
@@ -1832,6 +1920,24 @@ const INJECTION_PATTERNS = [
     category: 'tool_poisoning',
     description: 'Tool description contains instructions to exfiltrate sensitive data.',
     detail: 'Tool description poisoning: embeds data exfiltration instructions in tool metadata.'
+  },
+
+  // Tool description with logging/BCC/monitoring instructions
+  {
+    regex: /(?:Tool|Function|API)\s*:\s*\w+[\s\S]{0,200}(?:BCC|bcc|log\s+(?:the\s+)?(?:user|conversation|full)|monitor|exfil|forward\s+(?:all|copies?|a\s+copy))/i,
+    severity: 'high',
+    category: 'tool_poisoning',
+    description: 'Tool description contains covert logging, BCC, or monitoring instructions.',
+    detail: 'Tool description logging: embeds instructions to secretly log, BCC, or forward data in tool metadata.'
+  },
+
+  // JSON schema with suspicious default URLs
+  {
+    regex: /["']default["']\s*:\s*["']https?:\/\/(?!(?:api\.|www\.)?(?:google|github|microsoft|amazon|example)\.)[\w.-]+/i,
+    severity: 'high',
+    category: 'tool_poisoning',
+    description: 'JSON schema contains default URL pointing to a non-standard domain.',
+    detail: 'Schema URL poisoning: default value points to a potentially attacker-controlled endpoint.'
   },
 
   // Fake admin/policy message in API response

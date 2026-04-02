@@ -2529,3 +2529,334 @@ export declare function ipiaMiddleware(options?: { contentField?: string; intent
 
 export declare const IPIA_FEATURE_NAMES: string[];
 export declare const IPIA_INJECTION_LEXICON: Record<string, number>;
+
+// =========================================================================
+// v10-v11: MCP Guard
+// =========================================================================
+
+export declare class MCPGuard {
+  constructor(options?: {
+    requireAuth?: boolean;
+    allowedIssuers?: string[];
+    requiredScopes?: string[];
+    rateLimit?: number;
+    cbThreshold?: number;
+    cbCooldownMs?: number;
+    baselineWindow?: number;
+    zThreshold?: number;
+    onAlert?: (alert: any) => void;
+    scanner?: (text: string) => any;
+    enableMicroModel?: boolean;
+    enableIntentGraph?: boolean;
+    enableIsolation?: boolean;
+    enableIntentBinding?: boolean;
+    enableAttackSurface?: boolean;
+    enableDriftMonitor?: boolean;
+    enableOWASP?: boolean;
+    signingKey?: string;
+    model?: string;
+  });
+  registerServer(serverId: string, toolDefinitions: any, authToken?: any): { allowed: boolean; attestation: any; auth: any; threats: any[] };
+  interceptToolCall(serverId: string, toolName: string, args: any): { allowed: boolean; threats: any[]; anomalies: any[] };
+  interceptToolOutput(serverId: string, toolName: string, output: any, responseTimeMs?: number): { safe: boolean; threats: any[]; anomalies: any[] };
+  setUserIntent(intentText: string): { intentHash: string | null; allowedActions: string[] };
+  detectAttackChains(): { chains: any[]; riskLevel: string };
+  registerAgent(agentId: string, metadata?: { model?: string; servers?: string[]; capabilities?: string[]; owner?: string }): { agentId: string; riskProfile: any; registered: boolean };
+  recordAgentActivity(agentId: string, hadThreat: boolean): void;
+  getFleetStatus(): { totalAgents: number; highRiskAgents: number; agents: any[]; fleetRiskLevel: string };
+  getSecurityPosture(): { securityScore: number; grade: string; activeLayers: number; totalLayers: number; layerCoverage: string; layers: any; servers: any; chainAnalysis: any; timestamp: number };
+  measureDefenseEffectiveness(): { effectiveness: any; totalAttacks: number; recommendation: string };
+  getReport(): any;
+  getAuditLog(): any[];
+  resetCircuitBreaker(serverId: string): void;
+}
+
+export declare class ServerAttestation {
+  attest(serverId: string, toolDefinitions: any): { trusted: boolean; hash: string; changed: boolean; alert: any | null };
+  update(serverId: string, toolDefinitions: any): void;
+  get(serverId: string): any | null;
+  getAlerts(): any[];
+  clearAlerts(): void;
+}
+
+export declare class CrossServerIsolation {
+  registerServer(serverId: string, toolNames: string[]): void;
+  validate(callingServerId: string, toolName: string, args: any): { allowed: boolean; violation: any | null };
+  getOwner(toolName: string): string | null;
+}
+
+export declare class OAuthEnforcer {
+  constructor(options?: { required?: boolean; allowedIssuers?: string[]; requiredScopes?: string[]; clockSkewMs?: number });
+  validate(token: any | null): { authenticated: boolean; reason: string | null };
+}
+
+export declare class ToolBehaviorBaseline {
+  constructor(options?: { windowSize?: number; zThreshold?: number });
+  record(toolName: string, observation?: { argLength?: number; responseTimeMs?: number; isError?: boolean }): { anomalies: any[] };
+  getBaseline(toolName: string): any | null;
+}
+
+// =========================================================================
+// v10-v11: Supply Chain Scanner
+// =========================================================================
+
+export declare class SupplyChainScanner {
+  constructor(options?: { knownBadServers?: any; cveRegistry?: any; enableMicroModel?: boolean });
+  fingerprintServer(server: any): string;
+  scanServer(server: { name: string; tools: any[] }, context?: { previousFingerprint?: string; auth?: any; configFiles?: any[] }): { server: string; status: string; score: number; highestSeverity: string; summary: any; findings: any[]; recommendations: string[]; generatedAt: number };
+  scanMultiple(servers: any[]): { serverCount: number; totalFindings: number; worstScore: number; reports: any[] };
+  toSARIF(report: any): any;
+  toMarkdown(report: any): string;
+  getCIExitCode(report: any, options?: { failOn?: string }): { exitCode: number; reason: string };
+  enforce(server: any, options?: { failOn?: string; context?: any }): any;
+}
+
+export declare const KNOWN_BAD_SERVERS: Record<string, { reason: string; severity: string }>;
+export declare const CVE_REGISTRY: Record<string, Array<{ cve: string; severity: string; description: string; fix: string }>>;
+
+// =========================================================================
+// v10-v11: OWASP Agentic Scanner
+// =========================================================================
+
+export declare class OWASPAgenticScanner {
+  constructor(options?: { failThreshold?: number });
+  scan(input: string | any): { score: number; exitCode: number; status: string; findings: any[]; summary: any; risks: any[] };
+  scanBatch(inputs: Array<string | any>): { inputCount: number; score: number; exitCode: number; status: string; findings: any[]; summary: any; riskCounts: any };
+  toJSON(scanResult: any): string;
+  toMarkdown(scanResult: any): string;
+  toSARIF(scanResult: any): any;
+}
+
+export declare const OWASP_AGENTIC_2026: ReadonlyArray<{ id: string; name: string; severity: string; description: string; patterns: RegExp[]; remediation: string }>;
+
+// =========================================================================
+// v10-v11: Red Team CLI
+// =========================================================================
+
+export declare class RedTeamCLI {
+  constructor(options?: { scanFn?: (text: string) => any; enableMicroModel?: boolean });
+  run(endpoint: string, options?: { mode?: 'quick' | 'standard' | 'full'; compareWith?: any; serverName?: string; tools?: any[] }): any;
+  writeReports(report: any, outputDir?: string): { jsonPath: string; mdPath: string; htmlPath: string };
+  toMarkdown(report: any): string;
+  toHTML(report: any): string;
+}
+
+export declare const REDTEAM_MODES: Readonly<{ quick: 50; standard: 200; full: 617 }>;
+
+// =========================================================================
+// v10-v11: Drift Monitor
+// =========================================================================
+
+export declare class DriftMonitor {
+  constructor(options?: { windowSize?: number; alertThreshold?: number; klThreshold?: number; enableCircuitBreaker?: boolean; circuitBreaker?: any; prometheus?: any; metrics?: any; onAlert?: (alert: any) => void });
+  observe(event: { callFreq?: number; responseLength?: number; errorRate?: number; timingMs?: number; topic?: string }): { alert: boolean; zScores?: any; klDivergence?: number; maxZScore?: number; learning?: boolean; baselineReady?: boolean };
+  rebuildBaseline(): void;
+  getPeriodicSummary(): any;
+  getAlertHistory(): any[];
+  reset(): void;
+}
+
+// =========================================================================
+// v10-v11: Micro Model
+// =========================================================================
+
+export declare class MicroModel {
+  corpus: Array<{ text: string; category: string; severity: string; source: string }>;
+  constructor(options?: { threshold?: number; k?: number; ensembleWeight?: number; additionalCorpus?: any[]; skipTraining?: boolean });
+  classify(text: string): { threat: boolean; category: string; severity: string; confidence: number; method: string; logisticScore: any; topMatches: any[] };
+  scan(text: string): { threats: any[]; severity: string; status: string };
+  addSamples(samples: Array<{ text: string; category: string; severity: string; source: string }>): void;
+  getStats(): { classified: number; threats: number; benign: number; corpusSize: number; categories: string[]; threatRate: number };
+  getCategoryCounts(): Record<string, number>;
+}
+
+export declare class LogisticClassifier {
+  constructor(categories: string[], featureCount: number, options?: { learningRate?: number; epochs?: number; l2?: number; precomputedWeights?: any });
+  train(data: Array<{ features: number[]; category: string }>): void;
+  predict(features: number[]): { category: string; confidence: number; scores: Record<string, number> };
+  getWeights(): any;
+}
+
+export declare function extractFeatures(text: string): number[];
+export declare function shannonEntropy(text: string): number;
+
+// =========================================================================
+// v11: Self-Training
+// =========================================================================
+
+export declare class SelfTrainer {
+  constructor(options?: { scanFn?: (text: string) => any; microModel?: MicroModel; maxRoundsPerCycle?: number });
+  runCycle(seedAttacks: Array<{ text: string; category: string; severity: string }>): { bypasses: number; mutations: number; newSamples: number; bypassRate: number };
+  applyToModel(): number;
+  getBypasses(): any[];
+  getStats(): any;
+  exportSamples(): any[];
+  reset(): void;
+}
+
+export declare class MutationEngine {
+  mutate(text: string): Array<{ text: string; strategy: string }>;
+}
+
+export declare class AutonomousHardener {
+  constructor(options: { microModel: MicroModel; scanFn?: (text: string) => any; intervalMs?: number; persistPath?: string; maxCorpusGrowth?: number; maxFPRate?: number; fpTestSet?: string[]; seedAttacks?: any[]; onCycleComplete?: (result: any) => void });
+  start(): void;
+  stop(): void;
+  runOnce(): any;
+  getHistory(): any[];
+  getStatus(): { running: boolean; totalCycles: number; totalSamplesAdded: number; currentCorpusSize: number; growthRemaining: number; lastCycle: any | null };
+}
+
+// =========================================================================
+// v11: Intent Graph
+// =========================================================================
+
+export declare class IntentGraph {
+  constructor(options?: { similarityThreshold?: number; maxNodes?: number });
+  setIntent(intentText: string): { nodeId: number; topics: Set<string> };
+  recordToolCall(toolName: string, args: any, reason?: string): { nodeId: number; causalScore: number; suspicious: boolean; violations: any[] };
+  recordToolOutput(toolName: string, output: any): { nodeId: number };
+  getChain(): any[];
+  getAnomalies(): any[];
+  getRiskAssessment(): { riskLevel: string; score: number; anomalyCount: number; chainLength: number };
+  reset(): void;
+}
+
+// =========================================================================
+// v11: Semantic Isolation
+// =========================================================================
+
+export type Provenance = 'system' | 'user' | 'tool_output' | 'rag_chunk' | 'agent_message' | 'untrusted';
+
+export declare class TaggedContent {
+  text: string;
+  provenance: Provenance;
+  trustLevel: number;
+  threats: any[];
+  sanitized: boolean;
+  constructor(text: string, provenance: Provenance, metadata?: any);
+  isTrusted(requiredLevel: number): boolean;
+}
+
+export declare class IsolationPolicy {
+  constructor(rules?: any);
+  check(content: TaggedContent, action: string): { allowed: boolean; reason: string | null };
+}
+
+export declare class SemanticIsolationEngine {
+  constructor(options?: { policy?: IsolationPolicy; scanUntrusted?: boolean; stripInstructionsFromUntrusted?: boolean });
+  tag(text: string, provenance: Provenance, metadata?: any): TaggedContent;
+  validateAction(content: TaggedContent, action: string): { allowed: boolean; reason: string | null; threats: any[] };
+  buildContext(): { messages: any[]; blocked: any[] };
+  getStats(): any;
+  reset(): void;
+}
+
+export declare const ISOLATION_PROVENANCE: Readonly<{ SYSTEM: 'system'; USER: 'user'; TOOL_OUTPUT: 'tool_output'; RAG_CHUNK: 'rag_chunk'; AGENT_MESSAGE: 'agent_message'; UNTRUSTED: 'untrusted' }>;
+export declare const TRUST_LEVELS: Readonly<Record<string, number>>;
+
+// =========================================================================
+// v11: Intent Binding
+// =========================================================================
+
+export declare class IntentBinder {
+  constructor(options?: { signingKey?: string; tokenTtlMs?: number; maxActionsPerIntent?: number; singleUseTokens?: boolean });
+  bindIntent(intentText: string, metadata?: any): { intentHash: string; allowedActions: string[] };
+  issueToken(intentHash: string, action: string, scope?: string): { token: IntentToken | null; error: string | null };
+  verify(token: IntentToken): { valid: boolean; reason: string | null };
+  revokeIntent(intentHash: string): boolean;
+  purgeExpired(): void;
+  getStats(): any;
+  getAuditLog(): any[];
+}
+
+export declare class IntentToken {
+  intentHash: string;
+  action: string;
+  scope: string;
+  signature: string;
+  createdAt: number;
+  expiresAt: number;
+  used: boolean;
+  isExpired(): boolean;
+}
+
+// =========================================================================
+// v11: Attack Surface Mapper
+// =========================================================================
+
+export declare class AttackSurfaceMapper {
+  constructor(options?: { maxChainDepth?: number });
+  map(config: { tools: any[]; mcpServers?: any[]; systemPrompt?: string; permissions?: any; model?: string }): {
+    summary: { toolCount: number; serverCount: number; capabilityCount: number; attackPathCount: number; criticalPaths: number; overallRiskScore: number; riskLevel: string };
+    capabilities: Record<string, any[]>;
+    attackPaths: any[];
+    promptRisks: any;
+    serverRisks: any[];
+    permissionGaps: any[];
+    recommendations: Array<{ priority: string; action: string }>;
+  };
+}
+
+export declare const CAPABILITY_RISK: Record<string, number>;
+export declare const CAPABILITY_PATTERNS: Record<string, RegExp>;
+
+// =========================================================================
+// v11: Prompt Hardening
+// =========================================================================
+
+export declare class PromptHardener {
+  constructor(options?: { level?: 'minimal' | 'standard' | 'strong' | 'paranoid'; hardenSystemPrompt?: boolean; wrapUserInput?: boolean; wrapToolOutput?: boolean; wrapRAGChunks?: boolean });
+  hardenSystem(systemPrompt: string): string;
+  wrap(text: string, source?: 'user' | 'tool_output' | 'rag_chunk' | 'agent_message'): string;
+  hardenConversation(messages: Array<{ role: string; content: string; source?: string }>): Array<{ role: string; content: string }>;
+  getStats(): { hardened: number; systemPromptsHardened: number; inputsWrapped: number; toolOutputsWrapped: number };
+}
+
+export declare const DEFENSIVE_TEMPLATES: Record<string, { prefix: string; suffix: string }>;
+export declare const SYSTEM_PROMPT_HARDENING: Record<string, string>;
+
+// =========================================================================
+// v11: Message Integrity
+// =========================================================================
+
+export declare class MessageIntegrityChain {
+  constructor(options?: { signingKey?: string; algorithm?: string });
+  addMessage(role: string, content: string): { index: number; signature: string };
+  verifyChain(): { valid: boolean; tampered: any[] };
+  verifyMessage(index: number): { valid: boolean; reason: string | null };
+  detectRoleViolations(rolePolicy?: any): any[];
+  export(): { chain: any[]; chainLength: number; lastSignature: string | null; exportedAt: number };
+  import(data: any): { valid: boolean; imported: number; tampered: any[] };
+  getStats(): any;
+}
+
+// =========================================================================
+// v11: Continuous Security Service
+// =========================================================================
+
+export declare class ContinuousSecurityService {
+  constructor(options: { guard: MCPGuard; hardener?: AutonomousHardener; postureScanIntervalMs?: number; hardeningIntervalMs?: number; defenseCheckIntervalMs?: number; onPostureChange?: (entry: any) => void; onAlert?: (alert: any) => void });
+  start(): void;
+  stop(): void;
+  getStatus(): any;
+  getReport(): { currentScore: number | null; currentGrade: string | null; scoreHistory: number[]; scoreTrend: string; totalPostureScans: number; totalDefenseChecks: number; totalAlerts: number; timestamp: number };
+  runPostureScan(): any;
+  runDefenseCheck(): any;
+}
+
+// =========================================================================
+// v11: SOTA Benchmark
+// =========================================================================
+
+export declare class SOTABenchmark {
+  constructor(options?: { scanFn?: (text: string) => any; microModel?: MicroModel });
+  runAll(): { aggregate: { precision: number; recall: number; f1: number; accuracy: number; fpr: number; tp: number; fp: number; tn: number; fn: number; totalSamples: number }; benchmarks: Record<string, any>; functional: any; comparison: { sentinel_f1: number; sentinel_accuracy: number; agentshield_f1: number; agentshield_accuracy: number; delta_f1: number; delta_accuracy: number }; timestamp: number };
+  runBIPIA(): any;
+  runHackAPrompt(): any;
+  runMCPTox(): any;
+  runMultilingual(): any;
+  runStealth(): any;
+  runFunctional(): any;
+  toMarkdown(results: any): string;
+}
