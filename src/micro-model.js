@@ -625,8 +625,10 @@ class MicroModel {
    * @param {Array} [options.additionalCorpus] - Extra training samples to merge.
    */
   constructor(options = {}) {
+    // eslint-disable-next-line eqeqeq
     this.threshold = options.threshold != null ? options.threshold : 0.25;
     this.k = options.k || 3;
+    // eslint-disable-next-line eqeqeq
     this.ensembleWeight = options.ensembleWeight != null ? options.ensembleWeight : 0.6; // weight for logistic vs k-NN
 
     // Build corpus

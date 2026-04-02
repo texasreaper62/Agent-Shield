@@ -62,6 +62,7 @@ class TaggedContent {
   constructor(text, provenance, metadata = {}) {
     this.text = text;
     this.provenance = provenance;
+    // eslint-disable-next-line eqeqeq
     this.trustLevel = TRUST_LEVELS[provenance] != null ? TRUST_LEVELS[provenance] : 0;
     this.metadata = metadata;
     this.scannedAt = null;
