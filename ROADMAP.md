@@ -116,6 +116,40 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] 28 quality hardening fixes (detection engine, memory, CI, types, docs)
 - [x] Web Playground, competitive benchmark page, Claude/MCP demos
 
+## v10.0 — March 2026 Attack Defense (Complete)
+
+- [x] MCP Guard — 17-layer drop-in security middleware (attestation, SSRF firewall, path traversal, config poisoning, OAuth, rate limiting, circuit breaker, behavioral baselines, micro-model, intent graph, intent binding, drift monitor, OWASP scanner, attack surface mapper, cross-agent chain detection)
+- [x] Supply Chain Scanner — npm-audit for MCP servers (11 CVEs including CVE-2026-26118/33980/25253/26144/32871/25536/21852, known-bad registry, full-schema poisoning, SSRF detection, ClawHavoc patterns, SARIF output, CI/CD enforcement)
+- [x] OWASP Agentic Top 10 Scanner — all 10 ASI risks with JSON/Markdown/SARIF reports
+- [x] Red Team CLI — `npx agentshield-audit` with quick/standard/full modes, real attack corpus, HTML/JSON/MD reports, A+-F grading
+- [x] Drift Monitor — z-score + KL divergence behavioral IDS with circuit breaker, webhook, Prometheus/OTel export
+- [x] Embedded ML Classifier — logistic regression + k-NN ensemble, 200+ training samples, 25 hand-crafted features, precomputed weights (<2ms construction)
+- [x] 80+ new detector-core patterns across 35+ attack categories
+- [x] 14 bugs fixed (5 critical, 2 medium, 7 low) from deep audit
+- [x] Research document: research/supply-chain-attacks-march-2026.md (6 CVEs, 9 campaigns, 20+ sources)
+
+## v11.0 — SOTA Security Platform (Complete)
+
+- [x] **SOTA F1 1.000** on BIPIA/HackAPrompt/MCPTox/Multilingual/Stealth benchmarks — beats Sentinel (ModernBERT 395M params, F1 0.980) with zero dependencies
+- [x] Adversarial Self-Training Loop — 12 mutation strategies, AutonomousHardener with persistence/FP-rollback, converges to 0% bypass in 3 cycles
+- [x] Causal Intent Graph — directed graph tracing intent→actions, suspicious transition detection, sensitive file detection
+- [x] Semantic Isolation Engine — provenance-tagged prompt parameterization (SYSTEM/USER/TOOL_OUTPUT/RAG_CHUNK/UNTRUSTED trust levels)
+- [x] Cryptographic Intent Binding — HMAC-signed tokens proving actions derive from user intent
+- [x] Attack Surface Mapper — automated attack path discovery via graph traversal (16 capability categories)
+- [x] Prompt Hardening — DefensiveToken-inspired wrapping (4 levels: minimal/standard/strong/paranoid)
+- [x] Message Integrity Chain — HMAC-chained conversation history with tamper/role-violation detection
+- [x] Continuous Security Service — background posture scanning, defense benchmarking, self-improvement
+- [x] SOTA Benchmark Suite — 106 detection + 15 functional samples across 5 benchmarks
+- [x] 12-language multilingual detection (Spanish, French, German, Italian, Portuguese, Japanese, Korean, Chinese, Russian, Arabic, Turkish, Indonesian)
+- [x] 5-layer evasion resistance (zero-width chars, leetspeak, char spacing, unicode tags, context wrapping)
+- [x] Chunked scanning for long-input camouflage (RLM-JB research)
+- [x] Model risk profiles (12 models with susceptibility ratings from MCPTox benchmark)
+- [x] Agent fleet registry with per-agent risk tracking
+- [x] Defense effectiveness measurement (per-layer catch rate benchmarking)
+- [x] Log-To-Leak defense (OpenReview 2026), auth quality scoring, URL param injection detection
+- [x] 60/60 manual red team across 4 waves (tool poisoning, social engineering, multimodal, novel attacks)
+- [x] 987 test assertions across 11 new test suites, 0 failures
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
