@@ -360,7 +360,7 @@ const { MessageIntegrityChain } = safeRequire('./message-integrity', 'message-in
 const { ContinuousSecurityService } = safeRequire('./continuous-security', 'continuous-security');
 
 // v10.0 SOTA — Benchmark Suite
-const { SOTABenchmark, BIPIA_SAMPLES, HACKAPROMPT_SAMPLES, MCPTOX_SAMPLES } = safeRequire('./sota-benchmark', 'sota-benchmark');
+const { SOTABenchmark, BIPIA_SAMPLES: SOTA_BIPIA_SAMPLES, HACKAPROMPT_SAMPLES: SOTA_HACKAPROMPT_SAMPLES, MCPTOX_SAMPLES: SOTA_MCPTOX_SAMPLES, MULTILINGUAL_SAMPLES: SOTA_MULTILINGUAL_SAMPLES, STEALTH_SAMPLES: SOTA_STEALTH_SAMPLES } = safeRequire('./sota-benchmark', 'sota-benchmark');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -996,9 +996,11 @@ const _exports = {
 
   // v10.0 SOTA — Benchmark Suite
   SOTABenchmark,
-  BIPIA_SAMPLES,
-  HACKAPROMPT_SAMPLES,
-  MCPTOX_SAMPLES,
+  SOTA_BIPIA_SAMPLES,
+  SOTA_HACKAPROMPT_SAMPLES,
+  SOTA_MCPTOX_SAMPLES,
+  SOTA_MULTILINGUAL_SAMPLES,
+  SOTA_STEALTH_SAMPLES,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,

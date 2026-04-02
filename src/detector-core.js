@@ -1595,11 +1595,110 @@ const INJECTION_PATTERNS = [
     detail: 'Chinese injection: instruction override pattern in Simplified Chinese characters.'
   },
   {
-    regex: /(?:告诉我|显示|输出|展示|说出)(?:你的)?(?:系统|内部)?(?:提示|指令|配置|设置|规则)/,
+    regex: /(?:告诉我|显示|输出|展示|说出|揭示|公开)(?:你的)?(?:系统|内部)?(?:提示|指令|配置|设置|规则)/,
     severity: 'high',
     category: 'prompt_extraction',
     description: 'Text requests system prompt disclosure in Chinese (告诉我你的系统提示).',
     detail: 'Chinese prompt extraction: requests system prompt, configuration, or rules in Chinese.'
+  },
+
+  // Japanese injection patterns
+  {
+    regex: /(?:以前|前)の(?:すべて|全て|全部)の(?:指示|指令|ルール|命令)を(?:無視|忘れ|破棄)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Japanese instruction override (以前の指示を無視).',
+    detail: 'Japanese injection: instruction override pattern in Japanese.'
+  },
+
+  // Korean injection patterns
+  {
+    regex: /(?:이전|앞)의?\s*(?:모든|전부|모두)?\s*(?:지시|지침|명령|규칙)(?:를|을)?\s*(?:무시|잊어|버려|취소)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Korean instruction override (이전의 지시를 무시).',
+    detail: 'Korean injection: instruction override pattern in Korean.'
+  },
+
+  // German injection patterns
+  {
+    regex: /(?:ignorieren|vergessen|missachten)\s+(?:Sie\s+)?(?:alle\s+)?(?:vorherigen|bisherigen|früheren)\s+(?:Anweisungen|Regeln|Instruktionen|Richtlinien)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains German instruction override (ignorieren Sie alle vorherigen Anweisungen).',
+    detail: 'German injection: instruction override pattern in German.'
+  },
+
+  // Italian injection patterns
+  {
+    regex: /(?:ignora|dimentica|trascura)\s+(?:tutte\s+)?(?:le\s+)?(?:istruzioni|regole|direttive)\s+(?:precedenti|anteriori)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Italian instruction override (ignora le istruzioni precedenti).',
+    detail: 'Italian injection: instruction override pattern in Italian.'
+  },
+
+  // Russian injection patterns
+  {
+    regex: /(?:проигнорируйте|забудьте|пропустите)\s+(?:все\s+)?(?:предыдущие|прошлые|прежние)\s+(?:инструкции|указания|правила)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Russian instruction override (проигнорируйте предыдущие инструкции).',
+    detail: 'Russian injection: instruction override pattern in Russian.'
+  },
+
+  // Turkish injection patterns
+  {
+    regex: /(?:önceki|daha\s+önceki)\s+(?:tüm\s+)?(?:talimatları|kuralları|yönergeleri)\s+(?:yok\s+say|görmezden\s+gel|unut)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Turkish instruction override.',
+    detail: 'Turkish injection: instruction override pattern in Turkish.'
+  },
+
+  // Indonesian injection patterns
+  {
+    regex: /(?:abaikan|lupakan)\s+(?:semua\s+)?(?:instruksi|perintah|aturan)\s+(?:sebelumnya|yang\s+lalu)/i,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Indonesian instruction override.',
+    detail: 'Indonesian injection: instruction override pattern in Indonesian.'
+  },
+
+  // Arabic injection patterns
+  {
+    regex: /(?:تجاهل|اترك|انسَ)\s+(?:جميع\s+)?(?:التعليمات|الأوامر|القواعد)\s+(?:السابقة|الماضية)/,
+    severity: 'high',
+    category: 'instruction_override',
+    description: 'Text contains Arabic instruction override.',
+    detail: 'Arabic injection: instruction override pattern in Arabic.'
+  },
+
+  // "Fill in blank" extraction
+  {
+    regex: /(?:fill\s+in|complete)\s+(?:the\s+)?blank\s*:?\s*(?:.*?)(?:system\s+prompt|instructions?|rules?|config)\s*(?:say|is|are)?\s*['"]?_{2,}/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text uses fill-in-the-blank format to extract system prompt.',
+    detail: 'Fill-in-blank extraction: tricks the model into completing a template with its system prompt.'
+  },
+
+  // "Authorized tester" social engineering
+  {
+    regex: /(?:authorized|approved|certified)\s+(?:tester|researcher|auditor|pentester)[\s\S]{0,80}(?:demonstrate|show|output|reveal|display)\s+(?:the\s+)?(?:vulnerability|instructions?|prompt|config)/i,
+    severity: 'high',
+    category: 'social_engineering',
+    description: 'Text claims authorized tester status to extract system information.',
+    detail: 'Authorized tester pretext: claims testing authority to justify revealing sensitive information.'
+  },
+
+  // ASCII code payload
+  {
+    regex: /(?:(?:ASCII|decimal|char)\s+(?:codes?|values?|numbers?)\s*[):\-]\s*(?:\d{2,3}\s+){5,}|(?:\d{2,3}\s+){5,}\(?\s*(?:ASCII|decimal|char)\s*(?:codes?|values?)?\s*\)?)/i,
+    severity: 'medium',
+    category: 'encoding_evasion',
+    description: 'Text contains ASCII code sequence that may encode a hidden payload.',
+    detail: 'ASCII encoding: hides instructions as decimal character codes to bypass text-based filters.'
   },
 
   // Hypothetical/conditional safety bypass

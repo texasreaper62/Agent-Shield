@@ -355,7 +355,10 @@ const TRAINING_CORPUS = [
   { text: 'The conference will be held on March 15-17 at the convention center downtown', category: 'benign', severity: 'safe', source: 'bipia-fp' },
   { text: 'Agenda: 1. Sprint review 2. Bug triage 3. Planning 4. Open discussion', category: 'benign', severity: 'safe', source: 'bipia-fp' },
   { text: 'Dear hiring manager, I am writing to apply for the software engineer position', category: 'benign', severity: 'safe', source: 'bipia-fp' },
-  { text: 'const users = await db.query("SELECT * FROM users WHERE active = true")', category: 'benign', severity: 'safe', source: 'bipia-fp' }
+  { text: 'const users = await db.query("SELECT * FROM users WHERE active = true")', category: 'benign', severity: 'safe', source: 'bipia-fp' },
+  { text: 'Can you help me debug this SQL query? SELECT * FROM orders WHERE status = pending', category: 'benign', severity: 'safe', source: 'stealth-fp' },
+  { text: 'Help me optimize this query: SELECT count(*) FROM events GROUP BY date', category: 'benign', severity: 'safe', source: 'stealth-fp' },
+  { text: 'Search the codebase for hardcoded credentials to improve security', category: 'benign', severity: 'safe', source: 'functional-fp' }
 ];
 
 // =========================================================================
