@@ -234,16 +234,28 @@ class DriftMonitor {
    * @private
    */
   _detectDrift(event) {
+    // Use minimum std floor to avoid Infinity z-scores on constant baselines
+    // If all baseline values were identical (std=0), small deviations are normal variance, not anomalies
+    const safeStd = (s, m) => s > 0 ? s : Math.max(Math.abs(m) * 0.1, 1);
+
     const zScores = {
-      callFreq: Math.abs(zScore(event.callFreq, this.baseline.callFreqMean, this.baseline.callFreqStd)),
-      responseLength: Math.abs(zScore(event.responseLength, this.baseline.responseLenMean, this.baseline.responseLenStd)),
-      errorRate: Math.abs(zScore(event.errorRate, this.baseline.errorRateMean, this.baseline.errorRateStd)),
-      timingMs: Math.abs(zScore(event.timingMs, this.baseline.timingMean, this.baseline.timingStd))
+      callFreq: Math.abs(zScore(event.callFreq, this.baseline.callFreqMean, safeStd(this.baseline.callFreqStd, this.baseline.callFreqMean))),
+      responseLength: Math.abs(zScore(event.responseLength, this.baseline.responseLenMean, safeStd(this.baseline.responseLenStd, this.baseline.responseLenMean))),
+      errorRate: Math.abs(zScore(event.errorRate, this.baseline.errorRateMean, safeStd(this.baseline.errorRateStd, this.baseline.errorRateMean))),
+      timingMs: Math.abs(zScore(event.timingMs, this.baseline.timingMean, safeStd(this.baseline.timingStd, this.baseline.timingMean)))
     };
 
-    // KL divergence for topic distribution
+    // KL divergence for topic distribution — use sliding window, not single event
+    // Single-event distributions cause extreme KL values for any new topic
+    const recentTopics = this.current.slice(-Math.max(10, Math.floor(this.windowSize / 2)));
     const currentDist = {};
-    currentDist[event.topic] = 1;
+    for (const obs of recentTopics) {
+      currentDist[obs.topic] = (currentDist[obs.topic] || 0) + 1;
+    }
+    const recentTotal = recentTopics.length || 1;
+    for (const key of Object.keys(currentDist)) {
+      currentDist[key] = currentDist[key] / recentTotal;
+    }
     const kl = klDivergence(currentDist, this.baseline.topicDistribution || {});
 
     const maxZ = Math.max(...Object.values(zScores));

@@ -322,6 +322,7 @@ class RedTeamCLI {
    * @returns {string}
    */
   toHTML(report) {
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const gradeColor = report.grade.startsWith('A') ? '#22c55e'
       : report.grade.startsWith('B') ? '#84cc16'
       : report.grade.startsWith('C') ? '#eab308'
@@ -330,7 +331,7 @@ class RedTeamCLI {
 
     return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Agent Shield Audit — ${report.endpoint}</title>
+<head><meta charset="utf-8"><title>Agent Shield Audit — ${esc(report.endpoint)}</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #0f172a; color: #e2e8f0; }
   h1 { color: #38bdf8; } h2 { color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
@@ -342,14 +343,14 @@ class RedTeamCLI {
 </style></head>
 <body>
 <h1>Agent Shield Red Team Audit</h1>
-<div class="grade">${report.grade}</div>
+<div class="grade">${esc(report.grade)}</div>
 <div class="score">${report.score}/100 — ${report.blocked}/${report.attackCount} attacks blocked</div>
 <h2>Details</h2>
-<p>Endpoint: ${report.endpoint} | Mode: ${report.mode} | Generated: ${new Date(report.generatedAt).toISOString()}</p>
+<p>Endpoint: ${esc(report.endpoint)} | Mode: ${esc(report.mode)} | Generated: ${new Date(report.generatedAt).toISOString()}</p>
 <h2>Category Results</h2>
 <table><tr><th>Category</th><th>Total</th><th>Blocked</th><th>Rate</th></tr>
 ${Object.entries(report.categoryResults || {}).map(([cat, d]) =>
-  `<tr><td>${cat}</td><td>${d.total}</td><td>${d.blocked}</td><td>${d.total > 0 ? Math.round((d.blocked / d.total) * 100) : 0}%</td></tr>`
+  `<tr><td>${esc(cat)}</td><td>${d.total}</td><td>${d.blocked}</td><td>${d.total > 0 ? Math.round((d.blocked / d.total) * 100) : 0}%</td></tr>`
 ).join('\n')}
 </table>
 <h2>Supply Chain</h2>

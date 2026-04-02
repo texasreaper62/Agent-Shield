@@ -103,6 +103,36 @@ const CVE_REGISTRY = Object.freeze({
       description: 'Microsoft Excel XSS weaponizes Copilot Agent for zero-click data exfiltration via unintended network egress.',
       fix: 'Apply March 2026 Patch Tuesday update. Restrict Copilot Agent network access in enterprise policies.'
     }
+  ],
+  'fastmcp': [
+    {
+      cve: 'CVE-2026-32871',
+      severity: 'critical',
+      description: 'FastMCP OpenAPI Provider SSRF + Path Traversal (CVSS 10.0). _build_url() does not URL-encode path parameters. urljoin() interprets ../ sequences, allowing attackers to escape API prefix and access arbitrary backend endpoints with the server\'s auth headers.',
+      fix: 'Upgrade FastMCP to >=3.2.0. Validate and URL-encode all path parameters before URL construction.'
+    }
+  ],
+  'claude-code': [
+    {
+      cve: 'CVE-2025-59536',
+      severity: 'critical',
+      description: 'Claude Code code injection (CVSS 8.7). Malicious repo configs exploit Hooks to auto-execute arbitrary shell commands when a user starts Claude Code in an untrusted directory.',
+      fix: 'Upgrade Claude Code to >=1.0.111. Never open untrusted repos without reviewing .claude/ config files first.'
+    },
+    {
+      cve: 'CVE-2026-21852',
+      severity: 'high',
+      description: 'Claude Code API key exfiltration (CVSS 5.3). ANTHROPIC_BASE_URL can be overridden in project config to redirect all API calls to attacker server, leaking API keys with zero user interaction.',
+      fix: 'Upgrade Claude Code to >=2.0.65. Audit project .claude/ settings for ANTHROPIC_BASE_URL overrides.'
+    }
+  ],
+  'mcpjam-inspector': [
+    {
+      cve: 'CVE-2026-23744',
+      severity: 'critical',
+      description: 'MCPJam Inspector RCE. HTTP server binds to 0.0.0.0 by default with no authentication on server management endpoint. Any device on the same network can execute arbitrary commands.',
+      fix: 'Upgrade MCPJam Inspector to >=1.4.3. Bind to 127.0.0.1 only. Add authentication to management endpoints.'
+    }
   ]
 });
 
@@ -243,6 +273,16 @@ class SupplyChainScanner {
     // Analyze escalation chains
     this._analyzeEscalationChains(toolList, findings);
 
+    // Auth quality assessment
+    if (context.auth) {
+      this._assessAuthQuality(context.auth, serverName, findings);
+    }
+
+    // Config file poisoning check (ref CVE-2025-59536, CVE-2026-21852)
+    if (context.configFiles) {
+      this._scanConfigFiles(context.configFiles, findings);
+    }
+
     // Fingerprint drift check
     if (context.previousFingerprint) {
       const currentFp = this.fingerprintServer(server);
@@ -342,7 +382,7 @@ class SupplyChainScanner {
         tool: {
           driver: {
             name: 'Agent Shield Supply Chain Scanner',
-            version: '10.0.0',
+            version: '11.0.0',
             rules
           }
         },
@@ -396,6 +436,58 @@ class SupplyChainScanner {
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Get a CI/CD exit code based on scan results.
+   * 0 = pass, 1 = warnings, 2 = critical failures.
+   *
+   * @param {object} report - Report from scanServer().
+   * @param {object} [options]
+   * @param {string} [options.failOn='high'] - Minimum severity to fail: 'critical', 'high', 'medium', 'low'.
+   * @returns {{ exitCode: number, reason: string }}
+   */
+  getCIExitCode(report, options = {}) {
+    const failOn = options.failOn || 'high';
+    const severityRank = { critical: 4, high: 3, medium: 2, low: 1 };
+    const threshold = severityRank[failOn] || 3;
+
+    const failingFindings = report.findings.filter(f => (severityRank[f.severity] || 0) >= threshold);
+
+    if (failingFindings.length === 0) {
+      return { exitCode: 0, reason: 'All checks passed.' };
+    }
+
+    const hasCritical = failingFindings.some(f => f.severity === 'critical');
+    return {
+      exitCode: hasCritical ? 2 : 1,
+      reason: `${failingFindings.length} finding(s) at or above "${failOn}" severity. ${hasCritical ? 'Critical issues found.' : 'Review recommended.'}`
+    };
+  }
+
+  /**
+   * Enforce security policy — throws if scan fails.
+   * Use in CI/CD pipelines to block deployments.
+   *
+   * @param {object} server - Server definition.
+   * @param {object} [options]
+   * @param {string} [options.failOn='high'] - Minimum severity to fail.
+   * @param {object} [options.context] - Scan context.
+   * @returns {object} Report if scan passes.
+   * @throws {Error} If scan fails policy.
+   */
+  enforce(server, options = {}) {
+    const report = this.scanServer(server, options.context || {});
+    const { exitCode, reason } = this.getCIExitCode(report, { failOn: options.failOn });
+
+    if (exitCode > 0) {
+      const err = new Error(`[Agent Shield] Supply chain scan failed: ${reason}`);
+      err.exitCode = exitCode;
+      err.report = report;
+      throw err;
+    }
+
+    return report;
   }
 
   // -----------------------------------------------------------------------
@@ -521,6 +613,112 @@ class SupplyChainScanner {
         severity: 'high',
         message: 'Filesystem-access tool + shell-execution tool chain detected. An attacker could write and execute malicious scripts.',
         recommendation: 'Sandbox shell execution. Restrict filesystem write paths. Add confirmation gates.'
+      });
+    }
+  }
+
+  /**
+   * Scan config files for poisoning (malicious hooks, URL overrides).
+   * Ref: CVE-2025-59536 (Claude Code Hooks RCE), CVE-2026-21852 (API key theft).
+   * @private
+   */
+  _scanConfigFiles(configFiles, findings) {
+    const dangerousHooks = /(?:preToolCall|postToolCall|onSessionStart|afterResponse|hooks)\s*[=:]/i;
+    const urlOverride = /(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE|baseUrl|base_url)\s*[=:]\s*['"]?https?:\/\//i;
+    const shellCommands = /(?:curl|wget|bash|sh|node|python|nc|ncat|exec|eval)\b/i;
+    const mcpAutoApprove = /(?:autoApprove|auto_approve|allowAll|trust_all)["']?\s*[=:]\s*(?:true|yes|1|"true")/i;
+
+    for (const file of (Array.isArray(configFiles) ? configFiles : [])) {
+      const content = typeof file === 'string' ? file : (file.content || '');
+      const name = (file && file.name) || 'unknown config';
+
+      if (dangerousHooks.test(content) && shellCommands.test(content)) {
+        findings.push({
+          type: 'config_hook_injection',
+          severity: 'critical',
+          message: `Config file "${name}" contains hooks with shell command execution (ref CVE-2025-59536).`,
+          recommendation: 'Remove shell commands from hook definitions. Audit all .claude/ and .cursor/ config files in repos before opening.'
+        });
+      }
+
+      if (urlOverride.test(content)) {
+        const match = content.match(/(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE|baseUrl|base_url)\s*[=:]\s*['"]?(https?:\/\/[^\s'"]+)/i);
+        const url = match ? match[1] : '';
+        if (url && !/api\.anthropic\.com|api\.openai\.com|localhost|127\.0\.0\.1/.test(url)) {
+          findings.push({
+            type: 'config_url_override',
+            severity: 'critical',
+            message: `Config file "${name}" overrides API URL to "${url.substring(0, 80)}" (ref CVE-2026-21852). Potential credential theft.`,
+            recommendation: 'Remove API URL overrides from project config. Only use official API endpoints.'
+          });
+        }
+      }
+
+      if (mcpAutoApprove.test(content)) {
+        findings.push({
+          type: 'config_auto_approve',
+          severity: 'high',
+          message: `Config file "${name}" auto-approves MCP servers without user consent.`,
+          recommendation: 'Disable auto-approve. Require explicit user confirmation for each MCP server.'
+        });
+      }
+    }
+  }
+
+  /**
+   * Assess authentication quality for an MCP server.
+   * Ref: 38% of public MCP servers lack authentication entirely.
+   * @private
+   */
+  _assessAuthQuality(auth, serverName, findings) {
+    if (!auth || auth.type === 'none') {
+      findings.push({
+        type: 'no_authentication',
+        severity: 'critical',
+        message: `Server "${serverName}" has no authentication configured. 38% of MCP servers share this vulnerability.`,
+        recommendation: 'Add OAuth 2.0 or API key authentication. Never run MCP servers without auth.'
+      });
+      return;
+    }
+
+    // Weak token check
+    if (auth.token && auth.token.length < 32) {
+      findings.push({
+        type: 'weak_auth_token',
+        severity: 'high',
+        message: `Server "${serverName}" uses a short auth token (${auth.token.length} chars). Minimum recommended: 32.`,
+        recommendation: 'Use cryptographically random tokens of at least 32 characters.'
+      });
+    }
+
+    // No expiry
+    if (auth.type === 'oauth' && !auth.expiresAt && !auth.exp) {
+      findings.push({
+        type: 'no_token_expiry',
+        severity: 'medium',
+        message: `Server "${serverName}" OAuth token has no expiration. Compromised tokens persist indefinitely.`,
+        recommendation: 'Set token expiry to 1 hour maximum. Implement token rotation.'
+      });
+    }
+
+    // No scopes
+    if (auth.type === 'oauth' && (!auth.scopes || auth.scopes.length === 0)) {
+      findings.push({
+        type: 'no_scope_restriction',
+        severity: 'medium',
+        message: `Server "${serverName}" OAuth token has no scope restrictions. Agent has unlimited access.`,
+        recommendation: 'Define least-privilege scopes for each MCP server connection.'
+      });
+    }
+
+    // Default/common credentials
+    const weakPatterns = /^(?:test|admin|password|12345|secret|default|changeme|token)/i;
+    if (auth.token && weakPatterns.test(auth.token)) {
+      findings.push({
+        type: 'default_credentials',
+        severity: 'critical',
+        message: `Server "${serverName}" appears to use default or common credentials.`,
+        recommendation: 'Generate unique, cryptographically random credentials for each server.'
       });
     }
   }

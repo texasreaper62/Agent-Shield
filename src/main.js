@@ -359,6 +359,33 @@ const { DriftMonitor, klDivergence: driftKLDivergence } = safeRequire('./drift-m
 // v10.0 — Micro Detection Model (March 2026 attack corpus)
 const { MicroModel, TRAINING_CORPUS: MICRO_MODEL_CORPUS } = safeRequire('./micro-model', 'micro-model');
 
+// v10.0 L5 — Adversarial Self-Training
+const { SelfTrainer: L5SelfTrainer, MutationEngine: L5MutationEngine, AutonomousHardener } = safeRequire('./self-training', 'self-training');
+
+// v10.0 L5 — Causal Intent Graph
+const { IntentGraph, extractTopics, jaccardSimilarity: intentJaccard, SUSPICIOUS_TRANSITIONS: INTENT_SUSPICIOUS_TRANSITIONS } = safeRequire('./intent-graph', 'intent-graph');
+
+// v10.0 L5 — Semantic Isolation Engine
+const { SemanticIsolationEngine, IsolationPolicy, TaggedContent, PROVENANCE: ISOLATION_PROVENANCE, TRUST_LEVELS } = safeRequire('./semantic-isolation', 'semantic-isolation');
+
+// v10.0 L5 — Cryptographic Intent Binding
+const { IntentBinder, IntentToken } = safeRequire('./intent-binding', 'intent-binding');
+
+// v10.0 L5 — Attack Surface Mapper
+const { AttackSurfaceMapper, CAPABILITY_RISK, CAPABILITY_PATTERNS } = safeRequire('./attack-surface', 'attack-surface');
+
+// v10.0 SOTA — Prompt Hardening
+const { PromptHardener, DEFENSIVE_TEMPLATES, SYSTEM_PROMPT_HARDENING } = safeRequire('./prompt-hardening', 'prompt-hardening');
+
+// v10.0 SOTA — Message Integrity
+const { MessageIntegrityChain } = safeRequire('./message-integrity', 'message-integrity');
+
+// v10.0 SOTA — Continuous Security Service
+const { ContinuousSecurityService } = safeRequire('./continuous-security', 'continuous-security');
+
+// v10.0 SOTA — Benchmark Suite
+const { SOTABenchmark, BIPIA_SAMPLES: SOTA_BIPIA_SAMPLES, HACKAPROMPT_SAMPLES: SOTA_HACKAPROMPT_SAMPLES, MCPTOX_SAMPLES: SOTA_MCPTOX_SAMPLES, MULTILINGUAL_SAMPLES: SOTA_MULTILINGUAL_SAMPLES, STEALTH_SAMPLES: SOTA_STEALTH_SAMPLES } = safeRequire('./sota-benchmark', 'sota-benchmark');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -960,6 +987,52 @@ const _exports = {
   // v10.0 — Micro Detection Model
   MicroModel,
   MICRO_MODEL_CORPUS,
+
+  // v10.0 L5 — Adversarial Self-Training
+  L5SelfTrainer,
+  L5MutationEngine,
+  AutonomousHardener,
+
+  // v10.0 L5 — Causal Intent Graph
+  IntentGraph,
+  extractTopics,
+  intentJaccard,
+  INTENT_SUSPICIOUS_TRANSITIONS,
+
+  // v10.0 L5 — Semantic Isolation Engine
+  SemanticIsolationEngine,
+  IsolationPolicy,
+  TaggedContent,
+  ISOLATION_PROVENANCE,
+  TRUST_LEVELS,
+
+  // v10.0 L5 — Cryptographic Intent Binding
+  IntentBinder,
+  IntentToken,
+
+  // v10.0 L5 — Attack Surface Mapper
+  AttackSurfaceMapper,
+  CAPABILITY_RISK,
+  CAPABILITY_PATTERNS,
+
+  // v10.0 SOTA — Prompt Hardening
+  PromptHardener,
+  DEFENSIVE_TEMPLATES,
+  SYSTEM_PROMPT_HARDENING,
+
+  // v10.0 SOTA — Message Integrity
+  MessageIntegrityChain,
+
+  // v10.0 SOTA — Continuous Security Service
+  ContinuousSecurityService,
+
+  // v10.0 SOTA — Benchmark Suite
+  SOTABenchmark,
+  SOTA_BIPIA_SAMPLES,
+  SOTA_HACKAPROMPT_SAMPLES,
+  SOTA_MCPTOX_SAMPLES,
+  SOTA_MULTILINGUAL_SAMPLES,
+  SOTA_STEALTH_SAMPLES,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
