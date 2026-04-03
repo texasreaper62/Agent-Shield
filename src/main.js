@@ -80,9 +80,6 @@ const { PrometheusExporter, DatadogLogger, MetricsCollector: ObservabilityMetric
 // v5.1 — Benchmark harness
 const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, BenchmarkReportGenerator } = safeRequire('./benchmark-harness', 'benchmark-harness');
 
-// Text Normalizer
-const { TextNormalizer, normalize: normalizeText, HOMOGLYPH_MAP: NORMALIZER_HOMOGLYPH_MAP, LEET_MAP, DEFAULT_LAYERS } = safeRequire('./normalizer', 'normalizer');
-
 // Integrations
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
@@ -111,24 +108,6 @@ const { Allowlist, ConfidenceCalibrator, FeedbackLoop, ScanCache } = safeRequire
 
 // Presets & Config Builder
 const { PRESETS, ConfigBuilder, SnippetGenerator, getPresets, getPreset } = safeRequire('./presets', 'presets');
-
-// v8.0 — Smart Config
-const { ShieldBuilder, createShield, validateConfig, describeConfig, FEATURE_DEFAULTS, VALID_PRESETS } = safeRequire('./smart-config', 'smart-config');
-
-// v8.0 — Ensemble Detection
-const { EnsembleClassifier, PatternVoter, TFIDFVoter, EntropyVoter, IPIAVoter, VOTER_NAMES } = safeRequire('./ensemble', 'ensemble');
-
-// v8.0 — Agent Intent & Goal Drift
-const { AgentIntent, GoalDriftDetector, ToolSequenceModeler } = safeRequire('./agent-intent', 'agent-intent');
-
-// v8.0 — Persistent Learning & Feedback
-const { PersistentLearningLoop, FeedbackCollector } = safeRequire('./persistent-learning', 'persistent-learning');
-
-// v8.0 — Cross-Turn & Adaptive Thresholds
-const { CrossTurnTracker, AdaptiveThresholdCalibrator } = safeRequire('./cross-turn', 'cross-turn');
-
-// v8.0 — Adversarial Self-Training
-const { SelfTrainer, MutationEngine: SelfTrainingMutationEngine, SEED_ATTACKS, MUTATION_STRATEGIES } = safeRequire('./self-training', 'self-training');
 
 // Advanced Scanners
 const { RAGScanner, RAG_INJECTION_PATTERNS, PromptLinter, LINT_RULES, ToolSchemaValidator, DANGEROUS_TOOL_PATTERNS } = safeRequire('./scanners', 'scanners');
@@ -190,9 +169,6 @@ const { AdaptiveDetector, SemanticAnalysisHook, CommunityPatterns } = safeRequir
 
 // OpenClaw
 const { OpenClawShieldSkill, shieldOpenClawMessages, generateOpenClawSkill } = safeRequire('./openclaw', 'openclaw');
-
-// v8.0 — ML Detection (Pro/Enterprise)
-const { MLShield, isMLTier, isValidTier, loadMLPackage, ML_ENABLED_TIERS, VALID_TIERS } = safeRequire('./ml-detector', 'ml-detector');
 
 // v7.2 — IPIA Detector
 const { IPIADetector, ContextConstructor, FeatureExtractor, TreeClassifier, ExternalEmbedder, createIPIAScanner, ipiaMiddleware, FEATURE_NAMES: IPIA_FEATURE_NAMES, INJECTION_LEXICON: IPIA_INJECTION_LEXICON } = safeRequire('./ipia-detector', 'ipia-detector');
@@ -882,14 +858,6 @@ const _exports = {
   CERTIFICATION_REQUIREMENTS,
   CERTIFICATION_LEVELS,
 
-  // v8.0 — ML Detection (Pro/Enterprise)
-  MLShield,
-  isMLTier,
-  isValidTier,
-  loadMLPackage,
-  ML_ENABLED_TIERS,
-  VALID_TIERS,
-
   // v7.2 — IPIA Detector
   IPIADetector,
   ContextConstructor,
@@ -1111,7 +1079,6 @@ const _exports = {
   AUTHORITY_FRAMEWORKS,
   CA_CAPABILITY_MAP,
   CA_CERTIFICATE_LEVELS,
-
 };
 
 // Filter out undefined exports (from modules that failed to load)
