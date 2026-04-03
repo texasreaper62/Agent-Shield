@@ -2531,661 +2531,332 @@ export declare const IPIA_FEATURE_NAMES: string[];
 export declare const IPIA_INJECTION_LEXICON: Record<string, number>;
 
 // =========================================================================
-// v8.0 — Smart Config
+// v10-v11: MCP Guard
 // =========================================================================
 
-export type PresetName =
-  | 'chatbot'
-  | 'coding_agent'
-  | 'rag_pipeline'
-  | 'customer_support'
-  | 'internal_tool'
-  | 'multi_agent'
-  | 'high_security'
-  | 'minimal'
-  | 'mcp_server';
-
-export type SensitivityLevel = 'low' | 'medium' | 'high';
-
-export type BlockThresholdLevel = 'low' | 'medium' | 'high' | 'critical';
-
-export type VoterName = 'pattern' | 'tfidf' | 'entropy' | 'ipia' | 'semantic' | 'behavioral' | 'heuristic';
-
-export interface IntentConfig {
-  purpose?: string;
-  allowedTools?: string[];
-  allowedTopics?: string[];
-  maxDriftScore?: number;
+export declare class MCPGuard {
+  constructor(options?: {
+    requireAuth?: boolean;
+    allowedIssuers?: string[];
+    requiredScopes?: string[];
+    rateLimit?: number;
+    cbThreshold?: number;
+    cbCooldownMs?: number;
+    baselineWindow?: number;
+    zThreshold?: number;
+    onAlert?: (alert: any) => void;
+    scanner?: (text: string) => any;
+    enableMicroModel?: boolean;
+    enableIntentGraph?: boolean;
+    enableIsolation?: boolean;
+    enableIntentBinding?: boolean;
+    enableAttackSurface?: boolean;
+    enableDriftMonitor?: boolean;
+    enableOWASP?: boolean;
+    signingKey?: string;
+    model?: string;
+  });
+  registerServer(serverId: string, toolDefinitions: any, authToken?: any): { allowed: boolean; attestation: any; auth: any; threats: any[] };
+  interceptToolCall(serverId: string, toolName: string, args: any): { allowed: boolean; threats: any[]; anomalies: any[] };
+  interceptToolOutput(serverId: string, toolName: string, output: any, responseTimeMs?: number): { safe: boolean; threats: any[]; anomalies: any[] };
+  setUserIntent(intentText: string): { intentHash: string | null; allowedActions: string[] };
+  detectAttackChains(): { chains: any[]; riskLevel: string };
+  registerAgent(agentId: string, metadata?: { model?: string; servers?: string[]; capabilities?: string[]; owner?: string }): { agentId: string; riskProfile: any; registered: boolean };
+  recordAgentActivity(agentId: string, hadThreat: boolean): void;
+  getFleetStatus(): { totalAgents: number; highRiskAgents: number; agents: any[]; fleetRiskLevel: string };
+  getSecurityPosture(): { securityScore: number; grade: string; activeLayers: number; totalLayers: number; layerCoverage: string; layers: any; servers: any; chainAnalysis: any; timestamp: number };
+  measureDefenseEffectiveness(): { effectiveness: any; totalAttacks: number; recommendation: string };
+  getReport(): any;
+  getAuditLog(): any[];
+  resetCircuitBreaker(serverId: string): void;
 }
 
-export interface LearningConfig {
-  persist?: boolean;
-  persistPath?: string;
-  promotionThreshold?: number;
-  maxPatterns?: number;
+export declare class ServerAttestation {
+  attest(serverId: string, toolDefinitions: any): { trusted: boolean; hash: string; changed: boolean; alert: any | null };
+  update(serverId: string, toolDefinitions: any): void;
+  get(serverId: string): any | null;
+  getAlerts(): any[];
+  clearAlerts(): void;
 }
 
-export interface FeedbackConfig {
-  autoRetrain?: boolean;
-  maxPending?: number;
-  cooldownMs?: number;
+export declare class CrossServerIsolation {
+  registerServer(serverId: string, toolNames: string[]): void;
+  validate(callingServerId: string, toolName: string, args: any): { allowed: boolean; violation: any | null };
+  getOwner(toolName: string): string | null;
 }
 
-export interface EnsembleConfig {
-  voters?: VoterName[];
-  threshold?: number;
-  requireUnanimous?: boolean;
+export declare class OAuthEnforcer {
+  constructor(options?: { required?: boolean; allowedIssuers?: string[]; requiredScopes?: string[]; clockSkewMs?: number });
+  validate(token: any | null): { authenticated: boolean; reason: string | null };
 }
 
-export interface GoalDriftConfig {
-  checkInterval?: number;
-  driftThreshold?: number;
-  windowSize?: number;
+export declare class ToolBehaviorBaseline {
+  constructor(options?: { windowSize?: number; zThreshold?: number });
+  record(toolName: string, observation?: { argLength?: number; responseTimeMs?: number; isError?: boolean }): { anomalies: any[] };
+  getBaseline(toolName: string): any | null;
 }
-
-export interface CrossTurnConfig {
-  windowSize?: number;
-  scanInterval?: number;
-  accumulateAll?: boolean;
-}
-
-export interface ToolSequenceConfig {
-  learningPeriod?: number;
-  anomalyThreshold?: number;
-  maxChainLength?: number;
-}
-
-export interface AdaptiveThresholdsConfig {
-  calibrationSamples?: number;
-  adjustInterval?: number;
-  minConfidence?: number;
-}
-
-export interface SelfTrainingConfig {
-  generations?: number;
-  populationSize?: number;
-  mutationRate?: number;
-  interval?: number;
-}
-
-export interface ShieldCallbacks {
-  onThreat?: ((threatInfo: any) => void) | null;
-  onDrift?: ((driftInfo: any) => void) | null;
-  onAnomaly?: ((anomalyInfo: any) => void) | null;
-}
-
-export interface ShieldConfig {
-  preset: PresetName | null;
-  sensitivity: SensitivityLevel;
-  blockOnThreat: boolean;
-  blockThreshold: BlockThresholdLevel;
-  intent: IntentConfig | null;
-  learning: LearningConfig | null;
-  feedback: FeedbackConfig | null;
-  ensemble: EnsembleConfig | null;
-  goalDrift: GoalDriftConfig | null;
-  crossTurn: CrossTurnConfig | null;
-  toolSequence: ToolSequenceConfig | null;
-  adaptiveThresholds: AdaptiveThresholdsConfig | null;
-  selfTraining: SelfTrainingConfig | null;
-  readonly callbacks: ShieldCallbacks;
-}
-
-export interface ConfigValidationResult {
-  valid: boolean;
-  errors: string[];
-}
-
-export declare class ShieldBuilder {
-  constructor();
-  preset(name: PresetName): this;
-  sensitivity(level: SensitivityLevel): this;
-  blockOnThreat(bool: boolean): this;
-  blockThreshold(level: BlockThresholdLevel): this;
-  enableIntent(opts?: IntentConfig): this;
-  enableLearning(opts?: LearningConfig): this;
-  enableFeedback(opts?: FeedbackConfig): this;
-  enableEnsemble(opts?: EnsembleConfig): this;
-  enableGoalDrift(opts?: GoalDriftConfig): this;
-  enableCrossTurn(opts?: CrossTurnConfig): this;
-  enableToolSequence(opts?: ToolSequenceConfig): this;
-  enableAdaptiveThresholds(opts?: AdaptiveThresholdsConfig): this;
-  enableSelfTraining(opts?: SelfTrainingConfig): this;
-  onThreat(callback: (threatInfo: any) => void): this;
-  onDrift(callback: (driftInfo: any) => void): this;
-  onAnomaly(callback: (anomalyInfo: any) => void): this;
-  build(): ShieldConfig;
-}
-
-export declare function createShield(): ShieldBuilder;
-export declare function createShield(preset: PresetName): ShieldConfig;
-export declare function createShield(config: {
-  preset?: PresetName;
-  sensitivity?: SensitivityLevel;
-  blockOnThreat?: boolean;
-  blockThreshold?: BlockThresholdLevel;
-  intent?: IntentConfig | boolean;
-  learning?: LearningConfig | boolean;
-  feedback?: FeedbackConfig | boolean;
-  ensemble?: EnsembleConfig | boolean;
-  goalDrift?: GoalDriftConfig | boolean;
-  crossTurn?: CrossTurnConfig | boolean;
-  toolSequence?: ToolSequenceConfig | boolean;
-  adaptiveThresholds?: AdaptiveThresholdsConfig | boolean;
-  selfTraining?: SelfTrainingConfig | boolean;
-  onThreat?: (threatInfo: any) => void;
-  onDrift?: (driftInfo: any) => void;
-  onAnomaly?: (anomalyInfo: any) => void;
-}): ShieldConfig;
-export declare function createShield(builder: ShieldBuilder): ShieldConfig;
-
-export declare function validateConfig(config: any): ConfigValidationResult;
-export declare function describeConfig(config: ShieldConfig): string;
-
-export declare const FEATURE_DEFAULTS: {
-  intent: Required<IntentConfig>;
-  learning: Required<LearningConfig>;
-  feedback: Required<FeedbackConfig>;
-  ensemble: Required<EnsembleConfig>;
-  goalDrift: Required<GoalDriftConfig>;
-  crossTurn: Required<CrossTurnConfig>;
-  toolSequence: Required<ToolSequenceConfig>;
-  adaptiveThresholds: Required<AdaptiveThresholdsConfig>;
-  selfTraining: Required<SelfTrainingConfig>;
-};
-
-export declare const VALID_PRESETS: PresetName[];
 
 // =========================================================================
-// v8.0 — Ensemble Voting Classifier
+// v10-v11: Supply Chain Scanner
 // =========================================================================
 
-export interface VoteResult {
-  voter: string;
-  isInjection: boolean;
-  confidence: number;
-  reason: string;
+export declare class SupplyChainScanner {
+  constructor(options?: { knownBadServers?: any; cveRegistry?: any; enableMicroModel?: boolean });
+  fingerprintServer(server: any): string;
+  scanServer(server: { name: string; tools: any[] }, context?: { previousFingerprint?: string; auth?: any; configFiles?: any[] }): { server: string; status: string; score: number; highestSeverity: string; summary: any; findings: any[]; recommendations: string[]; generatedAt: number };
+  scanMultiple(servers: any[]): { serverCount: number; totalFindings: number; worstScore: number; reports: any[] };
+  toSARIF(report: any): any;
+  toMarkdown(report: any): string;
+  getCIExitCode(report: any, options?: { failOn?: string }): { exitCode: number; reason: string };
+  enforce(server: any, options?: { failOn?: string; context?: any }): any;
 }
 
-export interface EnsembleScanResult {
-  isInjection: boolean;
-  confidence: number;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  votes: VoteResult[];
-  agreement: number;
-  method: string;
-  timestamp: string;
-}
-
-export interface EnsembleStats {
-  totalScans: number;
-  injections: number;
-  safe: number;
-  averageAgreement: number;
-  averageConfidence: number;
-  voterCount: number;
-  voters: string[];
-}
-
-export interface EnsembleClassifierOptions {
-  voters?: VoterName[];
-  threshold?: number;
-  requireUnanimous?: boolean;
-  weights?: Record<string, number>;
-  minVoters?: number;
-  voterOptions?: Record<string, any>;
-}
-
-export declare class EnsembleClassifier {
-  threshold: number;
-  requireUnanimous: boolean;
-  minVoters: number;
-  weights: Record<string, number>;
-  constructor(config?: EnsembleClassifierOptions);
-  scan(text: string, context?: { intent?: string; source?: string; conversationHistory?: string[] }): EnsembleScanResult;
-  getStats(): EnsembleStats;
-}
-
-export declare class PatternVoter {
-  name: string;
-  constructor(options?: { source?: string });
-  vote(text: string, context?: any): VoteResult;
-}
-
-export declare class TFIDFVoter {
-  name: string;
-  constructor(options?: { similarityThreshold?: number });
-  vote(text: string, context?: any): VoteResult;
-}
-
-export declare class EntropyVoter {
-  name: string;
-  constructor(options?: { entropyThreshold?: number; ngramSize?: number });
-  vote(text: string, context?: any): VoteResult;
-}
-
-export declare class IPIAVoter {
-  name: string;
-  constructor(options?: { classifierThreshold?: number });
-  vote(text: string, context?: { intent?: string }): VoteResult;
-}
-
-export declare const VOTER_NAMES: string[];
+export declare const KNOWN_BAD_SERVERS: Record<string, { reason: string; severity: string }>;
+export declare const CVE_REGISTRY: Record<string, Array<{ cve: string; severity: string; description: string; fix: string }>>;
 
 // =========================================================================
-// v8.0 — Agent Intent & Goal Drift
+// v10-v11: OWASP Agentic Scanner
 // =========================================================================
 
-export interface MessageCheckResult {
-  onTopic: boolean;
-  relevanceScore: number;
-  drift: number;
-  reason: string;
+export declare class OWASPAgenticScanner {
+  constructor(options?: { failThreshold?: number });
+  scan(input: string | any): { score: number; exitCode: number; status: string; findings: any[]; summary: any; risks: any[] };
+  scanBatch(inputs: Array<string | any>): { inputCount: number; score: number; exitCode: number; status: string; findings: any[]; summary: any; riskCounts: any };
+  toJSON(scanResult: any): string;
+  toMarkdown(scanResult: any): string;
+  toSARIF(scanResult: any): any;
 }
 
-export interface ToolCheckResult2 {
-  allowed: boolean;
-  reason: string;
+export declare const OWASP_AGENTIC_2026: ReadonlyArray<{ id: string; name: string; severity: string; description: string; patterns: RegExp[]; remediation: string }>;
+
+// =========================================================================
+// v10-v11: Red Team CLI
+// =========================================================================
+
+export declare class RedTeamCLI {
+  constructor(options?: { scanFn?: (text: string) => any; enableMicroModel?: boolean });
+  run(endpoint: string, options?: { mode?: 'quick' | 'standard' | 'full'; compareWith?: any; serverName?: string; tools?: any[] }): any;
+  writeReports(report: any, outputDir?: string): { jsonPath: string; mdPath: string; htmlPath: string };
+  toMarkdown(report: any): string;
+  toHTML(report: any): string;
 }
 
-export interface DriftResult {
-  driftScore: number;
-  driftDetected: boolean;
-  trend: 'stable' | 'drifting' | 'recovering';
-  turnsSincePurpose: number;
-  topicShift: boolean;
-  reason: string;
-}
+export declare const REDTEAM_MODES: Readonly<{ quick: 50; standard: 200; full: 617 }>;
 
-export interface GoalDriftStats {
-  totalMessages: number;
-  messagesInWindow: number;
-  driftEvents: number;
-  topicShifts: number;
-  averageDrift: number;
-  maxDrift: number;
-  currentTrend: 'stable' | 'drifting' | 'recovering';
-  historyLength: number;
-}
+// =========================================================================
+// v10-v11: Drift Monitor
+// =========================================================================
 
-export interface ToolSequenceResult {
-  allowed: boolean;
-  anomalyScore: number;
-  probability: number;
-  isLearning: boolean;
-  reason: string;
-}
-
-export interface ToolSequenceStats {
-  totalCalls: number;
-  uniqueTools: number;
-  transitionCount: number;
-  anomalyCount: number;
-  isLearning: boolean;
-  learningProgress: number;
-  toolCounts: Record<string, number>;
-}
-
-export interface ToolSequenceExportData {
-  transitions: Record<string, Record<string, number>>;
-  toolCounts: Record<string, number>;
-  totalCalls: number;
-  anomalyCount: number;
-  learningPeriod: number;
-  anomalyThreshold: number;
-  exportedAt: string;
-}
-
-export interface AgentIntentOptions {
-  purpose: string;
-  allowedTools?: string[];
-  allowedTopics?: string[];
-  maxDriftScore?: number;
-  onDrift?: (info: any) => void;
-}
-
-export declare class AgentIntent {
-  purpose: string;
-  allowedTools: string[] | null;
-  allowedTopics: string[] | null;
-  maxDriftScore: number;
-  constructor(config: AgentIntentOptions);
-  checkMessage(message: string): MessageCheckResult;
-  checkTool(toolName: string, args?: any): ToolCheckResult2;
-  getPurposeVector(): Map<string, number>;
-}
-
-export interface GoalDriftDetectorOptions {
-  windowSize?: number;
-  driftThreshold?: number;
-  checkInterval?: number;
-  onDrift?: (info: any) => void;
-}
-
-export declare class GoalDriftDetector {
-  intent: AgentIntent;
-  windowSize: number;
-  driftThreshold: number;
-  checkInterval: number;
-  constructor(intent: AgentIntent, config?: GoalDriftDetectorOptions);
-  addMessage(message: string, role?: string): DriftResult;
-  getHistory(): number[];
+export declare class DriftMonitor {
+  constructor(options?: { windowSize?: number; alertThreshold?: number; klThreshold?: number; enableCircuitBreaker?: boolean; circuitBreaker?: any; prometheus?: any; metrics?: any; onAlert?: (alert: any) => void });
+  observe(event: { callFreq?: number; responseLength?: number; errorRate?: number; timingMs?: number; topic?: string }): { alert: boolean; zScores?: any; klDivergence?: number; maxZScore?: number; learning?: boolean; baselineReady?: boolean };
+  rebuildBaseline(): void;
+  getPeriodicSummary(): any;
+  getAlertHistory(): any[];
   reset(): void;
-  getStats(): GoalDriftStats;
-}
-
-export interface ToolSequenceModelerOptions {
-  learningPeriod?: number;
-  anomalyThreshold?: number;
-  maxChainLength?: number;
-}
-
-export declare class ToolSequenceModeler {
-  learningPeriod: number;
-  anomalyThreshold: number;
-  maxChainLength: number;
-  constructor(config?: ToolSequenceModelerOptions);
-  recordToolCall(toolName: string, context?: { args?: any; userId?: string; agentId?: string }): ToolSequenceResult;
-  getTransitionMatrix(): Record<string, Record<string, number>>;
-  getCommonSequences(topN?: number): Array<{ from: string; to: string; count: number; probability: number }>;
-  exportModel(): ToolSequenceExportData;
-  importModel(data: ToolSequenceExportData): void;
-  getStats(): ToolSequenceStats;
 }
 
 // =========================================================================
-// v8.0 — Persistent Learning & Feedback
+// v10-v11: Micro Model
 // =========================================================================
 
-export interface LearnedPatternMatch {
-  patternId: string;
-  pattern: string;
-  source: string;
-  confidence: number;
-  categories: string[];
-  severity: string;
+export declare class MicroModel {
+  corpus: Array<{ text: string; category: string; severity: string; source: string }>;
+  constructor(options?: { threshold?: number; k?: number; ensembleWeight?: number; additionalCorpus?: any[]; skipTraining?: boolean });
+  classify(text: string): { threat: boolean; category: string; severity: string; confidence: number; method: string; logisticScore: any; topMatches: any[] };
+  scan(text: string): { threats: any[]; severity: string; status: string };
+  addSamples(samples: Array<{ text: string; category: string; severity: string; source: string }>): void;
+  getStats(): { classified: number; threats: number; benign: number; corpusSize: number; categories: string[]; threatRate: number };
+  getCategoryCounts(): Record<string, number>;
 }
 
-export interface LearningCheckResult {
-  matches: LearnedPatternMatch[];
-  count: number;
+export declare class LogisticClassifier {
+  constructor(categories: string[], featureCount: number, options?: { learningRate?: number; epochs?: number; l2?: number; precomputedWeights?: any });
+  train(data: Array<{ features: number[]; category: string }>): void;
+  predict(features: number[]): { category: string; confidence: number; scores: Record<string, number> };
+  getWeights(): any;
 }
 
-export interface IngestResult {
-  candidates: number;
-  signatures: string[];
-}
-
-export interface FalsePositiveResult {
-  revoked: boolean;
-  fpCount: number;
-  remaining: number;
-}
-
-export interface LearningExportData {
-  version: string;
-  timestamp: string;
-  patterns: any[];
-  candidates: any[];
-  stats: any;
-}
-
-export interface LearningStats {
-  attacksIngested: number;
-  candidatesCreated: number;
-  patternsPromoted: number;
-  patternsRevoked: number;
-  falsePositivesReported: number;
-  saves: number;
-  loads: number;
-  activePatterns: number;
-  revokedPatterns: number;
-  candidates: number;
-  totalPromoted: number;
-}
-
-export interface PersistentLearningLoopOptions {
-  persist?: boolean;
-  persistPath?: string;
-  promotionThreshold?: number;
-  maxPatterns?: number;
-  decayMs?: number;
-  maxFalsePositives?: number;
-}
-
-export declare class PersistentLearningLoop {
-  constructor(config?: PersistentLearningLoopOptions);
-  ingest(text: string, meta?: { category?: string; source?: string; severity?: string }): IngestResult;
-  check(text: string): LearningCheckResult;
-  reportFalsePositive(patternId: string): FalsePositiveResult;
-  save(): boolean;
-  load(): boolean;
-  export(): LearningExportData;
-  import(data: LearningExportData): number;
-  decay(): number;
-  getStats(): LearningStats;
-  getActivePatterns(): any[];
-}
-
-export interface FeedbackReportResult {
-  id: string;
-  status: string;
-  pendingCount: number;
-}
-
-export interface FeedbackProcessResult {
-  processed: number;
-  patternsAdded: number;
-  patternsRevoked: number;
-  retrainTriggered: boolean;
-}
-
-export interface FeedbackStats {
-  falsePositives: number;
-  falseNegatives: number;
-  totalProcessed: number;
-  patternsAdded: number;
-  patternsRevoked: number;
-  retrainCount: number;
-  pendingCount: number;
-  processedCount: number;
-}
-
-export interface FeedbackCollectorOptions {
-  autoRetrain?: boolean;
-  maxPending?: number;
-  cooldownMs?: number;
-  learningLoop?: PersistentLearningLoop;
-}
-
-export declare class FeedbackCollector {
-  constructor(config?: FeedbackCollectorOptions);
-  reportFalsePositive(text: string, meta?: { scanId?: string; category?: string; patternId?: string; reason?: string }): FeedbackReportResult;
-  reportFalseNegative(text: string, meta?: { expectedCategory?: string; severity?: string; source?: string }): FeedbackReportResult;
-  getPending(): any[];
-  process(): FeedbackProcessResult;
-  getStats(): FeedbackStats;
-  export(): any;
-}
+export declare function extractFeatures(text: string): number[];
+export declare function shannonEntropy(text: string): number;
 
 // =========================================================================
-// v8.0 — Cross-Turn Tracking & Adaptive Thresholds
+// v11: Self-Training
 // =========================================================================
-
-export interface CrossTurnAddResult {
-  tracked: boolean;
-  messageCount: number;
-  scanTriggered: boolean;
-  threats: Threat[];
-  crossTurnDetection: boolean;
-}
-
-export interface CrossTurnScanResult {
-  threats: Threat[];
-  combinedLength: number;
-  messageCount: number;
-}
-
-export interface CrossTurnStats {
-  totalMessages: number;
-  scansTriggered: number;
-  crossTurnDetections: number;
-  individualDetections: number;
-  currentWindowSize: number;
-  maxWindowSize: number;
-  scanInterval: number;
-}
-
-export interface CrossTurnTrackerOptions {
-  windowSize?: number;
-  scanInterval?: number;
-  accumulateAll?: boolean;
-  sensitivity?: string;
-  onDetection?: (info: { threats: any[]; messages: Array<{ text: string; role: string }>; timestamp: number }) => void;
-}
-
-export declare class CrossTurnTracker {
-  windowSize: number;
-  scanInterval: number;
-  accumulateAll: boolean;
-  sensitivity: string;
-  constructor(config?: CrossTurnTrackerOptions);
-  addMessage(text: string, role?: string): CrossTurnAddResult;
-  scanNow(): CrossTurnScanResult;
-  getAccumulatedText(): string;
-  getMostSuspicious(): { text: string; role: string; confidence: number; threats: Threat[] } | null;
-  reset(): void;
-  getStats(): CrossTurnStats;
-}
-
-export interface CalibrationRecordResult {
-  recorded: boolean;
-  isCalibrating: boolean;
-  samplesRemaining: number;
-  currentThreshold: number;
-}
-
-export interface CalibrationStats {
-  totalSamples: number;
-  calibrationCount: number;
-  isCalibrating: boolean;
-  targetFPRate: number;
-  categories: Record<string, {
-    threshold: number;
-    totalSamples: number;
-    benignSamples: number;
-    injectionSamples: number;
-    feedbackSamples: number;
-    estimatedFPRate: number;
-  }>;
-}
-
-export interface CalibrationExportData {
-  version: number;
-  totalSamples: number;
-  calibrationCount: number;
-  calibrationSamples: number;
-  adjustInterval: number;
-  minConfidence: number;
-  maxConfidence: number;
-  targetFPRate: number;
-  categories: Record<string, { threshold: number; samples: any[] }>;
-  exportedAt: number;
-}
-
-export interface AdaptiveThresholdCalibratorOptions {
-  calibrationSamples?: number;
-  adjustInterval?: number;
-  minConfidence?: number;
-  maxConfidence?: number;
-  targetFPRate?: number;
-}
-
-export declare class AdaptiveThresholdCalibrator {
-  calibrationSamples: number;
-  adjustInterval: number;
-  minConfidence: number;
-  maxConfidence: number;
-  targetFPRate: number;
-  constructor(config?: AdaptiveThresholdCalibratorOptions);
-  record(result: { confidence: number; isInjection: boolean; category?: string }, isTruePositive?: boolean): CalibrationRecordResult;
-  getThreshold(category?: string): number;
-  shouldFlag(confidence: number, category?: string): boolean;
-  recalibrate(): { thresholds: Record<string, number>; samplesUsed: number };
-  getStats(): CalibrationStats;
-  export(): CalibrationExportData;
-  import(data: CalibrationExportData): void;
-}
-
-// =========================================================================
-// v8.0 — Adversarial Self-Training
-// =========================================================================
-
-export interface SelfTrainingCycleResult {
-  generation: number;
-  tested: number;
-  detected: number;
-  evaded: number;
-  detectionRate: number;
-  newPatterns: string[];
-  evasiveExamples: string[];
-  duration: number;
-}
-
-export interface SelfTrainingResult {
-  cycles: number;
-  totalTested: number;
-  totalEvaded: number;
-  patternsGenerated: string[];
-  improvementCurve: number[];
-  duration: number;
-}
-
-export interface SelfTrainerStats {
-  cyclesCompleted: number;
-  totalTested: number;
-  totalDetected: number;
-  totalEvaded: number;
-  overallDetectionRate: number;
-  evasiveAttacksFound: number;
-  patternsGenerated: number;
-  currentPopulationSize: number;
-  config: {
-    generations: number;
-    populationSize: number;
-    mutationRate: number;
-    seedAttackCount: number;
-  };
-}
-
-export interface SelfTrainerOptions {
-  generations?: number;
-  populationSize?: number;
-  mutationRate?: number;
-  seedAttacks?: string[];
-  detector?: (text: string) => { detected: boolean; confidence: number };
-  onEvasion?: (info: { attack: string; generation: number; cycle: number; confidence: number }) => void;
-}
 
 export declare class SelfTrainer {
-  generations: number;
-  populationSize: number;
-  mutationRate: number;
-  seedAttacks: string[];
-  constructor(config?: SelfTrainerOptions);
-  runCycle(): SelfTrainingCycleResult;
-  train(cycles?: number): SelfTrainingResult;
-  getEvasiveAttacks(): string[];
-  getGeneratedPatterns(): string[];
-  getStats(): SelfTrainerStats;
+  constructor(options?: { scanFn?: (text: string) => any; microModel?: MicroModel; maxRoundsPerCycle?: number });
+  runCycle(seedAttacks: Array<{ text: string; category: string; severity: string }>): { bypasses: number; mutations: number; newSamples: number; bypassRate: number };
+  applyToModel(): number;
+  getBypasses(): any[];
+  getStats(): any;
+  exportSamples(): any[];
+  reset(): void;
 }
 
 export declare class MutationEngine {
-  mutationRate: number;
-  constructor(mutationRate?: number);
-  mutate(text: string): string;
-  getStrategies(): string[];
+  mutate(text: string): Array<{ text: string; strategy: string }>;
 }
 
-export declare const SEED_ATTACKS: string[];
-export declare const MUTATION_STRATEGIES: string[];
+export declare class AutonomousHardener {
+  constructor(options: { microModel: MicroModel; scanFn?: (text: string) => any; intervalMs?: number; persistPath?: string; maxCorpusGrowth?: number; maxFPRate?: number; fpTestSet?: string[]; seedAttacks?: any[]; onCycleComplete?: (result: any) => void });
+  start(): void;
+  stop(): void;
+  runOnce(): any;
+  getHistory(): any[];
+  getStatus(): { running: boolean; totalCycles: number; totalSamplesAdded: number; currentCorpusSize: number; growthRemaining: number; lastCycle: any | null };
+}
+
+// =========================================================================
+// v11: Intent Graph
+// =========================================================================
+
+export declare class IntentGraph {
+  constructor(options?: { similarityThreshold?: number; maxNodes?: number });
+  setIntent(intentText: string): { nodeId: number; topics: Set<string> };
+  recordToolCall(toolName: string, args: any, reason?: string): { nodeId: number; causalScore: number; suspicious: boolean; violations: any[] };
+  recordToolOutput(toolName: string, output: any): { nodeId: number };
+  getChain(): any[];
+  getAnomalies(): any[];
+  getRiskAssessment(): { riskLevel: string; score: number; anomalyCount: number; chainLength: number };
+  reset(): void;
+}
+
+// =========================================================================
+// v11: Semantic Isolation
+// =========================================================================
+
+export type Provenance = 'system' | 'user' | 'tool_output' | 'rag_chunk' | 'agent_message' | 'untrusted';
+
+export declare class TaggedContent {
+  text: string;
+  provenance: Provenance;
+  trustLevel: number;
+  threats: any[];
+  sanitized: boolean;
+  constructor(text: string, provenance: Provenance, metadata?: any);
+  isTrusted(requiredLevel: number): boolean;
+}
+
+export declare class IsolationPolicy {
+  constructor(rules?: any);
+  check(content: TaggedContent, action: string): { allowed: boolean; reason: string | null };
+}
+
+export declare class SemanticIsolationEngine {
+  constructor(options?: { policy?: IsolationPolicy; scanUntrusted?: boolean; stripInstructionsFromUntrusted?: boolean });
+  tag(text: string, provenance: Provenance, metadata?: any): TaggedContent;
+  validateAction(content: TaggedContent, action: string): { allowed: boolean; reason: string | null; threats: any[] };
+  buildContext(): { messages: any[]; blocked: any[] };
+  getStats(): any;
+  reset(): void;
+}
+
+export declare const ISOLATION_PROVENANCE: Readonly<{ SYSTEM: 'system'; USER: 'user'; TOOL_OUTPUT: 'tool_output'; RAG_CHUNK: 'rag_chunk'; AGENT_MESSAGE: 'agent_message'; UNTRUSTED: 'untrusted' }>;
+export declare const TRUST_LEVELS: Readonly<Record<string, number>>;
+
+// =========================================================================
+// v11: Intent Binding
+// =========================================================================
+
+export declare class IntentBinder {
+  constructor(options?: { signingKey?: string; tokenTtlMs?: number; maxActionsPerIntent?: number; singleUseTokens?: boolean });
+  bindIntent(intentText: string, metadata?: any): { intentHash: string; allowedActions: string[] };
+  issueToken(intentHash: string, action: string, scope?: string): { token: IntentToken | null; error: string | null };
+  verify(token: IntentToken): { valid: boolean; reason: string | null };
+  revokeIntent(intentHash: string): boolean;
+  purgeExpired(): void;
+  getStats(): any;
+  getAuditLog(): any[];
+}
+
+export declare class IntentToken {
+  intentHash: string;
+  action: string;
+  scope: string;
+  signature: string;
+  createdAt: number;
+  expiresAt: number;
+  used: boolean;
+  isExpired(): boolean;
+}
+
+// =========================================================================
+// v11: Attack Surface Mapper
+// =========================================================================
+
+export declare class AttackSurfaceMapper {
+  constructor(options?: { maxChainDepth?: number });
+  map(config: { tools: any[]; mcpServers?: any[]; systemPrompt?: string; permissions?: any; model?: string }): {
+    summary: { toolCount: number; serverCount: number; capabilityCount: number; attackPathCount: number; criticalPaths: number; overallRiskScore: number; riskLevel: string };
+    capabilities: Record<string, any[]>;
+    attackPaths: any[];
+    promptRisks: any;
+    serverRisks: any[];
+    permissionGaps: any[];
+    recommendations: Array<{ priority: string; action: string }>;
+  };
+}
+
+export declare const CAPABILITY_RISK: Record<string, number>;
+export declare const CAPABILITY_PATTERNS: Record<string, RegExp>;
+
+// =========================================================================
+// v11: Prompt Hardening
+// =========================================================================
+
+export declare class PromptHardener {
+  constructor(options?: { level?: 'minimal' | 'standard' | 'strong' | 'paranoid'; hardenSystemPrompt?: boolean; wrapUserInput?: boolean; wrapToolOutput?: boolean; wrapRAGChunks?: boolean });
+  hardenSystem(systemPrompt: string): string;
+  wrap(text: string, source?: 'user' | 'tool_output' | 'rag_chunk' | 'agent_message'): string;
+  hardenConversation(messages: Array<{ role: string; content: string; source?: string }>): Array<{ role: string; content: string }>;
+  getStats(): { hardened: number; systemPromptsHardened: number; inputsWrapped: number; toolOutputsWrapped: number };
+}
+
+export declare const DEFENSIVE_TEMPLATES: Record<string, { prefix: string; suffix: string }>;
+export declare const SYSTEM_PROMPT_HARDENING: Record<string, string>;
+
+// =========================================================================
+// v11: Message Integrity
+// =========================================================================
+
+export declare class MessageIntegrityChain {
+  constructor(options?: { signingKey?: string; algorithm?: string });
+  addMessage(role: string, content: string): { index: number; signature: string };
+  verifyChain(): { valid: boolean; tampered: any[] };
+  verifyMessage(index: number): { valid: boolean; reason: string | null };
+  detectRoleViolations(rolePolicy?: any): any[];
+  export(): { chain: any[]; chainLength: number; lastSignature: string | null; exportedAt: number };
+  import(data: any): { valid: boolean; imported: number; tampered: any[] };
+  getStats(): any;
+}
+
+// =========================================================================
+// v11: Continuous Security Service
+// =========================================================================
+
+export declare class ContinuousSecurityService {
+  constructor(options: { guard: MCPGuard; hardener?: AutonomousHardener; postureScanIntervalMs?: number; hardeningIntervalMs?: number; defenseCheckIntervalMs?: number; onPostureChange?: (entry: any) => void; onAlert?: (alert: any) => void });
+  start(): void;
+  stop(): void;
+  getStatus(): any;
+  getReport(): { currentScore: number | null; currentGrade: string | null; scoreHistory: number[]; scoreTrend: string; totalPostureScans: number; totalDefenseChecks: number; totalAlerts: number; timestamp: number };
+  runPostureScan(): any;
+  runDefenseCheck(): any;
+}
+
+// =========================================================================
+// v11: SOTA Benchmark
+// =========================================================================
+
+export declare class SOTABenchmark {
+  constructor(options?: { scanFn?: (text: string) => any; microModel?: MicroModel });
+  runAll(): { aggregate: { precision: number; recall: number; f1: number; accuracy: number; fpr: number; tp: number; fp: number; tn: number; fn: number; totalSamples: number }; benchmarks: Record<string, any>; functional: any; comparison: { sentinel_f1: number; sentinel_accuracy: number; agentshield_f1: number; agentshield_accuracy: number; delta_f1: number; delta_accuracy: number }; timestamp: number };
+  runBIPIA(): any;
+  runHackAPrompt(): any;
+  runMCPTox(): any;
+  runMultilingual(): any;
+  runStealth(): any;
+  runFunctional(): any;
+  toMarkdown(results: any): string;
+}

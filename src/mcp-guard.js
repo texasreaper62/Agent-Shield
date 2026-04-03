@@ -457,6 +457,7 @@ class ToolBehaviorBaseline {
     }
 
     // Argument length
+    // eslint-disable-next-line eqeqeq
     if (observation.argLength != null) {
       const z = this._checkAnomaly(baseline.argLengths, observation.argLength);
       if (z !== null) {
@@ -477,6 +478,7 @@ class ToolBehaviorBaseline {
     }
 
     // Response time
+    // eslint-disable-next-line eqeqeq
     if (observation.responseTimeMs != null) {
       const z = this._checkAnomaly(baseline.responseTimes, observation.responseTimeMs);
       if (z !== null) {
@@ -1167,7 +1169,9 @@ class MCPGuard {
 
     // Record behavioral observation (only pass responseTimeMs if actually provided)
     const behaviorObs = { isError: false };
+    // eslint-disable-next-line eqeqeq
     if (responseTimeMs != null && responseTimeMs > 0) {
+    // eslint-disable-next-line eqeqeq
       behaviorObs.responseTimeMs = responseTimeMs;
     }
     const behaviorResult = this.baselines.record(toolName, behaviorObs);

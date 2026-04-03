@@ -1,510 +1,400 @@
 'use strict';
 
 /**
- * Agent Shield — Ensemble Voting Classifier (v8.0)
+ * Agent Shield — Multi-Classifier Ensemble (v12.0)
  *
- * Combines multiple detection signals (pattern matching, TF-IDF similarity,
- * entropy analysis, IPIA classification) into a single threat/benign decision
- * using weighted majority voting.
+ * Unified ensemble that combines results from multiple detection layers:
+ * detector-core (scanText), MicroModel, OWASP scanner, and intent graph.
+ * Uses weighted voting with configurable weights, confidence calibration,
+ * and produces a final threat/benign verdict with aggregated confidence.
  *
- * Zero dependencies. All processing runs locally — no data ever leaves
- * your environment.
+ * All detection runs locally — no data ever leaves your environment.
  *
  * @module ensemble
  */
-
-const { scanText } = require('./detector-core');
-const { EmbeddingSimilarityDetector } = require('./embedding');
-const { EntropyAnalyzer, PerplexityEstimator } = require('./token-analysis');
-const { FeatureExtractor, TreeClassifier, ContextConstructor } = require('./ipia-detector');
 
 // =========================================================================
 // CONSTANTS
 // =========================================================================
 
-/** Default voter names */
-const VOTER_NAMES = ['pattern', 'tfidf', 'entropy', 'ipia'];
-
-/** Severity thresholds */
-const SEVERITY_MAP = [
-  { min: 0.8, label: 'critical' },
-  { min: 0.6, label: 'high' },
-  { min: 0.4, label: 'medium' },
-  { min: 0.0, label: 'low' },
-];
+/**
+ * Default classifier weights. Higher weight = more influence on final verdict.
+ * @type {Object<string, number>}
+ */
+const DEFAULT_WEIGHTS = {
+  'detector-core': 1.0,
+  'micro-model': 1.2,
+  'owasp-scanner': 0.8,
+  'intent-graph': 0.9
+};
 
 /**
- * Map a confidence score to a severity label.
- * @param {number} confidence
- * @returns {string}
+ * Default confidence threshold for threat verdict.
+ * @type {number}
  */
-function confidenceToSeverity(confidence) {
-  for (const entry of SEVERITY_MAP) {
-    if (confidence >= entry.min) return entry.label;
-  }
-  return 'low';
-}
+const DEFAULT_THRESHOLD = 0.5;
 
 /**
- * Map a pattern severity string to a confidence value.
- * @param {string} severity
- * @returns {number}
+ * Minimum number of classifiers that must agree for high-confidence verdict.
+ * @type {number}
  */
-function severityToConfidence(severity) {
-  switch (severity) {
-    case 'critical': return 1.0;
-    case 'high': return 0.85;
-    case 'medium': return 0.6;
-    case 'low': return 0.3;
-    default: return 0.5;
-  }
-}
-
-// =========================================================================
-// PATTERN VOTER
-// =========================================================================
+const MIN_QUORUM = 2;
 
 /**
- * Wraps the detector-core scanText pattern matcher as an ensemble voter.
+ * Calibration parameters for Platt scaling (sigmoid calibration).
+ * Tuned on BIPIA/HackAPrompt validation set.
+ * @type {Object<string, { a: number, b: number }>}
  */
-class PatternVoter {
-  /**
-   * @param {object} [options]
-   * @param {string} [options.source='ensemble'] - Source label for scanText.
-   */
-  constructor(options = {}) {
-    this.name = 'pattern';
-    this.source = options.source || 'ensemble';
-  }
-
-  /**
-   * Cast a vote by running pattern-based detection.
-   * @param {string} text - Text to scan.
-   * @param {object} [context] - Optional context (unused by this voter).
-   * @returns {{ voter: string, isInjection: boolean, confidence: number, reason: string }}
-   */
-  vote(text) {
-    const result = scanText(text, { source: this.source });
-    const threats = result.threats || [];
-
-    if (threats.length === 0) {
-      return {
-        voter: this.name,
-        isInjection: false,
-        confidence: 0,
-        reason: 'No pattern matches found'
-      };
-    }
-
-    // Use highest severity threat to determine confidence
-    let maxConfidence = 0;
-    let topDescription = threats[0].description || 'Pattern match detected';
-    for (const threat of threats) {
-      const c = severityToConfidence(threat.severity);
-      if (c > maxConfidence) {
-        maxConfidence = c;
-        topDescription = threat.description || topDescription;
-      }
-    }
-
-    return {
-      voter: this.name,
-      isInjection: true,
-      confidence: maxConfidence,
-      reason: topDescription
-    };
-  }
-}
-
-// =========================================================================
-// TF-IDF VOTER
-// =========================================================================
-
-/**
- * Wraps the EmbeddingSimilarityDetector as an ensemble voter.
- * Detects paraphrased attacks via TF-IDF cosine similarity.
- */
-class TFIDFVoter {
-  /**
-   * @param {object} [options]
-   * @param {number} [options.similarityThreshold=0.45] - Threshold for flagging.
-   */
-  constructor(options = {}) {
-    this.name = 'tfidf';
-    this._detector = new EmbeddingSimilarityDetector({
-      similarityThreshold: options.similarityThreshold || 0.45
-    });
-  }
-
-  /**
-   * Cast a vote by running TF-IDF similarity detection.
-   * @param {string} text - Text to scan.
-   * @param {object} [context] - Optional context (unused by this voter).
-   * @returns {{ voter: string, isInjection: boolean, confidence: number, reason: string }}
-   */
-  vote(text) {
-    const result = this._detector.check(text);
-
-    if (!result.isSimilar || !result.bestMatch) {
-      return {
-        voter: this.name,
-        isInjection: false,
-        confidence: result.bestMatch ? result.bestMatch.similarity : 0,
-        reason: 'No significant similarity to known attacks'
-      };
-    }
-
-    return {
-      voter: this.name,
-      isInjection: true,
-      confidence: result.bestMatch.similarity,
-      reason: 'Similar to known attack: ' + result.bestMatch.text
-    };
-  }
-}
-
-// =========================================================================
-// ENTROPY VOTER
-// =========================================================================
-
-/**
- * Wraps EntropyAnalyzer and PerplexityEstimator as an ensemble voter.
- * Detects statistical anomalies in character entropy and n-gram perplexity.
- */
-class EntropyVoter {
-  /**
-   * @param {object} [options]
-   * @param {number} [options.entropyThreshold=0.3] - Entropy shift threshold.
-   * @param {number} [options.ngramSize=3] - N-gram size for perplexity.
-   */
-  constructor(options = {}) {
-    this.name = 'entropy';
-    this._entropyAnalyzer = new EntropyAnalyzer({
-      threshold: options.entropyThreshold || 0.3
-    });
-    this._perplexityEstimator = new PerplexityEstimator({
-      ngramSize: options.ngramSize || 3
-    });
-  }
-
-  /**
-   * Cast a vote by running entropy and perplexity analysis.
-   * @param {string} text - Text to scan.
-   * @param {object} [context] - Optional context (unused by this voter).
-   * @returns {{ voter: string, isInjection: boolean, confidence: number, reason: string }}
-   */
-  vote(text) {
-    const entropyResult = this._entropyAnalyzer.analyze(text);
-    const perplexityResult = this._perplexityEstimator.estimate(text);
-
-    const hasEntropyAnomaly = entropyResult.anomalies.length > 0;
-    const hasPerplexityAnomaly = perplexityResult.suspicious;
-
-    if (!hasEntropyAnomaly && !hasPerplexityAnomaly) {
-      return {
-        voter: this.name,
-        isInjection: false,
-        confidence: 0,
-        reason: 'No statistical anomalies detected'
-      };
-    }
-
-    // Compute confidence based on deviation magnitude
-    let confidence = 0;
-    const reasons = [];
-
-    if (hasEntropyAnomaly) {
-      // Use max deviation normalized against a reference range
-      let maxDeviation = 0;
-      for (const anomaly of entropyResult.anomalies) {
-        if (anomaly.deviation > maxDeviation) {
-          maxDeviation = anomaly.deviation;
-        }
-      }
-      // Entropy typically ranges 0-5 bits; deviation of 1+ is significant
-      const entropyConfidence = Math.min(maxDeviation / 2, 1.0);
-      confidence = Math.max(confidence, entropyConfidence);
-      reasons.push('Entropy anomaly in ' + entropyResult.anomalies.length + ' segment(s), max deviation ' + maxDeviation.toFixed(2));
-    }
-
-    if (hasPerplexityAnomaly) {
-      // Perplexity ratio: how many times higher than baseline
-      const ratio = this._perplexityEstimator.baselinePerplexity > 0
-        ? perplexityResult.perplexity / this._perplexityEstimator.baselinePerplexity
-        : 2;
-      // ratio of 2 is the threshold; scale 2-5 range to 0.4-1.0
-      const perplexityConfidence = Math.min(Math.max((ratio - 1) / 4, 0.3), 1.0);
-      confidence = Math.max(confidence, perplexityConfidence);
-      reasons.push('High perplexity ' + perplexityResult.perplexity.toFixed(2) + ' (baseline: ' + this._perplexityEstimator.baselinePerplexity.toFixed(2) + ')');
-    }
-
-    return {
-      voter: this.name,
-      isInjection: true,
-      confidence: Math.round(confidence * 1000) / 1000,
-      reason: reasons.join('; ')
-    };
-  }
-}
-
-// =========================================================================
-// IPIA VOTER
-// =========================================================================
-
-/**
- * Wraps the IPIA FeatureExtractor and TreeClassifier as an ensemble voter.
- * Uses joint-context analysis to detect indirect prompt injection.
- */
-class IPIAVoter {
-  /**
-   * @param {object} [options]
-   * @param {number} [options.classifierThreshold=0.5] - Decision tree threshold.
-   */
-  constructor(options = {}) {
-    this.name = 'ipia';
-    this._contextConstructor = new ContextConstructor();
-    this._featureExtractor = new FeatureExtractor();
-    this._classifier = new TreeClassifier({
-      threshold: options.classifierThreshold || 0.5
-    });
-  }
-
-  /**
-   * Cast a vote by running the IPIA pipeline.
-   * Uses context.intent as user intent and the text itself as external content.
-   * If no intent is provided, uses a generic intent.
-   * @param {string} text - Text to scan (treated as external content).
-   * @param {object} [context] - Optional context.
-   * @param {string} [context.intent] - User intent for joint-context analysis.
-   * @returns {{ voter: string, isInjection: boolean, confidence: number, reason: string }}
-   */
-  vote(text, context = {}) {
-    const intent = context.intent || 'Summarize the following content.';
-    const ctx = this._contextConstructor.build(text, intent);
-    const { features, featureMap } = this._featureExtractor.extract(ctx);
-    const result = this._classifier.classify(features, featureMap);
-
-    return {
-      voter: this.name,
-      isInjection: result.isInjection,
-      confidence: Math.round(result.confidence * 1000) / 1000,
-      reason: result.reason || (result.isInjection ? 'IPIA classifier flagged content' : 'IPIA classifier found no injection')
-    };
-  }
-}
-
-// =========================================================================
-// VOTER REGISTRY
-// =========================================================================
-
-/**
- * Map voter names to their constructor classes.
- * @type {Object<string, Function>}
- */
-const VOTER_REGISTRY = {
-  pattern: PatternVoter,
-  tfidf: TFIDFVoter,
-  entropy: EntropyVoter,
-  ipia: IPIAVoter,
+const CALIBRATION_PARAMS = {
+  'detector-core': { a: -2.5, b: 0.8 },
+  'micro-model': { a: -3.0, b: 0.5 },
+  'owasp-scanner': { a: -2.0, b: 1.0 },
+  'intent-graph': { a: -1.8, b: 1.2 }
 };
 
 // =========================================================================
-// ENSEMBLE CLASSIFIER
+// CALIBRATION
 // =========================================================================
 
 /**
- * Ensemble Voting Classifier — combines multiple detection backends into
- * a unified threat/benign decision via weighted majority voting.
+ * Apply Platt scaling (sigmoid calibration) to a raw score.
+ * Maps raw classifier output to a calibrated probability.
+ * @param {number} rawScore - Raw classifier score (0..1)
+ * @param {number} a - Slope parameter
+ * @param {number} b - Intercept parameter
+ * @returns {number} Calibrated probability (0..1)
+ */
+function plattScale(rawScore, a, b) {
+  // Sigmoid: P = 1 / (1 + exp(a*score + b))
+  const exponent = a * rawScore + b;
+  return 1 / (1 + Math.exp(exponent));
+}
+
+/**
+ * Isotonic regression-style binned calibration (fallback).
+ * Maps raw scores through piecewise linear bins.
+ * @param {number} rawScore
+ * @returns {number}
+ */
+function binnedCalibration(rawScore) {
+  // Simple 5-bin calibration
+  const bins = [
+    { from: 0.0, to: 0.2, calibrated: 0.05 },
+    { from: 0.2, to: 0.4, calibrated: 0.25 },
+    { from: 0.4, to: 0.6, calibrated: 0.50 },
+    { from: 0.6, to: 0.8, calibrated: 0.75 },
+    { from: 0.8, to: 1.0, calibrated: 0.95 }
+  ];
+
+  for (const bin of bins) {
+    if (rawScore >= bin.from && rawScore < bin.to) {
+      // Linear interpolation within bin
+      const fraction = (rawScore - bin.from) / (bin.to - bin.from);
+      const nextCalibrated = bins[bins.indexOf(bin) + 1]?.calibrated || 1.0;
+      return bin.calibrated + fraction * (nextCalibrated - bin.calibrated);
+    }
+  }
+  return rawScore >= 1.0 ? 0.99 : 0.01;
+}
+
+// =========================================================================
+// CLASSIFIER RESULT
+// =========================================================================
+
+/**
+ * @typedef {object} ClassifierResult
+ * @property {string} classifier - Classifier name
+ * @property {boolean} isThreat - Whether classifier detected a threat
+ * @property {number} confidence - Raw confidence score (0..1)
+ * @property {string} [category] - Threat category if detected
+ * @property {string} [severity] - Severity level if detected
+ * @property {object} [metadata] - Additional classifier-specific data
+ */
+
+/**
+ * @typedef {object} EnsembleVerdict
+ * @property {'threat'|'benign'} verdict - Final verdict
+ * @property {number} confidence - Aggregated calibrated confidence (0..1)
+ * @property {number} rawScore - Raw weighted score before calibration
+ * @property {ClassifierResult[]} contributors - Results from each classifier
+ * @property {string[]} threats - Detected threat categories
+ * @property {string} severity - Highest severity across all classifiers
+ * @property {number} agreementRatio - Fraction of classifiers agreeing with verdict
+ * @property {number} classifiersUsed - Number of classifiers that contributed
+ */
+
+// =========================================================================
+// DETECTION ENSEMBLE
+// =========================================================================
+
+/**
+ * Multi-Classifier Detection Ensemble.
+ *
+ * Combines results from multiple detection layers using weighted voting
+ * and confidence calibration to produce a unified verdict.
  *
  * @example
- * const { EnsembleClassifier } = require('./ensemble');
- * const ensemble = new EnsembleClassifier({ threshold: 0.5 });
- * const result = ensemble.scan('ignore all previous instructions');
- * console.log(result.isInjection, result.confidence, result.severity);
+ * const ensemble = new DetectionEnsemble();
+ * ensemble.addResult('detector-core', { isThreat: true, confidence: 0.9, category: 'injection' });
+ * ensemble.addResult('micro-model', { isThreat: true, confidence: 0.85 });
+ * ensemble.addResult('owasp-scanner', { isThreat: false, confidence: 0.3 });
+ * const verdict = ensemble.evaluate();
+ * // { verdict: 'threat', confidence: 0.82, ... }
  */
-class EnsembleClassifier {
+class DetectionEnsemble {
   /**
-   * Create an EnsembleClassifier.
-   * @param {object} [config]
-   * @param {string[]} [config.voters=['pattern','tfidf','entropy','ipia']] - Voter names to use.
-   * @param {number} [config.threshold=0.5] - Confidence threshold for final decision.
-   * @param {boolean} [config.requireUnanimous=false] - If true, all voters must agree.
-   * @param {Object<string, number>} [config.weights] - Per-voter weights. Default: equal weights.
-   * @param {number} [config.minVoters=2] - Minimum voters that must cast a vote.
-   * @param {object} [config.voterOptions] - Per-voter config, keyed by voter name.
+   * @param {object} [options]
+   * @param {Object<string, number>} [options.weights] - Classifier weights
+   * @param {number} [options.threshold] - Confidence threshold for threat verdict (default 0.5)
+   * @param {string} [options.calibrationMode] - 'platt' or 'binned' (default 'platt')
+   * @param {boolean} [options.requireQuorum] - Require MIN_QUORUM classifiers agree (default true)
    */
-  constructor(config = {}) {
-    this.threshold = config.threshold !== undefined ? config.threshold : 0.5;
-    this.requireUnanimous = config.requireUnanimous || false;
-    this.minVoters = config.minVoters !== undefined ? config.minVoters : 2;
+  constructor(options = {}) {
+    this.weights = { ...DEFAULT_WEIGHTS, ...(options.weights || {}) };
+    this.threshold = options.threshold ?? DEFAULT_THRESHOLD;
+    this.calibrationMode = options.calibrationMode || 'platt';
+    this.requireQuorum = options.requireQuorum !== false;
 
-    const voterNames = config.voters || [...VOTER_NAMES];
-    const voterOptions = config.voterOptions || {};
+    /** @type {ClassifierResult[]} */
+    this.results = [];
 
-    // Resolve weights (default: equal weight of 1)
-    this.weights = {};
-    for (const name of voterNames) {
-      this.weights[name] = (config.weights && config.weights[name] !== undefined)
-        ? config.weights[name]
-        : 1;
-    }
+    /** @type {EnsembleVerdict[]} */
+    this._history = [];
 
-    // Instantiate voters
-    this._voters = [];
-    for (const name of voterNames) {
-      const VoterClass = VOTER_REGISTRY[name];
-      if (!VoterClass) {
-        console.log('[Agent Shield] Ensemble: unknown voter "' + name + '", skipping');
-        continue;
-      }
-      try {
-        const voter = new VoterClass(voterOptions[name] || {});
-        this._voters.push(voter);
-      } catch (err) {
-        console.log('[Agent Shield] Ensemble: failed to initialize voter "' + name + '": ' + err.message);
-      }
-    }
-
-    // Stats tracking
-    this._stats = {
-      totalScans: 0,
-      injections: 0,
-      safe: 0,
-      voterAgreementSum: 0,
-      averageConfidence: 0,
-      confidenceSum: 0,
-    };
-
-    console.log('[Agent Shield] EnsembleClassifier initialized (' + this._voters.length + ' voters: ' + this._voters.map(v => v.name).join(', ') + ', threshold: ' + this.threshold + ')');
+    console.log('[Agent Shield] DetectionEnsemble initialized');
   }
 
   /**
-   * Scan text using all enabled voters and combine results via weighted majority voting.
-   * @param {string} text - Text to scan.
-   * @param {object} [context] - Optional context { intent, source, conversationHistory }.
-   * @returns {{
-   *   isInjection: boolean,
-   *   confidence: number,
-   *   severity: string,
-   *   votes: Array<{ voter: string, isInjection: boolean, confidence: number, reason: string }>,
-   *   agreement: number,
-   *   method: string,
-   *   timestamp: string
-   * }}
+   * Add a classifier result to the ensemble.
+   * @param {string} classifier - Classifier name (e.g. 'detector-core', 'micro-model')
+   * @param {object} result - Classifier output
+   * @param {boolean} result.isThreat - Whether a threat was detected
+   * @param {number} result.confidence - Confidence score (0..1)
+   * @param {string} [result.category] - Threat category
+   * @param {string} [result.severity] - Severity level
+   * @param {object} [result.metadata] - Additional data
    */
-  scan(text, context = {}) {
-    this._stats.totalScans++;
+  addResult(classifier, result) {
+    if (!classifier || typeof classifier !== 'string') {
+      throw new Error('Classifier name is required');
+    }
+    if (result === null || result === undefined || typeof result !== 'object') {
+      throw new Error('Result object is required');
+    }
 
-    // Collect votes from all voters
-    const votes = [];
-    for (const voter of this._voters) {
-      try {
-        const vote = voter.vote(text, context);
-        votes.push(vote);
-      } catch (err) {
-        console.log('[Agent Shield] Ensemble: voter "' + voter.name + '" threw error: ' + err.message);
-        // Voter abstains on error
+    const confidence = Math.max(0, Math.min(1, result.confidence || 0));
+
+    this.results.push({
+      classifier,
+      isThreat: !!result.isThreat,
+      confidence,
+      category: result.category || null,
+      severity: result.severity || null,
+      metadata: result.metadata || {}
+    });
+  }
+
+  /**
+   * Add result from detector-core scanText output.
+   * @param {object} scanResult - Output from scanText()
+   */
+  addScanTextResult(scanResult) {
+    if (!scanResult) return;
+
+    const isThreat = scanResult.flagged || (scanResult.threats && scanResult.threats.length > 0);
+    const confidence = isThreat ? Math.min(1, (scanResult.threats?.length || 1) * 0.3 + 0.4) : 0.1;
+    const category = scanResult.threats?.[0]?.category || null;
+    const severity = scanResult.threats?.[0]?.severity || null;
+
+    this.addResult('detector-core', { isThreat, confidence, category, severity, metadata: scanResult });
+  }
+
+  /**
+   * Add result from MicroModel classification.
+   * @param {object} modelResult - Output from MicroModel.classify()
+   */
+  addMicroModelResult(modelResult) {
+    if (!modelResult) return;
+
+    const isThreat = modelResult.label === 'malicious' || modelResult.isThreat === true;
+    const confidence = modelResult.confidence || modelResult.score || 0;
+
+    this.addResult('micro-model', { isThreat, confidence, metadata: modelResult });
+  }
+
+  /**
+   * Add result from OWASP Agentic scanner.
+   * @param {object} owaspResult - Output from OWASPAgenticScanner
+   */
+  addOWASPResult(owaspResult) {
+    if (!owaspResult) return;
+
+    const findings = owaspResult.findings || owaspResult.risks || [];
+    const isThreat = findings.length > 0;
+    const confidence = isThreat ? Math.min(1, findings.length * 0.2 + 0.3) : 0.05;
+    const severity = findings[0]?.severity || null;
+
+    this.addResult('owasp-scanner', { isThreat, confidence, severity, metadata: owaspResult });
+  }
+
+  /**
+   * Add result from intent graph analysis.
+   * @param {object} intentResult - Output from IntentGraph analysis
+   */
+  addIntentGraphResult(intentResult) {
+    if (!intentResult) return;
+
+    const suspicious = intentResult.suspiciousTransitions || intentResult.suspicious || [];
+    const isThreat = suspicious.length > 0 || intentResult.isThreat === true;
+    const confidence = intentResult.confidence || (isThreat ? 0.7 : 0.1);
+
+    this.addResult('intent-graph', { isThreat, confidence, metadata: intentResult });
+  }
+
+  /**
+   * Calibrate a raw confidence score for a given classifier.
+   * @param {string} classifier - Classifier name
+   * @param {number} rawScore - Raw confidence (0..1)
+   * @returns {number} Calibrated probability (0..1)
+   */
+  calibrate(classifier, rawScore) {
+    if (this.calibrationMode === 'platt') {
+      const params = CALIBRATION_PARAMS[classifier];
+      if (params) {
+        return plattScale(rawScore, params.a, params.b);
       }
     }
+    return binnedCalibration(rawScore);
+  }
 
-    // Check minimum voter requirement
-    if (votes.length < this.minVoters) {
-      console.log('[Agent Shield] Ensemble: only ' + votes.length + ' voter(s) responded, need ' + this.minVoters);
-      return this._buildResult(false, 0, votes);
+  /**
+   * Evaluate all added results and produce a final verdict.
+   * @returns {EnsembleVerdict}
+   */
+  evaluate() {
+    if (this.results.length === 0) {
+      return {
+        verdict: 'benign',
+        confidence: 0,
+        rawScore: 0,
+        contributors: [],
+        threats: [],
+        severity: 'low',
+        agreementRatio: 0,
+        classifiersUsed: 0
+      };
     }
 
-    // Weighted majority voting
-    // weightedScore: positive = injection, negative = benign
-    let weightedScore = 0;
+    let weightedThreatSum = 0;
+    let weightedBenignSum = 0;
     let totalWeight = 0;
+    let threatVoters = 0;
+    let benignVoters = 0;
+    const threats = new Set();
+    const severities = [];
 
-    for (const vote of votes) {
-      const weight = this.weights[vote.voter] || 1;
-      const direction = vote.isInjection ? 1 : -1;
-      weightedScore += weight * vote.confidence * direction;
+    const SEVERITY_ORDER = { critical: 4, high: 3, medium: 2, low: 1 };
+
+    for (const result of this.results) {
+      const weight = this.weights[result.classifier] ?? 1.0;
+      const calibrated = this.calibrate(result.classifier, result.confidence);
+
+      if (result.isThreat) {
+        weightedThreatSum += calibrated * weight;
+        threatVoters++;
+        if (result.category) threats.add(result.category);
+        if (result.severity) severities.push(result.severity);
+      } else {
+        weightedBenignSum += (1 - calibrated) * weight;
+        benignVoters++;
+      }
+
       totalWeight += weight;
     }
 
-    // Normalize to 0-1 range
-    // weightedScore ranges from -totalWeight to +totalWeight
-    // Map to 0-1: (score + totalWeight) / (2 * totalWeight)
-    const normalizedScore = totalWeight > 0
-      ? (weightedScore + totalWeight) / (2 * totalWeight)
-      : 0;
+    // Compute raw weighted score
+    const rawScore = totalWeight > 0 ? weightedThreatSum / totalWeight : 0;
 
-    let isInjection = normalizedScore >= this.threshold;
+    // Determine verdict
+    let verdict = rawScore >= this.threshold ? 'threat' : 'benign';
 
-    // Unanimous check
-    if (this.requireUnanimous && isInjection) {
-      const allAgree = votes.every(v => v.isInjection);
-      if (!allAgree) {
-        isInjection = false;
+    // Quorum check: if required, need at least MIN_QUORUM classifiers to agree
+    if (this.requireQuorum && this.results.length >= MIN_QUORUM) {
+      if (verdict === 'threat' && threatVoters < MIN_QUORUM) {
+        // Not enough classifiers agree on threat — downgrade to benign
+        verdict = 'benign';
       }
     }
 
-    // Compute agreement
-    const injectionCount = votes.filter(v => v.isInjection).length;
-    const benignCount = votes.length - injectionCount;
-    const majorityCount = Math.max(injectionCount, benignCount);
-    const agreement = votes.length > 0 ? majorityCount / votes.length : 0;
+    // Compute agreement ratio
+    const majority = verdict === 'threat' ? threatVoters : benignVoters;
+    const agreementRatio = this.results.length > 0 ? majority / this.results.length : 0;
 
-    const confidence = Math.round(normalizedScore * 1000) / 1000;
-
-    // Update stats
-    if (isInjection) {
-      this._stats.injections++;
-    } else {
-      this._stats.safe++;
+    // Determine highest severity
+    let severity = 'low';
+    for (const s of severities) {
+      if ((SEVERITY_ORDER[s] || 0) > (SEVERITY_ORDER[severity] || 0)) {
+        severity = s;
+      }
     }
-    this._stats.voterAgreementSum += agreement;
-    this._stats.confidenceSum += confidence;
 
-    return this._buildResult(isInjection, confidence, votes, agreement);
-  }
+    // Final confidence: combine raw score with agreement
+    const confidence = Math.round(rawScore * 0.7 + agreementRatio * 0.3 * (verdict === 'threat' ? 1 : 0.5) * 1000) / 1000
+      || Math.round(rawScore * 1000) / 1000;
 
-  /**
-   * Build a standardized result object.
-   * @param {boolean} isInjection
-   * @param {number} confidence
-   * @param {Array} votes
-   * @param {number} [agreement=0]
-   * @returns {object}
-   * @private
-   */
-  _buildResult(isInjection, confidence, votes, agreement = 0) {
-    return {
-      isInjection,
-      confidence,
-      severity: confidenceToSeverity(isInjection ? confidence : 0),
-      votes,
-      agreement: Math.round(agreement * 1000) / 1000,
-      method: 'ensemble',
-      timestamp: new Date().toISOString()
+    const ensembleVerdict = {
+      verdict,
+      confidence: Math.min(1, Math.max(0, confidence)),
+      rawScore: Math.round(rawScore * 1000) / 1000,
+      contributors: [...this.results],
+      threats: [...threats],
+      severity,
+      agreementRatio: Math.round(agreementRatio * 1000) / 1000,
+      classifiersUsed: this.results.length
     };
+
+    this._history.push(ensembleVerdict);
+
+    return ensembleVerdict;
   }
 
   /**
-   * Get stats about ensemble performance.
-   * @returns {{
-   *   totalScans: number,
-   *   injections: number,
-   *   safe: number,
-   *   averageAgreement: number,
-   *   averageConfidence: number,
-   *   voterCount: number,
-   *   voters: string[]
-   * }}
+   * Reset the ensemble for a new evaluation round.
    */
-  getStats() {
-    const total = this._stats.totalScans || 1;
+  reset() {
+    this.results = [];
+  }
+
+  /**
+   * Update classifier weights.
+   * @param {Object<string, number>} newWeights - Partial weight overrides
+   */
+  updateWeights(newWeights) {
+    if (newWeights && typeof newWeights === 'object') {
+      Object.assign(this.weights, newWeights);
+    }
+  }
+
+  /**
+   * Get evaluation history.
+   * @returns {EnsembleVerdict[]}
+   */
+  getHistory() {
+    return [...this._history];
+  }
+
+  /**
+   * Get current configuration summary.
+   * @returns {object}
+   */
+  getConfig() {
     return {
-      totalScans: this._stats.totalScans,
-      injections: this._stats.injections,
-      safe: this._stats.safe,
-      averageAgreement: Math.round((this._stats.voterAgreementSum / total) * 1000) / 1000,
-      averageConfidence: Math.round((this._stats.confidenceSum / total) * 1000) / 1000,
-      voterCount: this._voters.length,
-      voters: this._voters.map(v => v.name)
+      weights: { ...this.weights },
+      threshold: this.threshold,
+      calibrationMode: this.calibrationMode,
+      requireQuorum: this.requireQuorum,
+      pendingResults: this.results.length,
+      historySize: this._history.length
     };
   }
 }
@@ -514,10 +404,11 @@ class EnsembleClassifier {
 // =========================================================================
 
 module.exports = {
-  EnsembleClassifier,
-  PatternVoter,
-  TFIDFVoter,
-  EntropyVoter,
-  IPIAVoter,
-  VOTER_NAMES,
+  DetectionEnsemble,
+  DEFAULT_WEIGHTS,
+  DEFAULT_THRESHOLD,
+  MIN_QUORUM,
+  CALIBRATION_PARAMS,
+  plattScale,
+  binnedCalibration
 };

@@ -1,798 +1,484 @@
 'use strict';
 
 /**
- * Agent Shield — Agent Intent Declaration & Goal Drift Detection (v8.0)
+ * Agent Shield — Agent Behavioral Fingerprinting (v12.0)
  *
- * Lets developers declare what their agent is supposed to do, then detects
- * when conversations drift away from that purpose. Includes a Markov-chain
- * tool sequence modeler that learns normal tool patterns and flags anomalies.
+ * Captures an agent's normal behavior profile by tracking tool call frequency,
+ * argument patterns, response patterns, and timing profiles. Generates a
+ * portable fingerprint hash for comparison and compromise detection.
  *
- * Design:
- *   - AgentIntent — static declaration of purpose, allowed tools, allowed topics.
- *   - GoalDriftDetector — monitors a conversation for drift over time.
- *   - ToolSequenceModeler — learns bigram tool transitions, flags anomalies.
- *
- * Zero dependencies, local-only. All detection runs via TF-IDF cosine
- * similarity and simple Markov chains — no ML libraries required.
+ * All detection runs locally — no data ever leaves your environment.
  *
  * @module agent-intent
  */
 
+const crypto = require('crypto');
+
 // =========================================================================
-// TOKENIZER & TF-IDF (mirrors ipia-detector.js patterns)
+// CONSTANTS
 // =========================================================================
 
-/** Common English stop words to down-weight in TF-IDF. */
-const STOP_WORDS = new Set([
-  'the', 'be', 'to', 'of', 'and', 'in', 'that', 'have', 'it', 'for',
-  'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 'but',
-  'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or', 'an',
-  'will', 'my', 'one', 'all', 'would', 'there', 'their', 'what', 'so',
-  'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me',
-  'when', 'make', 'can', 'like', 'no', 'just', 'him', 'know', 'take',
-  'into', 'your', 'some', 'could', 'them', 'see', 'other', 'than',
-  'then', 'now', 'look', 'only', 'come', 'its', 'over', 'also', 'back',
-  'after', 'use', 'how', 'our', 'well', 'way', 'even', 'new', 'want',
-  'because', 'any', 'these', 'give', 'most', 'us', 'is', 'are', 'was',
-  'were', 'been', 'has', 'had', 'did', 'am',
-]);
+/** Default deviation threshold for compromise detection (z-score). */
+const DEFAULT_DEVIATION_THRESHOLD = 2.5;
+
+/** Minimum observations before fingerprint is considered stable. */
+const MIN_OBSERVATIONS = 10;
+
+/** Maximum history entries per metric to prevent unbounded growth. */
+const MAX_HISTORY = 10000;
+
+/** Similarity score thresholds. */
+const SIMILARITY_THRESHOLDS = {
+  identical: 0.95,
+  similar: 0.75,
+  related: 0.50,
+  different: 0.25
+};
+
+// =========================================================================
+// UTILITY FUNCTIONS
+// =========================================================================
 
 /**
- * Simple suffix-stripping stemmer (covers common English suffixes).
- * Not a full Porter stemmer, but good enough for TF-IDF matching.
- * @param {string} word
- * @returns {string}
+ * Compute mean of an array of numbers.
+ * @param {number[]} arr
+ * @returns {number}
  */
-function stem(word) {
-  if (word.length <= 3) return word;
-  // Handle -ies -> -y (e.g. itineraries -> itinerary, cities -> city)
-  if (word.endsWith('ies') && word.length > 4) {
-    return word.slice(0, -3) + 'y';
-  }
-  // Order matters: try longest suffixes first
-  const suffixes = [
-    'ational', 'tional', 'encies', 'ances', 'ments', 'ating',
-    'ation', 'aries', 'ness', 'ment', 'ings', 'ible', 'able',
-    'ence', 'ance', 'ious', 'eous', 'less', 'ting', 'ally', 'ful',
-    'ing', 'ary', 'ely', 'ers', 'ion', 'ous', 'ive',
-    'ed', 'ly', 'es', 'er', 'al', 'ty',
-    's'
-  ];
-  for (const suffix of suffixes) {
-    if (word.endsWith(suffix) && word.length - suffix.length >= 2) {
-      return word.slice(0, -suffix.length);
-    }
-  }
-  return word;
+function mean(arr) {
+  if (!arr || arr.length === 0) return 0;
+  let sum = 0;
+  for (let i = 0; i < arr.length; i++) sum += arr[i];
+  return sum / arr.length;
 }
 
 /**
- * Tokenize text into lowercase words (2+ chars), filtering stop words.
- * @param {string} text
- * @returns {string[]}
+ * Compute standard deviation of an array of numbers.
+ * @param {number[]} arr
+ * @returns {number}
  */
-function tokenize(text) {
-  if (!text) return [];
-  if (typeof text !== 'string') text = String(text);
-  return text.toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 1);
+function stddev(arr) {
+  if (!arr || arr.length < 2) return 0;
+  const m = mean(arr);
+  let sumSq = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const d = arr[i] - m;
+    sumSq += d * d;
+  }
+  return Math.sqrt(sumSq / (arr.length - 1));
 }
 
 /**
- * Tokenize without stop words, with stemming (for TF-IDF relevance).
- * @param {string} text
- * @returns {string[]}
- */
-function tokenizeForTfIdf(text) {
-  return tokenize(text)
-    .filter(w => !STOP_WORDS.has(w))
-    .map(w => stem(w));
-}
-
-/**
- * Compute term frequency map.
- * @param {string[]} tokens
- * @returns {Map<string, number>}
- */
-function termFrequency(tokens) {
-  const tf = new Map();
-  if (tokens.length === 0) return tf;
-  for (const t of tokens) {
-    tf.set(t, (tf.get(t) || 0) + 1);
-  }
-  for (const [k, v] of tf) {
-    tf.set(k, v / tokens.length);
-  }
-  return tf;
-}
-
-/**
- * Build IDF from a set of documents (each a token array).
- * @param {Array<string[]>} docs
- * @returns {Map<string, number>}
- */
-function buildIdf(docs) {
-  const df = new Map();
-  const n = docs.length;
-  for (const doc of docs) {
-    const seen = new Set(doc);
-    for (const t of seen) {
-      df.set(t, (df.get(t) || 0) + 1);
-    }
-  }
-  const idf = new Map();
-  for (const [term, count] of df) {
-    idf.set(term, Math.log((n + 1) / (count + 1)) + 1);
-  }
-  return idf;
-}
-
-/**
- * Build a TF-IDF vector for a document given an IDF map.
- * @param {string[]} tokens
- * @param {Map<string, number>} idf
- * @returns {Map<string, number>}
- */
-function tfidfVector(tokens, idf) {
-  const tf = termFrequency(tokens);
-  const vec = new Map();
-  for (const [term, freq] of tf) {
-    const idfVal = idf.get(term) || Math.log(2) + 1;
-    vec.set(term, freq * idfVal);
-  }
-  return vec;
-}
-
-/**
- * Cosine similarity between two TF-IDF vectors.
+ * Compute cosine similarity between two frequency maps.
  * @param {Map<string, number>} a
  * @param {Map<string, number>} b
- * @returns {number} 0-1
+ * @returns {number} 0..1
  */
-function cosineSim(a, b) {
-  let dot = 0, normA = 0, normB = 0;
+function cosineSimilarity(a, b) {
+  if (a.size === 0 && b.size === 0) return 1;
+  if (a.size === 0 || b.size === 0) return 0;
+
   const keys = new Set([...a.keys(), ...b.keys()]);
+  let dot = 0;
+  let magA = 0;
+  let magB = 0;
+
   for (const k of keys) {
     const va = a.get(k) || 0;
     const vb = b.get(k) || 0;
     dot += va * vb;
-    normA += va * va;
-    normB += vb * vb;
+    magA += va * va;
+    magB += vb * vb;
   }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  if (!isFinite(denom) || denom === 0) return 0;
-  const result = dot / denom;
-  return isFinite(result) ? result : 0;
+
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+/**
+ * Jensen-Shannon divergence between two distributions (lower = more similar).
+ * @param {Map<string, number>} p
+ * @param {Map<string, number>} q
+ * @returns {number} 0..1
+ */
+function jsDivergence(p, q) {
+  const keys = new Set([...p.keys(), ...q.keys()]);
+  const total = keys.size;
+  if (total === 0) return 0;
+
+  // Normalize to probability distributions
+  let sumP = 0;
+  let sumQ = 0;
+  for (const k of keys) {
+    sumP += p.get(k) || 0;
+    sumQ += q.get(k) || 0;
+  }
+  if (sumP === 0 && sumQ === 0) return 0;
+  if (sumP === 0 || sumQ === 0) return 1;
+
+  let jsd = 0;
+  for (const k of keys) {
+    const pi = (p.get(k) || 0) / sumP;
+    const qi = (q.get(k) || 0) / sumQ;
+    const mi = (pi + qi) / 2;
+    if (pi > 0 && mi > 0) jsd += 0.5 * pi * Math.log2(pi / mi);
+    if (qi > 0 && mi > 0) jsd += 0.5 * qi * Math.log2(qi / mi);
+  }
+
+  return Math.min(1, Math.max(0, jsd));
 }
 
 // =========================================================================
-// AGENT INTENT
+// AGENT FINGERPRINT
 // =========================================================================
 
 /**
- * Declares what an agent is supposed to do. Provides methods to check
- * whether a message or tool call is on-topic.
+ * Agent Behavioral Fingerprint.
+ *
+ * Captures an agent's normal behavior profile and detects deviations that
+ * may indicate compromise.
+ *
+ * @example
+ * const fp = new AgentFingerprint({ agentId: 'my-agent' });
+ * fp.recordToolCall('readFile', { path: '/data/config.json' }, 12);
+ * fp.recordToolCall('readFile', { path: '/data/users.json' }, 15);
+ * fp.recordResponse('text', 150);
+ * const hash = fp.generateHash();
+ * const result = fp.detectCompromise({ tool: 'execCommand', args: { cmd: 'curl evil.com' }, latencyMs: 500 });
  */
-class AgentIntent {
+class AgentFingerprint {
   /**
-   * @param {object} config
-   * @param {string} config.purpose - What this agent does ("Books flights for customers")
-   * @param {string[]} [config.allowedTools] - Tools this agent may use
-   * @param {string[]} [config.allowedTopics] - Topics the agent should stay within
-   * @param {number} [config.maxDriftScore=0.7] - Max drift before alert (0-1)
-   * @param {function} [config.onDrift] - Callback when drift detected
+   * @param {object} [options]
+   * @param {string} [options.agentId] - Unique agent identifier
+   * @param {number} [options.deviationThreshold] - Z-score threshold for anomaly (default 2.5)
+   * @param {number} [options.minObservations] - Minimum observations before stable (default 10)
    */
-  constructor(config) {
-    if (!config || !config.purpose) {
-      throw new Error('[Agent Shield] AgentIntent requires a purpose string');
-    }
-    this.purpose = config.purpose;
-    this.allowedTools = config.allowedTools || null;
-    this.allowedTopics = config.allowedTopics || null;
-    this.maxDriftScore = typeof config.maxDriftScore === 'number' ? config.maxDriftScore : 0.7;
-    this.onDrift = config.onDrift || null;
+  constructor(options = {}) {
+    this.agentId = options.agentId || `agent-${Date.now()}`;
+    this.deviationThreshold = options.deviationThreshold || DEFAULT_DEVIATION_THRESHOLD;
+    this.minObservations = options.minObservations || MIN_OBSERVATIONS;
+    this.createdAt = Date.now();
 
-    // Pre-compute purpose tokens and TF vector
-    this._purposeTokens = tokenizeForTfIdf(this.purpose);
+    /** @type {Map<string, number>} Tool call frequency counts. */
+    this.toolFrequency = new Map();
 
-    // Build topic tokens from allowedTopics
-    this._topicTokens = [];
-    if (this.allowedTopics && this.allowedTopics.length > 0) {
-      for (const topic of this.allowedTopics) {
-        this._topicTokens.push(...tokenizeForTfIdf(topic));
-      }
-    }
+    /** @type {Map<string, Set<string>>} Argument key patterns per tool. */
+    this.argumentPatterns = new Map();
 
-    // Combined purpose + topics tokens for broader matching
-    this._allPurposeTokens = [...this._purposeTokens, ...this._topicTokens];
+    /** @type {Map<string, number[]>} Latency observations per tool. */
+    this.timingProfiles = new Map();
 
-    console.log(`[Agent Shield] AgentIntent created: "${this.purpose.substring(0, 80)}"`);
+    /** @type {Map<string, number>} Response type frequency counts. */
+    this.responsePatterns = new Map();
+
+    /** @type {number[]} Inter-call intervals in ms. */
+    this.callIntervals = [];
+
+    /** @type {number} Total observations recorded. */
+    this.totalObservations = 0;
+
+    /** @type {number|null} Timestamp of last recorded event. */
+    this._lastCallTime = null;
+
+    console.log(`[Agent Shield] AgentFingerprint created for ${this.agentId}`);
   }
 
   /**
-   * Check if a user message is on-topic for this agent's purpose.
-   * Uses TF-IDF cosine similarity between purpose and message.
-   * @param {string} message - User message
-   * @returns {object} { onTopic: bool, relevanceScore: number 0-1, drift: number 0-1, reason: string }
+   * Record a tool call observation.
+   * @param {string} toolName - Name of the tool invoked
+   * @param {object} [args] - Arguments passed to the tool
+   * @param {number} [latencyMs] - Call latency in milliseconds
    */
-  checkMessage(message) {
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return { onTopic: true, relevanceScore: 0, drift: 1, reason: 'Empty message' };
+  recordToolCall(toolName, args = {}, latencyMs = 0) {
+    if (!toolName || typeof toolName !== 'string') return;
+
+    // Track frequency
+    this.toolFrequency.set(toolName, (this.toolFrequency.get(toolName) || 0) + 1);
+
+    // Track argument key patterns
+    if (!this.argumentPatterns.has(toolName)) {
+      this.argumentPatterns.set(toolName, new Set());
+    }
+    const argKeys = Object.keys(args || {}).sort().join(',');
+    if (argKeys) {
+      this.argumentPatterns.get(toolName).add(argKeys);
     }
 
-    const msgTokens = tokenizeForTfIdf(message);
-    if (msgTokens.length === 0) {
-      return { onTopic: true, relevanceScore: 0, drift: 1, reason: 'No meaningful tokens in message' };
+    // Track timing
+    if (!this.timingProfiles.has(toolName)) {
+      this.timingProfiles.set(toolName, []);
+    }
+    const timings = this.timingProfiles.get(toolName);
+    if (timings.length < MAX_HISTORY) {
+      timings.push(latencyMs);
     }
 
-    // Build IDF from purpose + message as two documents
-    const docs = [this._allPurposeTokens, msgTokens];
-    const idf = buildIdf(docs);
-
-    // Build TF-IDF vectors
-    const purposeVec = tfidfVector(this._allPurposeTokens, idf);
-    const msgVec = tfidfVector(msgTokens, idf);
-
-    // TF-IDF cosine similarity
-    const cosSim = cosineSim(purposeVec, msgVec);
-
-    // Term frequency cosine (no IDF) — better for short text vs fixed reference
-    const purposeTf = termFrequency(this._allPurposeTokens);
-    const msgTf = termFrequency(msgTokens);
-    const tfSim = cosineSim(purposeTf, msgTf);
-
-    // Message coverage: fraction of message tokens matching purpose vocabulary
-    const purposeSet = new Set(this._allPurposeTokens);
-    const overlapCount = msgTokens.filter(t => purposeSet.has(t)).length;
-    const coverageRatio = msgTokens.length > 0 ? overlapCount / msgTokens.length : 0;
-
-    // Blend: 25% TF-IDF cosine + 25% TF cosine + 50% coverage
-    // Coverage dominates because for intent checking, the key question is:
-    // "how much of the user's message uses purpose-related vocabulary?"
-    const relevanceScore = (cosSim * 0.25) + (tfSim * 0.25) + (coverageRatio * 0.5);
-    const drift = 1 - relevanceScore;
-    const onTopic = drift <= this.maxDriftScore;
-
-    let reason;
-    if (onTopic) {
-      reason = `Message is on-topic (relevance: ${(relevanceScore * 100).toFixed(1)}%)`;
-    } else {
-      reason = `Message drifted from purpose (relevance: ${(relevanceScore * 100).toFixed(1)}%, threshold: ${((1 - this.maxDriftScore) * 100).toFixed(1)}%)`;
-    }
-
-    if (!onTopic && this.onDrift) {
-      try {
-        this.onDrift({ message: message.substring(0, 200), drift, relevanceScore, reason });
-      } catch (e) {
-        console.error('[Agent Shield] onDrift callback error:', e.message);
+    // Track call intervals
+    const now = Date.now();
+    if (this._lastCallTime !== null) {
+      const interval = now - this._lastCallTime;
+      if (this.callIntervals.length < MAX_HISTORY) {
+        this.callIntervals.push(interval);
       }
     }
+    this._lastCallTime = now;
 
-    return { onTopic, relevanceScore, drift, reason };
+    this.totalObservations++;
   }
 
   /**
-   * Check if a tool call is allowed for this agent.
-   * @param {string} toolName
-   * @param {object} [args]
-   * @returns {object} { allowed: bool, reason: string }
+   * Record a response observation.
+   * @param {string} responseType - Type of response (e.g. 'text', 'json', 'error')
+   * @param {number} [length] - Response length in characters
    */
-  checkTool(toolName, args) {
-    if (!toolName || typeof toolName !== 'string') {
-      return { allowed: false, reason: 'Invalid tool name' };
-    }
+  recordResponse(responseType, length = 0) {
+    if (!responseType || typeof responseType !== 'string') return;
+    this.responsePatterns.set(responseType, (this.responsePatterns.get(responseType) || 0) + 1);
+    this.totalObservations++;
+  }
 
-    // If no allowedTools specified, everything is allowed
-    if (!this.allowedTools) {
-      return { allowed: true, reason: 'No tool restrictions defined' };
-    }
+  /**
+   * Check if the fingerprint has enough data to be considered stable.
+   * @returns {boolean}
+   */
+  isStable() {
+    return this.totalObservations >= this.minObservations;
+  }
 
-    const normalizedName = toolName.toLowerCase().trim();
-    const allowed = this.allowedTools.some(t => t.toLowerCase().trim() === normalizedName);
-
-    if (allowed) {
-      return { allowed: true, reason: `Tool "${toolName}" is in the allowed list` };
-    }
-
-    return {
-      allowed: false,
-      reason: `Tool "${toolName}" is not in the allowed list [${this.allowedTools.join(', ')}]`
+  /**
+   * Generate a portable hash that uniquely identifies this agent's behavior.
+   * @returns {string} SHA-256 hex hash
+   */
+  generateHash() {
+    const profile = {
+      agentId: this.agentId,
+      toolFrequency: Object.fromEntries(this.toolFrequency),
+      argumentPatterns: {},
+      timingStats: {},
+      responsePatterns: Object.fromEntries(this.responsePatterns),
+      totalObservations: this.totalObservations
     };
-  }
 
-  /**
-   * Get the intent's TF-IDF vector (for comparison).
-   * @returns {Map<string, number>}
-   */
-  getPurposeVector() {
-    const idf = buildIdf([this._allPurposeTokens]);
-    return tfidfVector(this._allPurposeTokens, idf);
-  }
-}
-
-// =========================================================================
-// GOAL DRIFT DETECTOR
-// =========================================================================
-
-/**
- * Monitors a conversation over time for drift away from a declared purpose.
- * Uses a sliding window of recent messages and TF-IDF cosine similarity.
- */
-class GoalDriftDetector {
-  /**
-   * @param {AgentIntent} intent - The declared intent
-   * @param {object} [config]
-   * @param {number} [config.windowSize=10] - Messages to consider
-   * @param {number} [config.driftThreshold=0.6] - Drift score to trigger alert
-   * @param {number} [config.checkInterval=5] - Check every N messages
-   * @param {function} [config.onDrift] - Callback on drift
-   */
-  constructor(intent, config = {}) {
-    if (!intent || !(intent instanceof AgentIntent)) {
-      throw new Error('[Agent Shield] GoalDriftDetector requires an AgentIntent instance');
+    // Serialize argument patterns
+    for (const [tool, patterns] of this.argumentPatterns) {
+      profile.argumentPatterns[tool] = [...patterns].sort();
     }
-    this.intent = intent;
-    this.windowSize = config.windowSize || 10;
-    this.driftThreshold = typeof config.driftThreshold === 'number' ? config.driftThreshold : 0.6;
-    this.checkInterval = config.checkInterval || 5;
-    this.onDrift = config.onDrift || null;
 
-    this._messages = [];
-    this._driftHistory = [];
-    this._totalMessages = 0;
-    this._driftEvents = 0;
-    this._topicShifts = 0;
-
-    console.log('[Agent Shield] GoalDriftDetector initialized ' +
-      `(window=${this.windowSize}, threshold=${this.driftThreshold})`);
-  }
-
-  /**
-   * Add a message to the conversation and check for drift.
-   * @param {string} message - The message text
-   * @param {string} [role='user'] - 'user' or 'assistant'
-   * @returns {object} {
-   *   driftScore: number 0-1 (0=on topic, 1=completely off),
-   *   driftDetected: bool,
-   *   trend: 'stable' | 'drifting' | 'recovering',
-   *   turnsSincePurpose: number,
-   *   topicShift: bool (sudden topic change),
-   *   reason: string
-   * }
-   */
-  addMessage(message, role = 'user') {
-    if (!message || typeof message !== 'string') {
-      return {
-        driftScore: 0,
-        driftDetected: false,
-        trend: 'stable',
-        turnsSincePurpose: 0,
-        topicShift: false,
-        reason: 'Empty or invalid message'
+    // Serialize timing statistics (mean + stddev, not raw data)
+    for (const [tool, timings] of this.timingProfiles) {
+      profile.timingStats[tool] = {
+        mean: Math.round(mean(timings) * 100) / 100,
+        stddev: Math.round(stddev(timings) * 100) / 100,
+        count: timings.length
       };
     }
 
-    this._totalMessages++;
-    const msgTokens = tokenizeForTfIdf(message);
+    const serialized = JSON.stringify(profile, Object.keys(profile).sort());
+    return crypto.createHash('sha256').update(serialized).digest('hex');
+  }
 
-    this._messages.push({
-      text: message,
-      tokens: msgTokens,
-      role,
-      timestamp: Date.now()
-    });
-
-    // Cap stored messages
-    if (this._messages.length > this.windowSize * 3) {
-      this._messages = this._messages.slice(-this.windowSize * 3);
+  /**
+   * Compare this fingerprint with another and return a similarity score.
+   * @param {AgentFingerprint} other - Another fingerprint to compare against
+   * @returns {{ score: number, label: string, details: object }}
+   */
+  compare(other) {
+    if (!(other instanceof AgentFingerprint)) {
+      return { score: 0, label: 'invalid', details: { error: 'Not an AgentFingerprint instance' } };
     }
 
-    // Get sliding window of recent messages
-    const window = this._messages.slice(-this.windowSize);
-    const windowTokens = [];
-    for (const msg of window) {
-      windowTokens.push(...msg.tokens);
-    }
+    const details = {};
 
-    // Blended scoring (same approach as AgentIntent.checkMessage)
-    const purposeTokens = this.intent._allPurposeTokens;
-    const docs = [purposeTokens, windowTokens];
-    const idf = buildIdf(docs);
+    // 1. Tool frequency similarity (cosine)
+    details.toolFrequency = cosineSimilarity(this.toolFrequency, other.toolFrequency);
 
-    const purposeVec = tfidfVector(purposeTokens, idf);
-    const windowVec = tfidfVector(windowTokens, idf);
-    const cosSim = cosineSim(purposeVec, windowVec);
-
-    // TF cosine (no IDF)
-    const purposeTf = termFrequency(purposeTokens);
-    const windowTf = termFrequency(windowTokens);
-    const tfSim = cosineSim(purposeTf, windowTf);
-
-    // Coverage: fraction of window tokens in purpose vocabulary
-    const purposeSet = new Set(purposeTokens);
-    const overlapCount = windowTokens.filter(t => purposeSet.has(t)).length;
-    const coverageRatio = windowTokens.length > 0 ? overlapCount / windowTokens.length : 0;
-
-    const relevance = (cosSim * 0.25) + (tfSim * 0.25) + (coverageRatio * 0.5);
-    const driftScore = 1 - relevance;
-    const driftDetected = driftScore > this.driftThreshold;
-
-    // Detect sudden topic shift by comparing current message to previous
-    let topicShift = false;
-    if (this._messages.length >= 2) {
-      const prev = this._messages[this._messages.length - 2];
-      const prevTf = termFrequency(prev.tokens);
-      const currTf = termFrequency(msgTokens);
-      const localSim = cosineSim(prevTf, currTf);
-      // A sharp drop in local similarity signals a topic shift
-      if (localSim < 0.1 && msgTokens.length > 2 && prev.tokens.length > 2) {
-        topicShift = true;
-        this._topicShifts++;
+    // 2. Argument pattern overlap (Jaccard)
+    let argOverlap = 0;
+    let argTotal = 0;
+    const allTools = new Set([...this.argumentPatterns.keys(), ...other.argumentPatterns.keys()]);
+    for (const tool of allTools) {
+      const a = this.argumentPatterns.get(tool) || new Set();
+      const b = other.argumentPatterns.get(tool) || new Set();
+      const union = new Set([...a, ...b]);
+      const intersection = [...a].filter(x => b.has(x));
+      if (union.size > 0) {
+        argOverlap += intersection.length / union.size;
+        argTotal++;
       }
     }
+    details.argumentPatterns = argTotal > 0 ? argOverlap / argTotal : (allTools.size === 0 ? 1 : 0);
 
-    // Calculate turns since any on-topic message
-    let turnsSincePurpose = 0;
-    for (let i = this._messages.length - 1; i >= 0; i--) {
-      const msg = this._messages[i];
-      const msgDocs = [purposeTokens, msg.tokens];
-      const msgIdf = buildIdf(msgDocs);
-      const msgPurposeVec = tfidfVector(purposeTokens, msgIdf);
-      const msgVec = tfidfVector(msg.tokens, msgIdf);
-      const msgCosSim = cosineSim(msgPurposeVec, msgVec);
+    // 3. Response pattern similarity (cosine)
+    details.responsePatterns = cosineSimilarity(this.responsePatterns, other.responsePatterns);
 
-      // TF cosine
-      const msgPurposeTf = termFrequency(purposeTokens);
-      const msgTf = termFrequency(msg.tokens);
-      const msgTfSim = cosineSim(msgPurposeTf, msgTf);
-
-      // Coverage
-      const msgOverlap = msg.tokens.filter(t => purposeSet.has(t)).length;
-      const msgCoverage = msg.tokens.length > 0 ? msgOverlap / msg.tokens.length : 0;
-
-      const msgRelevance = (msgCosSim * 0.25) + (msgTfSim * 0.25) + (msgCoverage * 0.5);
-      if (msgRelevance > (1 - this.driftThreshold)) {
-        break;
-      }
-      turnsSincePurpose++;
+    // 4. Timing profile similarity (1 - JS divergence of mean latencies)
+    const timingA = new Map();
+    const timingB = new Map();
+    for (const [tool, timings] of this.timingProfiles) {
+      timingA.set(tool, mean(timings));
     }
-
-    // Record drift score for trend analysis
-    this._driftHistory.push(driftScore);
-    if (this._driftHistory.length > 100) {
-      this._driftHistory = this._driftHistory.slice(-100);
+    for (const [tool, timings] of other.timingProfiles) {
+      timingB.set(tool, mean(timings));
     }
+    details.timingProfile = 1 - jsDivergence(timingA, timingB);
 
-    // Determine trend from last 3 scores
-    const trend = this._calcTrend();
-
-    if (driftDetected) {
-      this._driftEvents++;
+    // Weighted aggregate
+    const weights = { toolFrequency: 0.35, argumentPatterns: 0.25, responsePatterns: 0.20, timingProfile: 0.20 };
+    let score = 0;
+    for (const [key, weight] of Object.entries(weights)) {
+      score += (details[key] || 0) * weight;
     }
+    score = Math.round(score * 1000) / 1000;
 
-    // Build reason
-    let reason;
-    if (driftDetected) {
-      reason = `Conversation has drifted from purpose (drift: ${(driftScore * 100).toFixed(1)}%, ` +
-        `threshold: ${(this.driftThreshold * 100).toFixed(1)}%, trend: ${trend})`;
-    } else {
-      reason = `Conversation is on-topic (drift: ${(driftScore * 100).toFixed(1)}%, trend: ${trend})`;
-    }
+    let label = 'different';
+    if (score >= SIMILARITY_THRESHOLDS.identical) label = 'identical';
+    else if (score >= SIMILARITY_THRESHOLDS.similar) label = 'similar';
+    else if (score >= SIMILARITY_THRESHOLDS.related) label = 'related';
 
-    // Fire callback
-    if (driftDetected && this.onDrift) {
-      try {
-        this.onDrift({
-          driftScore,
-          trend,
-          turnsSincePurpose,
-          topicShift,
-          message: message.substring(0, 200),
-          reason
-        });
-      } catch (e) {
-        console.error('[Agent Shield] onDrift callback error:', e.message);
-      }
-    }
-
-    return {
-      driftScore,
-      driftDetected,
-      trend,
-      turnsSincePurpose,
-      topicShift,
-      reason
-    };
+    return { score, label, details };
   }
 
   /**
-   * Calculate drift trend from recent scores.
-   * @private
-   * @returns {'stable' | 'drifting' | 'recovering'}
+   * Check if current behavior deviates from the fingerprint (possible compromise).
+   * @param {object} observation - Current observed behavior
+   * @param {string} [observation.tool] - Tool being called
+   * @param {object} [observation.args] - Arguments to the tool
+   * @param {number} [observation.latencyMs] - Observed latency in ms
+   * @returns {{ compromised: boolean, score: number, reasons: string[] }}
    */
-  _calcTrend() {
-    const h = this._driftHistory;
-    if (h.length < 3) return 'stable';
+  detectCompromise(observation = {}) {
+    const reasons = [];
+    let anomalyScore = 0;
 
-    const last3 = h.slice(-3);
-    const increasing = last3[0] < last3[1] && last3[1] < last3[2];
-    const decreasing = last3[0] > last3[1] && last3[1] > last3[2];
-
-    if (increasing) return 'drifting';
-    if (decreasing) return 'recovering';
-    return 'stable';
-  }
-
-  /**
-   * Get drift history.
-   * @returns {number[]} Array of drift scores
-   */
-  getHistory() {
-    return [...this._driftHistory];
-  }
-
-  /**
-   * Reset the detector.
-   */
-  reset() {
-    this._messages = [];
-    this._driftHistory = [];
-    this._totalMessages = 0;
-    this._driftEvents = 0;
-    this._topicShifts = 0;
-    console.log('[Agent Shield] GoalDriftDetector reset');
-  }
-
-  /**
-   * Get stats.
-   * @returns {object}
-   */
-  getStats() {
-    const h = this._driftHistory;
-    const avgDrift = h.length > 0 ? h.reduce((a, b) => a + b, 0) / h.length : 0;
-    const maxDrift = h.length > 0 ? Math.max(...h) : 0;
-
-    return {
-      totalMessages: this._totalMessages,
-      messagesInWindow: Math.min(this._messages.length, this.windowSize),
-      driftEvents: this._driftEvents,
-      topicShifts: this._topicShifts,
-      averageDrift: avgDrift,
-      maxDrift,
-      currentTrend: this._calcTrend(),
-      historyLength: h.length
-    };
-  }
-}
-
-// =========================================================================
-// TOOL SEQUENCE MODELER
-// =========================================================================
-
-/** Special token for the start of a tool sequence. */
-const START_TOKEN = '__START__';
-
-/**
- * Learns normal tool call patterns using a Markov chain (bigram transitions)
- * and flags anomalous sequences.
- */
-class ToolSequenceModeler {
-  /**
-   * @param {object} [config]
-   * @param {number} [config.learningPeriod=50] - Tool calls before modeling starts
-   * @param {number} [config.anomalyThreshold=0.15] - Probability below this = anomaly
-   * @param {number} [config.maxChainLength=10] - Max sequence length to track
-   */
-  constructor(config = {}) {
-    this.learningPeriod = config.learningPeriod || 50;
-    this.anomalyThreshold = typeof config.anomalyThreshold === 'number' ? config.anomalyThreshold : 0.15;
-    this.maxChainLength = config.maxChainLength || 10;
-
-    /** @type {Object<string, Object<string, number>>} Bigram counts: from -> to -> count */
-    this._transitions = {};
-    /** @type {string[]} Recent tool sequence */
-    this._sequence = [];
-    /** @type {number} Total tool calls recorded */
-    this._totalCalls = 0;
-    /** @type {number} Anomalies detected */
-    this._anomalyCount = 0;
-    /** @type {Object<string, number>} Tool call counts */
-    this._toolCounts = {};
-
-    console.log(`[Agent Shield] ToolSequenceModeler initialized ` +
-      `(learningPeriod=${this.learningPeriod}, anomalyThreshold=${this.anomalyThreshold})`);
-  }
-
-  /**
-   * Record a tool call and check if it's anomalous.
-   * @param {string} toolName
-   * @param {object} [context] - { args, userId, agentId }
-   * @returns {object} {
-   *   allowed: bool,
-   *   anomalyScore: number 0-1 (0=normal, 1=never seen),
-   *   probability: number (transition probability from previous tool),
-   *   isLearning: bool,
-   *   reason: string
-   * }
-   */
-  recordToolCall(toolName, context = {}) {
-    if (!toolName || typeof toolName !== 'string') {
+    if (!this.isStable()) {
       return {
-        allowed: true,
-        anomalyScore: 0,
-        probability: 0,
-        isLearning: true,
-        reason: 'Invalid tool name'
+        compromised: false,
+        score: 0,
+        reasons: ['Fingerprint not yet stable (insufficient observations)']
       };
     }
 
-    this._totalCalls++;
-    this._toolCounts[toolName] = (this._toolCounts[toolName] || 0) + 1;
-    const isLearning = this._totalCalls <= this.learningPeriod;
+    const { tool, args, latencyMs } = observation;
 
-    // Determine the previous tool (or START_TOKEN)
-    const prevTool = this._sequence.length > 0
-      ? this._sequence[this._sequence.length - 1]
-      : START_TOKEN;
-
-    // Record transition
-    if (!this._transitions[prevTool]) {
-      this._transitions[prevTool] = {};
-    }
-    this._transitions[prevTool][toolName] = (this._transitions[prevTool][toolName] || 0) + 1;
-
-    // Add to sequence, enforce maxChainLength
-    this._sequence.push(toolName);
-    if (this._sequence.length > this.maxChainLength) {
-      this._sequence.shift();
+    // 1. Unknown tool check
+    if (tool && !this.toolFrequency.has(tool)) {
+      reasons.push(`Unknown tool "${tool}" not in behavioral profile`);
+      anomalyScore += 3;
     }
 
-    // During learning, always allow
-    if (isLearning) {
-      return {
-        allowed: true,
-        anomalyScore: 0,
-        probability: 1,
-        isLearning: true,
-        reason: `Learning mode (${this._totalCalls}/${this.learningPeriod})`
-      };
-    }
-
-    // Calculate transition probability
-    const probability = this._getTransitionProbability(prevTool, toolName);
-    const anomalyScore = 1 - probability;
-    const allowed = probability >= this.anomalyThreshold;
-
-    if (!allowed) {
-      this._anomalyCount++;
-    }
-
-    let reason;
-    if (allowed) {
-      reason = `Tool "${toolName}" after "${prevTool}" is normal (P=${probability.toFixed(3)})`;
-    } else {
-      reason = `Tool "${toolName}" after "${prevTool}" is anomalous ` +
-        `(P=${probability.toFixed(3)}, threshold=${this.anomalyThreshold})`;
-    }
-
-    return { allowed, anomalyScore, probability, isLearning, reason };
-  }
-
-  /**
-   * Get transition probability P(to | from).
-   * @private
-   * @param {string} from
-   * @param {string} to
-   * @returns {number}
-   */
-  _getTransitionProbability(from, to) {
-    const row = this._transitions[from];
-    if (!row) return 0;
-
-    const total = Object.values(row).reduce((a, b) => a + b, 0);
-    if (total === 0) return 0;
-
-    const count = row[to] || 0;
-    return count / total;
-  }
-
-  /**
-   * Get the transition probability matrix.
-   * @returns {Object<string, Object<string, number>>} Normalized probabilities
-   */
-  getTransitionMatrix() {
-    const matrix = {};
-    for (const [from, targets] of Object.entries(this._transitions)) {
-      const total = Object.values(targets).reduce((a, b) => a + b, 0);
-      matrix[from] = {};
-      for (const [to, count] of Object.entries(targets)) {
-        matrix[from][to] = total > 0 ? count / total : 0;
+    // 2. Tool frequency deviation
+    if (tool && this.toolFrequency.has(tool)) {
+      const totalCalls = [...this.toolFrequency.values()].reduce((a, b) => a + b, 0);
+      const expectedFreq = this.toolFrequency.get(tool) / totalCalls;
+      // If this tool is very rarely used (<5% of calls), calling it is mildly suspicious
+      if (expectedFreq < 0.05) {
+        reasons.push(`Tool "${tool}" is rarely used (${(expectedFreq * 100).toFixed(1)}% of calls)`);
+        anomalyScore += 1;
       }
     }
-    return matrix;
-  }
 
-  /**
-   * Get the most common tool sequences (bigrams).
-   * @param {number} [topN=10] - Number of sequences to return
-   * @returns {Array<{ from: string, to: string, count: number, probability: number }>}
-   */
-  getCommonSequences(topN = 10) {
-    const sequences = [];
-    for (const [from, targets] of Object.entries(this._transitions)) {
-      const total = Object.values(targets).reduce((a, b) => a + b, 0);
-      for (const [to, count] of Object.entries(targets)) {
-        sequences.push({
-          from,
-          to,
-          count,
-          probability: total > 0 ? count / total : 0
-        });
+    // 3. Argument pattern deviation
+    if (tool && args && this.argumentPatterns.has(tool)) {
+      const knownPatterns = this.argumentPatterns.get(tool);
+      const currentPattern = Object.keys(args || {}).sort().join(',');
+      if (currentPattern && !knownPatterns.has(currentPattern)) {
+        reasons.push(`Unusual argument pattern for "${tool}": "${currentPattern}"`);
+        anomalyScore += 2;
       }
     }
-    sequences.sort((a, b) => b.count - a.count);
-    return sequences.slice(0, topN);
-  }
 
-  /**
-   * Export the learned model for persistence.
-   * @returns {object}
-   */
-  exportModel() {
+    // 4. Timing anomaly (z-score)
+    if (tool && typeof latencyMs === 'number' && this.timingProfiles.has(tool)) {
+      const timings = this.timingProfiles.get(tool);
+      const m = mean(timings);
+      const sd = stddev(timings);
+      if (sd > 0) {
+        const zScore = Math.abs(latencyMs - m) / sd;
+        if (zScore > this.deviationThreshold) {
+          reasons.push(`Timing anomaly for "${tool}": z-score ${zScore.toFixed(2)} (latency ${latencyMs}ms vs mean ${m.toFixed(0)}ms)`);
+          anomalyScore += zScore > 4 ? 3 : 1;
+        }
+      }
+    }
+
+    // 5. Check for suspicious argument values
+    if (args) {
+      const argStr = JSON.stringify(args).toLowerCase();
+      const suspiciousPatterns = [
+        /curl\s+/,
+        /wget\s+/,
+        /eval\s*\(/,
+        /base64/,
+        /\/etc\/passwd/,
+        /\.\.\//,
+        /exfiltrat/
+      ];
+      for (const pattern of suspiciousPatterns) {
+        if (pattern.test(argStr)) {
+          reasons.push(`Suspicious argument content detected: ${pattern.source}`);
+          anomalyScore += 2;
+        }
+      }
+    }
+
+    const compromised = anomalyScore >= this.deviationThreshold;
+
     return {
-      transitions: JSON.parse(JSON.stringify(this._transitions)),
-      toolCounts: { ...this._toolCounts },
-      totalCalls: this._totalCalls,
-      anomalyCount: this._anomalyCount,
-      learningPeriod: this.learningPeriod,
-      anomalyThreshold: this.anomalyThreshold,
-      exportedAt: new Date().toISOString()
+      compromised,
+      score: Math.round(anomalyScore * 100) / 100,
+      reasons
     };
   }
 
   /**
-   * Import a previously exported model.
-   * @param {object} data - Model data from exportModel()
+   * Export fingerprint as a portable JSON object.
+   * @returns {object}
    */
-  importModel(data) {
-    if (!data || typeof data !== 'object') {
-      throw new Error('[Agent Shield] Invalid model data');
+  toJSON() {
+    const obj = {
+      agentId: this.agentId,
+      createdAt: this.createdAt,
+      totalObservations: this.totalObservations,
+      stable: this.isStable(),
+      hash: this.generateHash(),
+      toolFrequency: Object.fromEntries(this.toolFrequency),
+      argumentPatterns: {},
+      timingStats: {},
+      responsePatterns: Object.fromEntries(this.responsePatterns)
+    };
+
+    for (const [tool, patterns] of this.argumentPatterns) {
+      obj.argumentPatterns[tool] = [...patterns];
     }
-    if (data.transitions) {
-      this._transitions = JSON.parse(JSON.stringify(data.transitions));
+    for (const [tool, timings] of this.timingProfiles) {
+      obj.timingStats[tool] = { mean: mean(timings), stddev: stddev(timings), count: timings.length };
     }
-    if (data.toolCounts) {
-      this._toolCounts = { ...data.toolCounts };
-    }
-    if (typeof data.totalCalls === 'number') {
-      this._totalCalls = data.totalCalls;
-    }
-    if (typeof data.anomalyCount === 'number') {
-      this._anomalyCount = data.anomalyCount;
-    }
-    console.log(`[Agent Shield] ToolSequenceModeler model imported (${this._totalCalls} calls)`);
+
+    return obj;
   }
 
   /**
-   * Get modeler stats.
-   * @returns {object}
+   * Restore fingerprint from a previously exported JSON object.
+   * @param {object} data - Output from toJSON()
+   * @returns {AgentFingerprint}
    */
-  getStats() {
-    const uniqueTools = Object.keys(this._toolCounts).length;
-    const transitionCount = Object.values(this._transitions)
-      .reduce((sum, targets) => sum + Object.keys(targets).length, 0);
+  static fromJSON(data) {
+    const fp = new AgentFingerprint({ agentId: data.agentId });
+    fp.createdAt = data.createdAt || Date.now();
+    fp.totalObservations = data.totalObservations || 0;
 
-    return {
-      totalCalls: this._totalCalls,
-      uniqueTools,
-      transitionCount,
-      anomalyCount: this._anomalyCount,
-      isLearning: this._totalCalls <= this.learningPeriod,
-      learningProgress: Math.min(this._totalCalls / this.learningPeriod, 1),
-      toolCounts: { ...this._toolCounts }
-    };
+    if (data.toolFrequency) {
+      fp.toolFrequency = new Map(Object.entries(data.toolFrequency));
+    }
+    if (data.argumentPatterns) {
+      for (const [tool, patterns] of Object.entries(data.argumentPatterns)) {
+        fp.argumentPatterns.set(tool, new Set(patterns));
+      }
+    }
+    if (data.responsePatterns) {
+      fp.responsePatterns = new Map(Object.entries(data.responsePatterns));
+    }
+
+    return fp;
   }
 }
 
@@ -801,7 +487,8 @@ class ToolSequenceModeler {
 // =========================================================================
 
 module.exports = {
-  AgentIntent,
-  GoalDriftDetector,
-  ToolSequenceModeler
+  AgentFingerprint,
+  SIMILARITY_THRESHOLDS,
+  DEFAULT_DEVIATION_THRESHOLD,
+  MIN_OBSERVATIONS
 };
