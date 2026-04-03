@@ -362,6 +362,30 @@ const { ContinuousSecurityService } = safeRequire('./continuous-security', 'cont
 // v10.0 SOTA — Benchmark Suite
 const { SOTABenchmark, BIPIA_SAMPLES: SOTA_BIPIA_SAMPLES, HACKAPROMPT_SAMPLES: SOTA_HACKAPROMPT_SAMPLES, MCPTOX_SAMPLES: SOTA_MCPTOX_SAMPLES, MULTILINGUAL_SAMPLES: SOTA_MULTILINGUAL_SAMPLES, STEALTH_SAMPLES: SOTA_STEALTH_SAMPLES } = safeRequire('./sota-benchmark', 'sota-benchmark');
 
+// v12.0 — Multi-Turn Attack Detection
+const { ConversationTracker } = safeRequire('./cross-turn', 'cross-turn');
+
+// v12.0 — Automated Incident Response
+const { IncidentResponse, RESPONSE_STRATEGIES } = safeRequire('./incident-response', 'incident-response');
+
+// v12.0 — Agent Behavioral Fingerprinting
+const { AgentFingerprint, SIMILARITY_THRESHOLDS, DEFAULT_DEVIATION_THRESHOLD, MIN_OBSERVATIONS: FP_MIN_OBSERVATIONS } = safeRequire('./agent-intent', 'agent-intent');
+
+// v12.0 — Advanced Text Normalizer
+const { TextNormalizer, normalizeAll, stripZeroWidth, reverseLeetspeak, collapseCharSpacing, stripContextWrappers, decodeUnicodeEscapes, ZERO_WIDTH_RE, LEET_MAP, CONTEXT_WRAPPERS: NORMALIZER_CONTEXT_WRAPPERS, HTML_ENTITIES } = safeRequire('./normalizer', 'normalizer');
+
+// v12.0 — Multi-Classifier Ensemble
+const { DetectionEnsemble, DEFAULT_WEIGHTS: ENSEMBLE_DEFAULT_WEIGHTS, DEFAULT_THRESHOLD: ENSEMBLE_DEFAULT_THRESHOLD, MIN_QUORUM, CALIBRATION_PARAMS, plattScale, binnedCalibration } = safeRequire('./ensemble', 'ensemble');
+
+// v12.0 — Smart Configuration / Policy Engine
+const { SmartConfig, DEPLOYMENT_PRESETS, VALIDATION_RULES: CONFIG_VALIDATION_RULES } = safeRequire('./smart-config', 'smart-config');
+
+// v12.0 — Multimodal Detector
+const { MultimodalDetector } = safeRequire('./ml-detector', 'ml-detector');
+
+// v12.0 — Federated Threat Intelligence
+const { ThreatIntelNode } = safeRequire('./persistent-learning', 'persistent-learning');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -1001,6 +1025,52 @@ const _exports = {
   SOTA_MCPTOX_SAMPLES,
   SOTA_MULTILINGUAL_SAMPLES,
   SOTA_STEALTH_SAMPLES,
+
+  // v12.0 — Multi-Turn Attack Detection
+  ConversationTracker,
+
+  // v12.0 — Automated Incident Response
+  IncidentResponse,
+  RESPONSE_STRATEGIES,
+
+  // v12.0 — Agent Behavioral Fingerprinting
+  AgentFingerprint,
+  SIMILARITY_THRESHOLDS,
+  DEFAULT_DEVIATION_THRESHOLD,
+  FP_MIN_OBSERVATIONS,
+
+  // v12.0 — Advanced Text Normalizer
+  TextNormalizer,
+  normalizeAll,
+  stripZeroWidth,
+  reverseLeetspeak,
+  collapseCharSpacing,
+  stripContextWrappers,
+  decodeUnicodeEscapes,
+  ZERO_WIDTH_RE,
+  LEET_MAP,
+  NORMALIZER_CONTEXT_WRAPPERS,
+  HTML_ENTITIES,
+
+  // v12.0 — Multi-Classifier Ensemble
+  DetectionEnsemble,
+  ENSEMBLE_DEFAULT_WEIGHTS,
+  ENSEMBLE_DEFAULT_THRESHOLD,
+  MIN_QUORUM,
+  CALIBRATION_PARAMS,
+  plattScale,
+  binnedCalibration,
+
+  // v12.0 — Smart Configuration / Policy Engine
+  SmartConfig,
+  DEPLOYMENT_PRESETS,
+  CONFIG_VALIDATION_RULES,
+
+  // v12.0 — Multimodal Detector
+  MultimodalDetector,
+
+  // v12.0 — Federated Threat Intelligence
+  ThreatIntelNode,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
