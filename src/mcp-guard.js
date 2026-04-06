@@ -1117,7 +1117,34 @@ class MCPGuard {
 
     this._log('tool_call', serverId, { toolName, allowed: threats.length === 0, threatCount: threats.length });
 
-    return { allowed: threats.length === 0, threats, anomalies };
+    // Issue 16 fix: Fusion layer — if micro-model says benign but pattern scanner
+    // says threat (or vice versa), use weighted vote instead of OR
+    let allowed = threats.length === 0;
+    if (this.microModel && threats.length > 0) {
+      // Check if ALL threats are from a single low-confidence layer
+      const patternOnlyThreats = threats.filter(t => t.type !== 'micro_model_input' && t.type !== 'owasp_agentic');
+      const modelOnlyThreats = threats.filter(t => t.type === 'micro_model_input');
+
+      // If only the micro-model flagged it (no pattern match), check confidence
+      if (patternOnlyThreats.length === 0 && modelOnlyThreats.length > 0) {
+        const confidence = modelOnlyThreats[0].confidence || 0;
+        if (confidence < 0.4) {
+          // Low-confidence model-only detection — demote to anomaly instead of blocking
+          allowed = true;
+          anomalies.push({
+            type: 'low_confidence_model_flag',
+            severity: 'medium',
+            description: `Micro-model flagged with low confidence (${(confidence * 100).toFixed(0)}%). Not blocking.`
+          });
+          // Remove model threats from threat list
+          for (let i = threats.length - 1; i >= 0; i--) {
+            if (threats[i].type === 'micro_model_input') threats.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    return { allowed, threats, anomalies };
   }
 
   /**

@@ -3175,6 +3175,7 @@ const scanText = (text, options = {}) => {
 
   // Chunked scanning for long inputs (RLM-JB research)
   // Chunking defeats camouflage by forcing localized attention on each segment
+  // Issue 9 fix: only use chunk threats with severity >= high to reduce FPs on technical docs
   if (text.length > 500 && threats.length === 0) {
     const chunkSize = 300;
     const overlap = 50;
@@ -3183,6 +3184,8 @@ const scanText = (text, options = {}) => {
       if (chunk.trim().length < 20) continue;
       const chunkThreats = scanTextForPatterns(chunk, source + ':chunk', timeBudgetMs, startTime);
       for (const ct of chunkThreats) {
+        // Only promote high/critical chunk threats — medium/low in chunks are often FPs on technical text
+        if (ct.severity !== 'high' && ct.severity !== 'critical') continue;
         const isDuplicate = threats.some(t => t.category === ct.category);
         if (!isDuplicate) {
           ct.detail = (ct.detail || '') + ` [Detected in chunk at offset ${i}.]`;

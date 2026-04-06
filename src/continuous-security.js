@@ -42,6 +42,7 @@ class ContinuousSecurityService {
     this.hardeningInterval = options.hardeningIntervalMs || 3600000;
     this.defenseCheckInterval = options.defenseCheckIntervalMs || 1800000;
     this.onPostureChange = options.onPostureChange || null;
+    this.persistPath = options.persistPath || null; // Issue 17 fix: persist state
     this.onAlert = options.onAlert || null;
 
     this._timers = [];
@@ -64,6 +65,9 @@ class ContinuousSecurityService {
     this._running = true;
 
     console.log('[Agent Shield] Continuous security service started.');
+
+    // Load persisted state if available
+    this.loadState();
 
     // Run immediately
     this._runPostureScan();
@@ -186,6 +190,7 @@ class ContinuousSecurityService {
       }
 
       this._lastPosture = entry;
+      this.saveState();
       return entry;
     } catch (err) {
       return { timestamp: Date.now(), error: err.message };
@@ -226,11 +231,48 @@ class ContinuousSecurityService {
       return { timestamp: Date.now(), error: err.message };
     }
   }
-}
 
-// =========================================================================
-// EXPORTS
-// =========================================================================
+  /**
+   * Save state to disk for persistence across restarts (Issue 17 fix).
+   */
+  saveState() {
+    if (!this.persistPath) return;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const dir = path.dirname(this.persistPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.persistPath, JSON.stringify({
+        postureScans: this.history.postureScans.slice(-100),
+        defenseChecks: this.history.defenseChecks.slice(-20),
+        alerts: this.history.alerts.slice(-50),
+        lastPosture: this._lastPosture,
+        savedAt: Date.now()
+      }));
+    } catch (err) {
+      console.warn(`[Agent Shield] Failed to save state: ${err.message}`);
+    }
+  }
+
+  /**
+   * Load state from disk (Issue 17 fix).
+   */
+  loadState() {
+    if (!this.persistPath) return;
+    try {
+      const fs = require('fs');
+      if (!fs.existsSync(this.persistPath)) return;
+      const data = JSON.parse(fs.readFileSync(this.persistPath, 'utf8'));
+      if (data.postureScans) this.history.postureScans = data.postureScans;
+      if (data.defenseChecks) this.history.defenseChecks = data.defenseChecks;
+      if (data.alerts) this.history.alerts = data.alerts;
+      if (data.lastPosture) this._lastPosture = data.lastPosture;
+      console.log(`[Agent Shield] Loaded ${this.history.postureScans.length} posture scans from disk.`);
+    } catch (err) {
+      console.warn(`[Agent Shield] Failed to load state: ${err.message}`);
+    }
+  }
+}
 
 module.exports = {
   ContinuousSecurityService
