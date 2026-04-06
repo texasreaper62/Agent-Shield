@@ -122,6 +122,54 @@ class MemoryIntegrityMonitor {
   }
 
   /**
+   * Export session state for cross-session drift tracking (Trap 3 deepening).
+   * Save this at session end, load at next session start.
+   * @returns {{ stateHash: string, writeCount: number, suspiciousCount: number, timestamp: number }}
+   */
+  exportSessionState() {
+    return {
+      stateHash: this._computeStateHash(),
+      writeCount: this._writes.length,
+      suspiciousCount: this._writes.filter(w => w.suspicious).length,
+      topHashes: this._writes.slice(-20).map(w => w.hash),
+      timestamp: Date.now()
+    };
+  }
+
+  /**
+   * Detect cross-session drift by comparing current state to a previous session's state.
+   * @param {object} previousSession - Output from exportSessionState() of a prior session.
+   * @returns {{ drifted: boolean, driftScore: number, newWritesSinceLast: number, details: string }}
+   */
+  detectCrossSessionDrift(previousSession) {
+    if (!previousSession || !previousSession.stateHash) {
+      return { drifted: false, driftScore: 0, newWritesSinceLast: 0, details: 'No previous session to compare.' };
+    }
+
+    const currentHash = this._computeStateHash();
+    const drifted = currentHash !== previousSession.stateHash;
+    const newWrites = this._writes.length;
+    const suspiciousNew = this._writes.filter(w => w.suspicious).length;
+
+    // Check if any recent writes overlap with previous session's hashes
+    const prevHashes = new Set(previousSession.topHashes || []);
+    const overlapCount = this._writes.filter(w => prevHashes.has(w.hash)).length;
+
+    const driftScore = drifted ? Math.min(1, (suspiciousNew * 0.3) + (newWrites > 10 ? 0.2 : 0)) : 0;
+
+    return {
+      drifted,
+      driftScore: Math.round(driftScore * 100) / 100,
+      newWritesSinceLast: newWrites,
+      suspiciousNewWrites: suspiciousNew,
+      overlapWithPrevious: overlapCount,
+      details: drifted
+        ? `Memory state changed. ${suspiciousNew} suspicious writes out of ${newWrites} total.`
+        : 'Memory state unchanged from previous session.'
+    };
+  }
+
+  /**
    * Get the full timeline of memory writes.
    * @returns {Array<{content: string, source: string, timestamp: number, hash: string, suspicious: boolean}>}
    */

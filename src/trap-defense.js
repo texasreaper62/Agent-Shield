@@ -455,11 +455,123 @@ class SideChannelDetector {
 // EXPORTS
 // =========================================================================
 
+// =========================================================================
+// TRAP 1 DEEPENING: JS-Rendered Content Scanner
+// =========================================================================
+
+/**
+ * Detects signs of JavaScript-rendered injection — content that would
+ * only appear after JS execution. Since the SDK can't run JS, this
+ * detects HEURISTIC SIGNS that JS is being used to hide content.
+ */
+class JSRenderingDetector {
+  /**
+   * Scan HTML source for signs of JS-rendered injection.
+   * @param {string} htmlSource - Raw HTML source (before JS execution).
+   * @returns {{ suspicious: boolean, signals: Array<object> }}
+   */
+  scan(htmlSource) {
+    if (!htmlSource || typeof htmlSource !== 'string') return { suspicious: false, signals: [] };
+    const signals = [];
+
+    // document.write / innerHTML injection
+    if (/document\.write\s*\(|\.innerHTML\s*=|\.outerHTML\s*=|\.insertAdjacentHTML\s*\(/i.test(htmlSource)) {
+      const injectionContent = htmlSource.match(/(?:document\.write|innerHTML\s*=|insertAdjacentHTML)\s*\(?['"`]([\s\S]{10,?})['"`]/i);
+      if (injectionContent) {
+        const scanResult = scanText(injectionContent[1], { source: 'js_rendered' });
+        if (scanResult.threats && scanResult.threats.length > 0) {
+          signals.push({ type: 'js_innerHTML_injection', severity: 'critical', description: 'JavaScript injects content via innerHTML/document.write containing injection' });
+        }
+      }
+    }
+
+    // eval / Function constructor with strings
+    if (/eval\s*\(\s*['"`]|new\s+Function\s*\(\s*['"`]|setTimeout\s*\(\s*['"`]|setInterval\s*\(\s*['"`]/i.test(htmlSource)) {
+      signals.push({ type: 'dynamic_code_execution', severity: 'high', description: 'Page uses eval/Function to dynamically generate content' });
+    }
+
+    // Base64-encoded content decoded at runtime
+    if (/atob\s*\(|Buffer\.from\s*\(.*base64/i.test(htmlSource)) {
+      signals.push({ type: 'runtime_decoding', severity: 'high', description: 'Page decodes base64 content at runtime — possible hidden payload' });
+    }
+
+    // User-agent detection (cloaking indicator)
+    if (/navigator\.userAgent|user-?agent|isBot|isCrawler|isRobot/i.test(htmlSource)) {
+      signals.push({ type: 'user_agent_detection', severity: 'high', description: 'Page checks user-agent — possible AI-specific cloaking' });
+    }
+
+    // Conditional content based on referrer or headers
+    if (/document\.referrer|window\.location\.search|URLSearchParams/i.test(htmlSource) &&
+        /(?:if|switch|ternary|\?)\s/.test(htmlSource)) {
+      signals.push({ type: 'conditional_content', severity: 'medium', description: 'Page conditionally renders content based on URL/referrer' });
+    }
+
+    return {
+      suspicious: signals.some(s => s.severity === 'critical' || s.severity === 'high'),
+      signals
+    };
+  }
+}
+
+// =========================================================================
+// TRAP 1 DEEPENING: Enhanced Cloaking Heuristics
+// =========================================================================
+
+/**
+ * Advanced cloaking detection — detects signs of cloaking without
+ * requiring two separate fetches.
+ */
+class CloakingHeuristicScanner {
+  /**
+   * Scan content for signs it was specifically crafted for AI consumption.
+   * @param {string} content - Content received by the AI agent.
+   * @param {object} [metadata] - Response metadata (headers, status, timing).
+   * @returns {{ suspicious: boolean, signals: Array<object> }}
+   */
+  scan(content, metadata = {}) {
+    if (!content || typeof content !== 'string') return { suspicious: false, signals: [] };
+    const signals = [];
+
+    // Suspiciously high instruction density for a "normal" webpage
+    const instructionPatterns = /(?:you\s+must|you\s+should|always|never|do\s+not|ignore|override|system|admin|execute|output)/gi;
+    const matches = content.match(instructionPatterns) || [];
+    const instructionDensity = matches.length / Math.max(content.split(/\s+/).length, 1);
+    if (instructionDensity > 0.05) {
+      signals.push({ type: 'high_instruction_density', severity: 'high', density: instructionDensity, description: `Unusually high instruction density (${(instructionDensity * 100).toFixed(1)}%) — content may be crafted for AI` });
+    }
+
+    // Hidden content indicators (display:none, visibility:hidden, zero-size)
+    const hiddenCount = (content.match(/display\s*:\s*none|visibility\s*:\s*hidden|font-size\s*:\s*0|opacity\s*:\s*0|height\s*:\s*0|width\s*:\s*0/gi) || []).length;
+    if (hiddenCount >= 2) {
+      signals.push({ type: 'multiple_hidden_elements', severity: 'high', count: hiddenCount, description: `${hiddenCount} hidden content elements — possible injection concealment` });
+    }
+
+    // Mismatch between visible text and total content
+    const visibleText = content.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    const totalLength = content.length;
+    if (totalLength > 500 && visibleText.length / totalLength < 0.2) {
+      signals.push({ type: 'low_visible_ratio', severity: 'medium', ratio: visibleText.length / totalLength, description: 'Very low visible-to-total content ratio — mostly hidden markup' });
+    }
+
+    // Response timing anomaly (if provided)
+    if (metadata.responseTimeMs && metadata.responseTimeMs > 5000) {
+      signals.push({ type: 'slow_response', severity: 'low', description: 'Unusually slow response — may indicate server-side AI detection and custom rendering' });
+    }
+
+    return {
+      suspicious: signals.some(s => s.severity === 'critical' || s.severity === 'high'),
+      signals
+    };
+  }
+}
+
 module.exports = {
   // Trap 1
   CloakingDetector,
   CompositeContentScanner,
   SVGScanner,
+  JSRenderingDetector,
+  CloakingHeuristicScanner,
   // Trap 4
   BrowserActionValidator,
   CredentialIsolationMonitor,

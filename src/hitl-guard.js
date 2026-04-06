@@ -472,6 +472,69 @@ class HITLGuard {
 // EXPORTS
 // =========================================================================
 
+// =========================================================================
+// TRAP 6 DEEPENING: Output Deception Scorer
+// =========================================================================
+
+/**
+ * Scores agent output for deceptive characteristics designed to fool
+ * human reviewers into approving dangerous actions.
+ */
+class OutputDeceptionScorer {
+  /**
+   * Score an agent's output for deception indicators.
+   * @param {string} output - Agent output to evaluate.
+   * @param {object} [context] - Context about what was requested.
+   * @returns {{ deceptionScore: number, indicators: Array<object>, recommendation: string }}
+   */
+  score(output, context = {}) {
+    if (!output || typeof output !== 'string') return { deceptionScore: 0, indicators: [], recommendation: 'pass' };
+    const indicators = [];
+
+    // Excessive confidence without evidence
+    const confidenceWords = (output.match(/\b(?:definitely|certainly|absolutely|guaranteed|100%|surely|undoubtedly|without\s+(?:a\s+)?doubt)\b/gi) || []).length;
+    if (confidenceWords >= 2) {
+      indicators.push({ type: 'excessive_confidence', weight: 0.2, description: `${confidenceWords} high-confidence assertions without supporting evidence` });
+    }
+
+    // Action buried in long explanation
+    const sentences = output.split(/[.!?\n]+/).filter(s => s.trim().length > 10);
+    const actionSentences = sentences.filter(s => /\b(?:click|run|execute|install|download|send|transfer|delete|approve|authorize)\b/i.test(s));
+    if (sentences.length > 5 && actionSentences.length > 0) {
+      const actionPositions = actionSentences.map(s => sentences.indexOf(s));
+      const lastQuarter = sentences.length * 0.75;
+      if (actionPositions.some(p => p >= lastQuarter)) {
+        indicators.push({ type: 'buried_action', weight: 0.3, description: 'Actionable instructions buried in the last quarter of a long response' });
+      }
+    }
+
+    // Technical jargon masking simple actions
+    const jargonDensity = (output.match(/\b(?:subprocess|daemon|syscall|ioctl|mmap|chmod|chown|setuid|capability|namespace|cgroup|seccomp)\b/gi) || []).length / Math.max(output.split(/\s+/).length, 1);
+    if (jargonDensity > 0.03 && actionSentences.length > 0) {
+      indicators.push({ type: 'jargon_obfuscation', weight: 0.25, description: 'High technical jargon density combined with actionable instructions' });
+    }
+
+    // Urgency injection in output
+    if (/\b(?:immediately|right\s+now|as\s+soon\s+as\s+possible|urgent|time-sensitive|critical|before\s+it's\s+too\s+late)\b/i.test(output)) {
+      indicators.push({ type: 'urgency_in_output', weight: 0.15, description: 'Output contains urgency language that may pressure reviewer' });
+    }
+
+    // Minimization of risks
+    if (/\b(?:don't\s+worry|no\s+risk|perfectly\s+safe|nothing\s+(?:bad\s+)?(?:will|can)\s+happen|completely\s+harmless)\b/i.test(output) && actionSentences.length > 0) {
+      indicators.push({ type: 'risk_minimization', weight: 0.2, description: 'Output minimizes risks while requesting actions' });
+    }
+
+    const deceptionScore = Math.min(1, indicators.reduce((s, i) => s + i.weight, 0));
+    const recommendation = deceptionScore >= 0.5 ? 'block' : deceptionScore >= 0.3 ? 'review' : 'pass';
+
+    return {
+      deceptionScore: Math.round(deceptionScore * 100) / 100,
+      indicators,
+      recommendation
+    };
+  }
+}
+
 module.exports = {
   HITLGuard,
   ApprovalPatternMonitor,
@@ -479,6 +542,7 @@ module.exports = {
   OutputInjectionScanner,
   ReadabilityScanner,
   CriticalInfoPositionChecker,
+  OutputDeceptionScorer,
   CRITICAL_KEYWORDS,
   OUTPUT_INJECTION_PATTERNS,
   HIGH_RISK_ACTIONS,
