@@ -1994,6 +1994,218 @@ const INJECTION_PATTERNS = [
     category: 'social_engineering',
     description: 'Text impersonates the training team to issue fake policy corrections.',
     detail: 'Fake correction: claims to be an official update from the training team to override safety guidelines.'
+  },
+
+  // --- Real Attack Dataset Patterns (from F1 0.516 honest benchmark) ---
+  // These close the gap between self-graded F1 1.000 and real-world F1.
+
+  // Output forcing — "say X", "output X", "repeat X", "print X"
+  {
+    regex: /(?:^|\.\s+)(?:just\s+)?(?:say|output|print|type|write|repeat|respond\s+with)\s+(?:only\s+)?['"]([^'"]{3,})['"](?:\s+(?:exactly|verbatim|only|and\s+nothing\s+else))?/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text forces the model to output a specific string.',
+    detail: 'Output forcing: direct command to output a specific string, bypassing normal response generation.'
+  },
+  {
+    regex: /(?:your\s+(?:only|sole|entire)\s+(?:job|task|purpose|output)\s+is\s+(?:to\s+)?(?:say|output|print|type)|(?:do\s+not|don't)\s+(?:say|write|output|add)\s+(?:anything|any\s+(?:other|additional))\s+(?:text|words?|content))/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text restricts the model to outputting only a specific string.',
+    detail: 'Output restriction: constrains the model to produce only the attacker-specified output.'
+  },
+  {
+    regex: /(?:instead\s+of\s+(?:translating|summarizing|answering|responding|doing\s+(?:that|what)),?\s*(?:just\s+)?(?:say|output|repeat|type|print))/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text redirects the model from its task to outputting attacker-specified text.',
+    detail: 'Task redirection: overrides the assigned task with an output-forcing command.'
+  },
+
+  // Prompt extraction — indirect phrasing
+  {
+    regex: /(?:what\s+(?:was|were|is|are)\s+(?:written|typed|said|placed|put)\s+(?:above|before|prior|earlier)(?:\s+(?:this|my)\s+(?:message|text|input))?|repeat\s+(?:everything|all|back)(?:\s+(?:above|before|that\s+was\s+(?:said|written))))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text attempts to extract content from earlier in the conversation (system prompt).',
+    detail: 'Indirect extraction: asks for content "above" or "before" which typically means the system prompt.'
+  },
+  {
+    regex: /(?:output|repeat|show|display|tell\s+me)\s+(?:the\s+)?(?:text|content|message|instructions?)\s+(?:that\s+)?(?:appears?|comes?|is|was)\s+(?:before|above|prior\s+to)\s+(?:my|this|the\s+user)\s+(?:message|input|text)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text requests content that appeared before the user message (system prompt extraction).',
+    detail: 'Position-based extraction: requests content by its position relative to the user message.'
+  },
+  {
+    regex: /(?:your\s+(?:instructions|role|task)\s+(?:was|were|is|are)\s+(?:to\s+)?(?:say\s+)?what|what\s+(?:is|was|are|were)\s+your\s+(?:original\s+)?(?:instructions?|task|role|purpose|objective))\s*\?/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks the model to reveal its instructions/role/task.',
+    detail: 'Role extraction: directly asks what the model was instructed to do.'
+  },
+  {
+    regex: /(?:translate|convert|rephrase|rewrite)\s+(?:the\s+)?(?:system\s+)?(?:message|prompt|instructions?)\s+(?:to|into|in)\s+(?:English|another|a\s+different)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks to translate/convert the system prompt to extract it.',
+    detail: 'Translation extraction: uses translation as a pretext to reveal system prompt content.'
+  },
+  {
+    regex: /(?:list|enumerate|tell\s+me|what\s+are)\s+(?:all\s+)?(?:the\s+)?(?:rules?|constraints?|guidelines?|boundaries|limitations?)\s+(?:you\s+)?(?:follow|have|were\s+given|must\s+(?:follow|obey))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks the model to enumerate its rules or constraints.',
+    detail: 'Rule enumeration: asks the model to list its behavioral rules, revealing system prompt content.'
+  },
+  {
+    regex: /(?:summarize|describe|explain)\s+(?:your\s+)?(?:role|purpose|function)\s+in\s+(?:exactly\s+)?\d+\s+words/i,
+    severity: 'medium',
+    category: 'prompt_extraction',
+    description: 'Text asks the model to summarize its role in N words (word-limited extraction).',
+    detail: 'Word-limited extraction: constraining role description to N words forces disclosure of key system prompt elements.'
+  },
+  {
+    regex: /(?:what\s+(?:are|were)\s+)?(?:the\s+)?(?:first|last|initial)\s+(?:\d+\s+)?(?:words?|sentences?|lines?)\s+(?:of\s+)?(?:your\s+)?(?:instructions?|prompt|(?:system\s+)?message|rules)/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks for the first/last N words of the system prompt.',
+    detail: 'Positional extraction: requests specific portions of the system prompt by position.'
+  },
+
+  // Conditional output manipulation
+  {
+    regex: /(?:if\s+.{3,30}(?:then|,)\s+(?:output|say|print|respond|type)\s+['"]|(?:output|say|print)\s+['"][^'"]+['"]\s+(?:if|when|unless))/i,
+    severity: 'medium',
+    category: 'prompt_injection',
+    description: 'Text uses conditional logic to force specific output.',
+    detail: 'Conditional forcing: if/then logic that leads to attacker-specified output regardless of the condition.'
+  },
+
+  // "Start your answer/response with X"
+  {
+    regex: /(?:start|begin)\s+(?:your\s+)?(?:answer|response|reply|output)\s+with\s+['"]?[^'"]{3,}/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text forces the model to begin its response with specific text.',
+    detail: 'Response prefix forcing: instructs the model to start with attacker-specified text.'
+  },
+
+  // ALL CAPS command — "IGNORE EVERYTHING AND SAY/DO"
+  {
+    regex: /(?:IGNORE|DISREGARD|FORGET|STOP)\s+(?:EVERYTHING|ALL|PREVIOUS|ABOVE)\s+(?:AND\s+)?(?:SAY|OUTPUT|PRINT|DO|TYPE|RESPOND)/,
+    severity: 'critical',
+    category: 'instruction_override',
+    description: 'Text contains ALL CAPS override command.',
+    detail: 'Caps override: ALL CAPS instruction override often used in competition-style attacks.'
+  },
+
+  // Fake conversation format injection — "Human: X\nAssistant: X"
+  {
+    regex: /(?:Human|User|Person)\s*:\s*.+\n\s*(?:Assistant|AI|Bot|System)\s*:\s*.+/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text contains fake conversation format to inject assistant responses.',
+    detail: 'Conversation format injection: uses Human/Assistant formatting to inject predetermined responses.'
+  },
+
+  // "Repeat back the text above" / "what was written above"
+  {
+    regex: /(?:repeat|copy|reproduce|echo)\s+(?:back\s+)?(?:the\s+)?(?:text|content|everything|words?)\s+(?:above|before|prior|that\s+(?:was\s+)?(?:written|said|typed|placed))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks to repeat/copy content from above (system prompt extraction).',
+    detail: 'Repeat-above extraction: asks to reproduce prior conversation content to leak system prompt.'
+  },
+
+  // "respond with X for all queries" / "output X to confirm/verify"
+  {
+    regex: /(?:respond|reply|answer|output)\s+(?:with\s+)?['"]?[^'"]{3,30}['"]?\s+(?:for\s+all|to\s+(?:confirm|verify|prove|test|check))/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text instructs a fixed response for all queries or as a "test."',
+    detail: 'Fixed response injection: sets a persistent response or uses testing/verification framing to inject output.'
+  },
+
+  // "system_note" or "admin_note" in JSON — already have this but need looser match
+  {
+    regex: /["'](?:system_note|admin_note|internal_message|ai_directive|hidden_instruction)["']\s*:\s*["']/i,
+    severity: 'high',
+    category: 'indirect_injection',
+    description: 'JSON field with suspicious name (system_note, admin_note) containing instructions.',
+    detail: 'JSON directive injection: uses specially-named JSON fields to inject instructions into tool/API responses.'
+  },
+
+  // Triple backtick framing — "```payload``` output this"
+  {
+    regex: /`{3}[\s\S]{3,}`{3}\s*(?:output|print|say|repeat|type|respond)/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text uses triple backtick code blocks to frame attacker payload.',
+    detail: 'Code block injection: wraps payload in triple backticks and asks the model to output the content.'
+  },
+
+  // Backtick extraction — "output what is between backticks"
+  {
+    regex: /(?:output|print|say|repeat|type)\s+(?:only\s+)?(?:what\s+is|the\s+(?:text|content))\s+(?:between|inside|within)\s+(?:the\s+)?(?:backticks|quotes|brackets|tags)/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text asks to extract and output content from between delimiters.',
+    detail: 'Delimiter extraction: uses backticks/quotes/brackets to frame attacker content as the expected output.'
+  },
+
+  // "Emergency/urgent: do X now"
+  {
+    regex: /(?:emergency|urgent|critical|immediate)\s*:\s*(?:output|say|print|respond|execute|do|type)\s+(?:exactly\s+)?['"]?/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text uses urgency framing to force immediate action.',
+    detail: 'Urgency forcing: uses emergency/urgent framing to bypass deliberation and force immediate output.'
+  },
+
+  // "What are the first N words you were told?"
+  {
+    regex: /(?:what\s+(?:are|were)\s+)?(?:the\s+)?(?:first|last|initial)\s+(?:\d+\s+)?(?:words?|sentences?|lines?|characters?)\s+(?:you\s+were\s+(?:told|given|instructed)|of\s+your\s+(?:instructions?|prompt|rules))/i,
+    severity: 'high',
+    category: 'prompt_extraction',
+    description: 'Text asks for the first/last N words the model was told (system prompt).',
+    detail: 'Positional prompt extraction: requests specific words from the system prompt by position.'
+  },
+
+  // "You are an AI that only outputs X"
+  {
+    regex: /you\s+are\s+(?:an?\s+)?(?:AI|bot|assistant|model)\s+that\s+(?:only\s+)?(?:outputs?|says?|prints?|types?|responds?\s+with)\s+['"]?/i,
+    severity: 'high',
+    category: 'role_hijack',
+    description: 'Text redefines the model as one that only outputs specific text.',
+    detail: 'Identity override: redefines the model as a single-purpose output machine.'
+  },
+
+  // Hypothetical follow-up to capability disclosure
+  {
+    regex: /(?:since|now\s+that|given\s+that)\s+you\s+(?:can|have|said\s+you\s+(?:can|could))\s+(?:access|read|write|execute)[\s\S]{0,50}(?:now\s+)?(?:actually|really|go\s+ahead\s+and)\s+(?:read|access|execute|do|show)/i,
+    severity: 'high',
+    category: 'prompt_injection',
+    description: 'Text escalates from hypothetical capability discussion to actual exploitation.',
+    detail: 'Hypothetical-to-real escalation: uses prior capability admission as leverage to request actual exploitation.'
+  },
+
+  // Capability probing — "can you access files/internet/databases?"
+  {
+    regex: /(?:can\s+you|are\s+you\s+able\s+to|do\s+you\s+have\s+(?:access|ability))\s+(?:to\s+)?(?:access|read|write|modify|delete|execute|run|open)\s+(?:files?|internet|web|database|network|system|commands?|code|scripts?)/i,
+    severity: 'medium',
+    category: 'reconnaissance',
+    description: 'Text probes the model for its capabilities (reconnaissance for follow-up attack).',
+    detail: 'Capability reconnaissance: asks what the agent can access, typically followed by exploitation of disclosed capabilities.'
+  },
+
+  // Note/annotation injection in tool outputs
+  {
+    regex: /(?:note\s+to\s+(?:AI|assistant|model|agent|system)|AI\s+(?:assistant|model)\s*:)\s*(?:ignore|override|instead|the\s+above|forget|disregard)/i,
+    severity: 'high',
+    category: 'indirect_injection',
+    description: 'Text contains a "note to AI" directive hidden in external content.',
+    detail: 'Annotation injection: uses "note to AI" framing to inject instructions into tool output or document content.'
   }
 ];
 

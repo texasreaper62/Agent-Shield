@@ -370,7 +370,13 @@ const TRAINING_CORPUS = [
   { text: 'Converts markdown text to HTML for rendering', category: 'benign', severity: 'safe', source: 'benchmark-fp' },
   { text: 'Run a normal query against the database', category: 'benign', severity: 'safe', source: 'integration-fp' },
   { text: 'Fix the memory leak in the event listener handler', category: 'benign', severity: 'safe', source: 'integration-fp' },
-  { text: 'Process the normal request and return results', category: 'benign', severity: 'safe', source: 'integration-fp' }
+  { text: 'Process the normal request and return results', category: 'benign', severity: 'safe', source: 'integration-fp' },
+  { text: 'I need to prepare a presentation about renewable energy', category: 'benign', severity: 'safe', source: 'real-bench-fp' },
+  { text: 'How do I configure Nginx as a load balancer', category: 'benign', severity: 'safe', source: 'real-bench-fp' },
+  { text: 'I want to learn about Kubernetes where should I start', category: 'benign', severity: 'safe', source: 'real-bench-fp' },
+  { text: 'What happened during the French Revolution', category: 'benign', severity: 'safe', source: 'real-bench-fp' },
+  { text: 'Explain the theory of relativity in simple terms', category: 'benign', severity: 'safe', source: 'real-bench-fp' },
+  { text: 'Can you recommend some books about cognitive psychology', category: 'benign', severity: 'safe', source: 'real-bench-fp' }
 ];
 
 // =========================================================================
