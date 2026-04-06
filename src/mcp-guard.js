@@ -550,7 +550,33 @@ class ToolBehaviorBaseline {
  * attestation, scanning, isolation, auth, rate limiting, and behavioral
  * baselines.
  */
+/** Presets for MCPGuard — solves Issue 15 (17 flags are unusable). */
+const GUARD_PRESETS = {
+  /** Minimal — pattern scanning only, no ML, no auth. Good for development. */
+  minimal: {},
+  /** Standard — pattern scanning + micro-model. Good for staging. */
+  standard: { enableMicroModel: true },
+  /** Recommended — all detection layers active. Good for production. */
+  recommended: { enableMicroModel: true, enableOWASP: true, enableDriftMonitor: true, enableAttackSurface: true },
+  /** Strict — everything on, auth required. Good for enterprise. */
+  strict: { enableMicroModel: true, enableOWASP: true, enableDriftMonitor: true, enableAttackSurface: true, enableIntentGraph: true, enableIntentBinding: true, enableIsolation: true, requireAuth: true },
+  /** Paranoid — maximum security. May have false positives. */
+  paranoid: { enableMicroModel: true, enableOWASP: true, enableDriftMonitor: true, enableAttackSurface: true, enableIntentGraph: true, enableIntentBinding: true, enableIsolation: true, requireAuth: true, rateLimit: 30, cbThreshold: 3 }
+};
+
 class MCPGuard {
+  /**
+   * Create MCPGuard from a preset instead of configuring 17 flags.
+   * @param {string} preset - 'minimal', 'standard', 'recommended', 'strict', 'paranoid'.
+   * @param {object} [overrides] - Override specific preset values.
+   * @returns {MCPGuard}
+   */
+  static fromPreset(preset, overrides = {}) {
+    const config = GUARD_PRESETS[preset];
+    if (!config) throw new Error(`[Agent Shield] Unknown preset: ${preset}. Use: ${Object.keys(GUARD_PRESETS).join(', ')}`);
+    return new MCPGuard({ ...config, ...overrides });
+  }
+
   /**
    * @param {object} [options]
    * @param {boolean} [options.requireAuth=false] - Require OAuth tokens.

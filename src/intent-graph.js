@@ -171,6 +171,15 @@ class IntentGraph {
       // Word-level similarity
       causalScore = jaccardSimilarity(this.currentIntent.topics, topics);
 
+      // Issue 11 fix: Even with word overlap, penalize if tool/args contain sensitive keywords
+      // "find passwords in vault" overlaps with "find restaurants" on "find" but is clearly different
+      const sensitiveToolOrArgs = /(?:password|credential|secret|token|key|shadow|passwd|ssh|env|admin|root|sudo|exfiltrat|steal|hack|inject|override|hijack)/i.test(argsStr + ' ' + toolName);
+      const intentHasSensitive = /(?:password|credential|secret|token|key|security|auth)/i.test([...this.currentIntent.topics].join(' '));
+      if (sensitiveToolOrArgs && !intentHasSensitive) {
+        // Tool accesses sensitive resources but intent doesn't mention them — reduce score
+        causalScore = Math.min(causalScore, 0.05);
+      }
+
       // If word overlap is 0, check if the tool category is plausibly related to intent
       // "find restaurants" → data_read is plausible. "find restaurants" → execution is not.
       if (causalScore === 0) {

@@ -40,7 +40,7 @@ const CAPABILITY_RISK = {
 };
 
 const CAPABILITY_PATTERNS = {
-  code_execution: /(?:exec|spawn|shell|bash|cmd|eval|Function|child_process|terminal|run\s+command)/i,
+  code_execution: /(?:exec|spawn|shell|bash|cmd|eval|Function|child_process|terminal|run\s+(?:command|code|script|program)|code[_\s]?(?:exec|run|execute)|sandbox|interpret)/i,
   filesystem_write: /(?:write|create|mkdir|append|save|put).*(?:file|fs|disk|path)/i,
   filesystem_read: /(?:read|open|cat|head|tail|get).*(?:file|fs|disk|path)/i,
   network_outbound: /(?:http|fetch|curl|wget|request|post|send|upload|socket\.connect)/i,
