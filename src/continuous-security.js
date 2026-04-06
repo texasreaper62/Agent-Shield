@@ -190,7 +190,8 @@ class ContinuousSecurityService {
       }
 
       this._lastPosture = entry;
-      this.saveState();
+      // Save every 10th scan to reduce disk I/O
+      if (this.history.postureScans.length % 10 === 0) this.saveState();
       return entry;
     } catch (err) {
       return { timestamp: Date.now(), error: err.message };
