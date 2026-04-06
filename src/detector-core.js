@@ -3086,8 +3086,13 @@ const scanText = (text, options = {}) => {
       .replace(/[\u202A-\u202E\u2066-\u2069]/g, '');                   // Bidi overrides (RTL attacks)
 
     // 2. Reverse leetspeak substitution (defeats character substitution)
+    // Only apply when text looks intentionally obfuscated:
+    // - High digit-to-letter mixing (3+ instances of digit adjacent to letter)
+    // - NOT when text contains legitimate numbers like "3D", "1080p", "H4X0R"
     const LEET_REVERSE = { '4': 'a', '3': 'e', '1': 'i', '0': 'o', '5': 's', '7': 't', '8': 'b', '9': 'g' };
-    if (/\d[a-z]|[a-z]\d/i.test(normalizedText)) {
+    const digitLetterMixes = (normalizedText.match(/\d[a-z]|[a-z]\d/gi) || []).length;
+    const hasLegitNumbers = /\b(?:\d{2,}[a-z]|[a-z]\d{2,}|\d+(?:px|em|rem|pt|ms|kb|mb|gb|tb|fps|hz|dpi|[kKmMgG][bB]?))\b/i.test(normalizedText);
+    if (digitLetterMixes >= 3 && !hasLegitNumbers) {
       normalizedText = normalizedText.replace(/[0-9]/g, ch => LEET_REVERSE[ch] || ch);
     }
 
