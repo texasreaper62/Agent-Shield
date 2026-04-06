@@ -386,6 +386,21 @@ const { MultimodalDetector } = safeRequire('./ml-detector', 'ml-detector');
 // v12.0 — Federated Threat Intelligence
 const { ThreatIntelNode } = safeRequire('./persistent-learning', 'persistent-learning');
 
+// v13.0 — DeepMind Trap Defenses (Traps 1 + 4)
+const { CloakingDetector, CompositeContentScanner, SVGScanner, BrowserActionValidator, CredentialIsolationMonitor, TransactionGatekeeper, SideChannelDetector } = safeRequire('./trap-defense', 'trap-defense');
+
+// v13.0 — Human-in-the-Loop Trap Defenses (Trap 6)
+const { HITLGuard, ApprovalPatternMonitor, SummarizationIntegrityChecker, OutputInjectionScanner: HITLOutputScanner, ReadabilityScanner: HITLReadabilityScanner, CriticalInfoPositionChecker } = safeRequire('./hitl-guard', 'hitl-guard');
+
+// v13.0 — Fleet/Systemic Trap Defenses (Trap 5)
+const { FleetDefense, FleetCorrelationEngine, CascadeBreaker, FinancialContentValidator, DependencyDiversityScanner } = safeRequire('./fleet-defense', 'fleet-defense');
+
+// v13.0 — Semantic Manipulation Trap Defenses (Trap 2)
+const { SemanticGuard, AuthoritativeClaimDetector, BiasDetector: SemanticBiasDetector, EducationalFramingDetector, EmotionalReasoningDetector, AUTHORITATIVE_TRIGGERS, SAFETY_WEAKENING_CLAIMS, BIAS_SIGNALS, EDUCATIONAL_FRAMING_PATTERNS, EMOTIONAL_PATTERNS } = safeRequire('./semantic-guard', 'semantic-guard');
+
+// v13.0 — Memory Trap Defenses (Trap 3)
+const { MemoryGuard, MemoryIntegrityMonitor, RAGIngestionScanner, MemoryIsolationEnforcer, RetrievalAnomalyDetector, INSTRUCTION_INDICATORS } = safeRequire('./memory-guard', 'memory-guard');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -1071,6 +1086,42 @@ const _exports = {
 
   // v12.0 — Federated Threat Intelligence
   ThreatIntelNode,
+
+  // v13.0 — DeepMind Trap Defenses
+  CloakingDetector,
+  CompositeContentScanner,
+  SVGScanner,
+  BrowserActionValidator,
+  CredentialIsolationMonitor,
+  TransactionGatekeeper,
+  SideChannelDetector,
+  HITLGuard,
+  ApprovalPatternMonitor,
+  SummarizationIntegrityChecker,
+  HITLOutputScanner,
+  HITLReadabilityScanner,
+  CriticalInfoPositionChecker,
+  FleetDefense,
+  FleetCorrelationEngine,
+  CascadeBreaker,
+  FinancialContentValidator,
+  DependencyDiversityScanner,
+  SemanticGuard,
+  AuthoritativeClaimDetector,
+  SemanticBiasDetector,
+  EducationalFramingDetector,
+  EmotionalReasoningDetector,
+  AUTHORITATIVE_TRIGGERS,
+  SAFETY_WEAKENING_CLAIMS,
+  BIAS_SIGNALS,
+  EDUCATIONAL_FRAMING_PATTERNS,
+  EMOTIONAL_PATTERNS,
+  MemoryGuard,
+  MemoryIntegrityMonitor,
+  RAGIngestionScanner,
+  MemoryIsolationEnforcer,
+  RetrievalAnomalyDetector,
+  INSTRUCTION_INDICATORS,
 
   // v7.5 — Compliance Certification Authority
   ComplianceCertificateAuthority,
