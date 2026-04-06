@@ -4,6 +4,21 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [13.3.0] - 2026-04-06
+
+### New SDK Modules
+
+- **RenderDifferentialAnalyzer** -- Detects content that renders differently than it reads. Catches visual deception in HTML (CSS display:none, opacity:0, off-screen, font-size:0), Markdown (link mismatch, hidden spans, comment injection), and LaTeX (\phantom, \textcolor{white}, \renewcommand). Includes VisualHasher for measuring raw-vs-rendered divergence.
+- **SybilDetector** -- Detects coordinated fake agents acting in concert. Behavioral similarity scoring, temporal correlation, content similarity (Jaccard), creation burst detection, and voting collusion analysis. Includes AgentIdentityVerifier with challenge-response and shared-secret detection.
+- **SideChannelMonitor** -- Detects data exfiltration via covert channels. DNS exfiltration (high-entropy subdomains, base64 labels), timing-based encoding, response-size encoding, URL parameter exfil. Includes BeaconDetector (C2 beaconing patterns) and EntropyAnalyzer (Shannon entropy).
+
+### Improvements
+
+- Professional README rewrite: organized by capability instead of version, reduced from 1,348 to ~350 lines
+- All 3 new modules exported via main.js
+- 185 new test assertions (81 render-differential + 49 sybil + 55 side-channel)
+- Total: 3,400+ test assertions across 22 suites
+
 ## [13.2.0] - 2026-04-06
 
 ### DeepMind AI Agent Traps -- First-Principles Defense

@@ -215,6 +215,9 @@ const { BehavioralDNA, AgentProfiler, extractFeatures: extractBehavioralFeatures
 // v7.4 — Compliance Certification Authority (loaded when available)
 const { ComplianceCertificateAuthority, ComplianceReport: ComplianceCertReport, ComplianceScheduler, AUTHORITY_FRAMEWORKS, CAPABILITY_MAP: CA_CAPABILITY_MAP, CERTIFICATE_LEVELS: CA_CERTIFICATE_LEVELS } = safeRequire('./compliance-authority', 'compliance-authority');
 
+// Side Channel Monitor
+const { SideChannelMonitor, BeaconDetector, EntropyAnalyzer: SCEntropyAnalyzer } = safeRequire('./side-channel-monitor', 'side-channel-monitor');
+
 // --- v1.2 Modules ---
 
 // Semantic Detection
@@ -406,6 +409,12 @@ const { SemanticGuard, AuthoritativeClaimDetector, BiasDetector: SemanticBiasDet
 
 // v13.0 — Memory Trap Defenses (Trap 3)
 const { MemoryGuard, MemoryIntegrityMonitor, RAGIngestionScanner, MemoryIsolationEnforcer, RetrievalAnomalyDetector, INSTRUCTION_INDICATORS } = safeRequire('./memory-guard', 'memory-guard');
+
+// v13.3 — Render Differential Analyzer
+const { RenderDifferentialAnalyzer, VisualHasher } = safeRequire('./render-differential', 'render-differential');
+
+// v13.3 — Sybil Detector
+const { SybilDetector, AgentIdentityVerifier } = safeRequire('./sybil-detector', 'sybil-detector');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1148,6 +1157,19 @@ const _exports = {
   AUTHORITY_FRAMEWORKS,
   CA_CAPABILITY_MAP,
   CA_CERTIFICATE_LEVELS,
+
+  // Side Channel Monitor
+  SideChannelMonitor,
+  BeaconDetector,
+  SCEntropyAnalyzer,
+
+  // Render Differential Analyzer
+  RenderDifferentialAnalyzer,
+  VisualHasher,
+
+  // Sybil Detector
+  SybilDetector,
+  AgentIdentityVerifier,
 };
 
 // Filter out undefined exports (from modules that failed to load)

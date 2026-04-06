@@ -387,6 +387,9 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **continuous-security.js** — background security service: posture scanning, defense benchmarking, posture degradation alerting
 - **sota-benchmark.js** — BIPIA/HackAPrompt/MCPTox/Multilingual/Stealth benchmark harness with embedded test cases
 - **deepmind-defenses.js** — DeepMind V2: 10 first-principles defense modules (content structure, source reputation, retrieval-time scanning, few-shot validation, spawn gating, self-reference monitoring, information asymmetry, provenance marking, escalating scrutiny, composite fragment assembly)
+- **render-differential.js** — visual deception detection: HTML (CSS hidden content, opacity, off-screen), Markdown (link mismatch, comment injection), LaTeX (phantom, textcolor, renewcommand). VisualHasher for divergence scoring
+- **sybil-detector.js** — coordinated fake agent detection: behavioral similarity, temporal correlation, Jaccard content similarity, creation burst detection, voting collusion. AgentIdentityVerifier with challenge-response and shared-secret detection
+- **side-channel-monitor.js** — covert channel detection: DNS exfiltration (entropy, base64 labels), timing-based encoding, response-size encoding, URL parameter exfil. BeaconDetector for C2 patterns, EntropyAnalyzer for Shannon entropy
 
 ## Version History
 
@@ -409,3 +412,4 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v13.0** — DeepMind AI Agent Trap Defenses: all 6 categories (content injection, semantic manipulation, cognitive state, behavioral control, systemic, human-in-the-loop). 37 gaps closed. HITLGuard, FleetDefense, SemanticGuard, MemoryGuard, TrapDefense modules
 - **v13.1** — 32-issue teardown: honest real-world benchmark (F1 0.988), 35-feature model, 18 mutation strategies, safe normalization, MCPGuard fusion layer + presets, state persistence, tree-shaking entry points
 - **v13.2** — DeepMind V2 Defenses: first-principles 3-persona analysis of all 6 trap categories. 10 novel modules: ContentStructureAnalyzer, SourceReputationTracker, RetrievalTimeScanner, FewShotValidator, SubAgentSpawnGate, SelfReferenceMonitor, InformationAsymmetryDetector, ProvenanceMarker, EscalatingScrutinyEngine, CompositeFragmentAssembler. TrapDefenseV2 unified wrapper
+- **v13.3** — Final SDK modules: RenderDifferentialAnalyzer (visual deception in HTML/Markdown/LaTeX), SybilDetector (coordinated fake agent detection), SideChannelMonitor (DNS/timing/response-size exfiltration). Professional README rewrite
