@@ -187,6 +187,16 @@ First-principles 3-persona analysis (spam filter engineer, immunologist, fire sa
 - [x] CompositeFragmentAssembler — detect split-payload attacks across agents/turns, cross-source assembly with pattern matching
 - [x] TrapDefenseV2 — unified wrapper integrating all 10 modules
 
+## v13.3 — Final SDK Modules (Complete)
+
+Three remaining SDK modules completing the detection surface:
+
+- [x] RenderDifferentialAnalyzer — detect visual deception in HTML (CSS display:none, opacity:0, off-screen, font-size:0), Markdown (link mismatch, hidden spans, comment injection), LaTeX (\phantom, \textcolor{white}, \renewcommand). VisualHasher for measuring raw-vs-rendered divergence
+- [x] SybilDetector — detect coordinated fake agents: behavioral similarity scoring, temporal correlation, Jaccard content similarity, creation burst detection, voting collusion analysis. AgentIdentityVerifier with challenge-response and shared-secret detection
+- [x] SideChannelMonitor — detect data exfiltration via covert channels: DNS exfiltration (high-entropy subdomains, base64 labels), timing-based encoding, response-size encoding, URL parameter exfil. BeaconDetector for C2 beaconing, EntropyAnalyzer for Shannon entropy
+- [x] Professional README rewrite — organized by capability, not version history
+- [x] 185 new test assertions (81 + 49 + 55)
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
