@@ -91,6 +91,7 @@ class ApprovalPatternMonitor {
    */
   recordApproval(approved, riskLevel) {
     this._history.push({ approved, riskLevel, timestamp: Date.now() });
+    if (this._history.length > 10000) this._history = this._history.slice(-10000);
     this._totalDecisions++;
 
     if (approved) {

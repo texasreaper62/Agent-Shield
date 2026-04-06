@@ -319,6 +319,7 @@ class MemoryIsolationEnforcer {
 
     const log = this._writeLog.get(userId);
     log.push({ key, source: userId, timestamp: Date.now() });
+    if (log.length > 5000) log.splice(0, log.length - 5000);
 
     return { written: true };
   }

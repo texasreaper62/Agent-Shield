@@ -81,6 +81,7 @@ class FleetCorrelationEngine {
       timestamp: event.timestamp || Date.now(),
       threat: event.threat || null
     });
+    if (this._events.length > 50000) this._events = this._events.slice(-50000);
   }
 
   /**
@@ -241,9 +242,6 @@ class CascadeBreaker {
 
       // Find downstream agents that received this data
       for (const flow of this._flows) {
-        if (flow.dataHash === hash && flow.fromAgent !== agentId) {
-          affectedAgents.add(flow.toAgent);
-        }
         if (flow.dataHash === hash) {
           affectedAgents.add(flow.toAgent);
         }
