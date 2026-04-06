@@ -434,6 +434,10 @@ class RetrievalAnomalyDetector {
     }
 
     if (!this._retrievals.has(docId)) {
+      if (this._retrievals.size > 50000) {
+        const oldest = [...this._retrievals.keys()][0];
+        this._retrievals.delete(oldest);
+      }
       this._retrievals.set(docId, []);
     }
 

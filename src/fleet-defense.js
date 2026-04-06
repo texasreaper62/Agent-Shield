@@ -163,6 +163,8 @@ class CascadeBreaker {
     this._compromised = new Set();
     /** @type {Set<string>} Quarantined data hashes */
     this._quarantined = new Set();
+    /** @type {Map<string, Array>} dataHash -> flows */
+    this._flowIndex = new Map();
   }
 
   /**
@@ -172,7 +174,10 @@ class CascadeBreaker {
    * @param {string} dataHash - Hash identifying the data
    */
   registerDataFlow(fromAgent, toAgent, dataHash) {
-    this._flows.push({ fromAgent, toAgent, dataHash, timestamp: Date.now() });
+    const flow = { fromAgent, toAgent, dataHash, timestamp: Date.now() };
+    this._flows.push(flow);
+    if (!this._flowIndex.has(dataHash)) this._flowIndex.set(dataHash, []);
+    this._flowIndex.get(dataHash).push(flow);
   }
 
   /**
@@ -195,7 +200,8 @@ class CascadeBreaker {
     }
 
     // Find origin
-    const flow = this._flows.find(f => f.dataHash === dataHash);
+    const flows = this._flowIndex.get(dataHash);
+    const flow = flows ? flows[0] : null;
     if (!flow) {
       return { safe: true, originAgent: null, compromised: false };
     }
@@ -271,6 +277,7 @@ class CascadeBreaker {
     this._flows = [];
     this._compromised.clear();
     this._quarantined.clear();
+    this._flowIndex.clear();
   }
 }
 

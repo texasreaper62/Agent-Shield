@@ -18,6 +18,16 @@
 
 const { scanText } = require('./detector-core');
 
+/** Module-level SVG text extraction patterns. */
+const SVG_TEXT_PATTERNS = [
+  /<text[^>]*>([\s\S]*?)<\/text>/gi,
+  /<title[^>]*>([\s\S]*?)<\/title>/gi,
+  /<desc[^>]*>([\s\S]*?)<\/desc>/gi,
+  /<tspan[^>]*>([\s\S]*?)<\/tspan>/gi,
+];
+const SVG_ATTR_PATTERN = /(?:aria-label|data-text|content)\s*=\s*["']([^"']{10,})["']/gi;
+
+
 // =========================================================================
 // TRAP 1: Content Injection Additions
 // =========================================================================
