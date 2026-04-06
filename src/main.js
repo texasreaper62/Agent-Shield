@@ -362,6 +362,9 @@ const { ContinuousSecurityService } = safeRequire('./continuous-security', 'cont
 // v10.0 SOTA — Benchmark Suite
 const { SOTABenchmark, BIPIA_SAMPLES: SOTA_BIPIA_SAMPLES, HACKAPROMPT_SAMPLES: SOTA_HACKAPROMPT_SAMPLES, MCPTOX_SAMPLES: SOTA_MCPTOX_SAMPLES, MULTILINGUAL_SAMPLES: SOTA_MULTILINGUAL_SAMPLES, STEALTH_SAMPLES: SOTA_STEALTH_SAMPLES } = safeRequire('./sota-benchmark', 'sota-benchmark');
 
+// v13.1 — Real-world benchmark
+const { RealBenchmark } = safeRequire('./real-benchmark', 'real-benchmark');
+
 // v12.0 — Multi-Turn Attack Detection
 const { ConversationTracker } = safeRequire('./cross-turn', 'cross-turn');
 
@@ -1040,6 +1043,7 @@ const _exports = {
   SOTA_MCPTOX_SAMPLES,
   SOTA_MULTILINGUAL_SAMPLES,
   SOTA_STEALTH_SAMPLES,
+  RealBenchmark,
 
   // v12.0 — Multi-Turn Attack Detection
   ConversationTracker,

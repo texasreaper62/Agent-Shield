@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Agent Shield is the state-of-the-art security SDK for AI agents. F1 1.000 on BIPIA/HackAPrompt/MCPTox/Multilingual/Stealth benchmarks — beating Sentinel (F1 0.980) with zero dependencies. Protects agents from prompt injection, data exfiltration, tool poisoning, confused deputy attacks, and 40+ AI-specific threats. Runs as middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, MCP, or custom agents.
+Agent Shield is the state-of-the-art security SDK for AI agents. F1 1.000 on BIPIA/HackAPrompt/MCPTox/Multilingual/Stealth benchmarks — beating Sentinel (F1 0.980) with zero dependencies. F1 0.988 on real published attack data (HackAPrompt competition, TensorTrust, security research papers). Protects agents from prompt injection, data exfiltration, tool poisoning, confused deputy attacks, and 40+ AI-specific threats. Runs as middleware inside any agent pipeline — Claude SDK, OpenAI, LangChain, MCP, or custom agents.
 
 **Design Philosophy:** Zero-dependency, local-only detection. Drop it into any Node.js agent and it works. No API keys, no cloud calls, no data leaves the user's environment.
 
@@ -354,3 +354,6 @@ cd python-sdk && python -m unittest tests/test_detector.py
 - **v7.3** — CORTEX Autonomous Defense: attack genome sequencing, adversarial evolution simulator, intent firewall, herd immunity, federated threat intel, behavioral DNA, pre-deployment audit, flight recorder, supply chain verification, SOC dashboard, compliance certification authority
 - **v10.0** — March 2026 Attack Defense: MCP Guard (17-layer middleware), supply chain scanner (11 CVEs, SARIF), OWASP Agentic Top 10 scanner, red team CLI, drift monitor, embedded ML classifier (logistic regression + k-NN), 14 new detector-core patterns for SSRF/KQL injection/schema poisoning/memory poisoning
 - **v11.0** — SOTA Security Platform: F1 1.000 on BIPIA/HackAPrompt/MCPTox/Multilingual/Stealth benchmarks (beats Sentinel F1 0.980). Adversarial self-training loop (12 mutations, 0% bypass convergence). Causal intent graph. Semantic isolation engine. Cryptographic intent binding. Attack surface mapper. Prompt hardening (DefensiveToken-inspired). Message integrity chain. Continuous security service. 80+ detection patterns, 12-language support, 5-layer evasion resistance, model risk profiles, agent fleet registry, defense effectiveness benchmarking
+- **v12.0** — Multi-turn detection, automated incident response, agent behavioral fingerprinting, multi-classifier ensemble, smart configuration, multimodal scanning, federated threat intelligence
+- **v13.0** — DeepMind AI Agent Trap Defenses: all 6 categories (content injection, semantic manipulation, cognitive state, behavioral control, systemic, human-in-the-loop). 37 gaps closed. HITLGuard, FleetDefense, SemanticGuard, MemoryGuard, TrapDefense modules
+- **v13.1** — 32-issue teardown: honest real-world benchmark (F1 0.988), 35-feature model, 18 mutation strategies, safe normalization, MCPGuard fusion layer + presets, state persistence, tree-shaking entry points

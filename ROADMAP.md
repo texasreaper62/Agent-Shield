@@ -150,6 +150,27 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] 60/60 manual red team across 4 waves (tool poisoning, social engineering, multimodal, novel attacks)
 - [x] 987 test assertions across 11 new test suites, 0 failures
 
+## v13.1 — Hardening (Complete)
+
+32-issue systematic teardown and fix cycle:
+
+- [x] Real-world benchmark: F1 0.988 on HackAPrompt/TensorTrust/research papers (honest, not self-graded)
+- [x] 20+ new detector-core patterns for real attack categories (output forcing, prompt extraction, conversation injection)
+- [x] 35-feature micro-model (was 25) with structural features that capture attack shape
+- [x] 18 mutation strategies in self-training (was 12) with real-world attacker techniques
+- [x] Safe normalization — "3D printing", "1080p", "4.2GB" no longer corrupted by leetspeak reversal
+- [x] MCPGuard fusion layer — micro-model can't block alone on low confidence
+- [x] MCPGuard.fromPreset() — 5 presets replace 17 boolean flags
+- [x] Intent graph sensitive keyword penalty with expanded keyword list
+- [x] Stronger semantic isolation markers (XML-style with trust levels)
+- [x] createGatedExecutor() for mandatory intent verification
+- [x] BiasDetector requires 2+ signals to reduce casual speech FPs
+- [x] guardWrite() on MemoryIntegrityMonitor — blocks before write, not just logs after
+- [x] State persistence for ContinuousSecurityService with I/O throttling
+- [x] 9 separate entry points for tree shaking (guard, scanner, model, etc.)
+- [x] Honest README claims (F1 0.988 on real data)
+- [x] 18-language benign text validation (0 false positives)
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
