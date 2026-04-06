@@ -602,7 +602,7 @@ function runAuditCLI() {
   });
 
   const report = audit.run();
-  console.log(report.formatReport());
+  console.log('[Agent Shield]', report.formatReport());
   return report;
 }
 

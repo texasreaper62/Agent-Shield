@@ -76,8 +76,7 @@ class SybilDetector {
     /** @type {Map<string, Array<object>>} */
     this._actions = new Map();
 
-    console.log('%s SybilDetector initialized (threshold: %s, window: %dms, minCluster: %d)',
-      LOG_PREFIX, this.similarityThreshold, this.timeWindowMs, this.minClusterSize);
+    console.log('%s SybilDetector initialized (threshold: %s, window: %dms, minCluster: %d)', LOG_PREFIX, this.similarityThreshold, this.timeWindowMs, this.minClusterSize);
   }
 
   /**
@@ -222,8 +221,7 @@ class SybilDetector {
       }
     }
 
-    console.log('%s Sybil detection complete: %d cluster(s), risk=%s',
-      LOG_PREFIX, clusters.length, sybilRisk);
+    console.log('%s Sybil detection complete: %d cluster(s), risk=%s', LOG_PREFIX, clusters.length, sybilRisk);
 
     return { clusters, sybilRisk };
   }
@@ -514,8 +512,7 @@ class AgentIdentityVerifier {
 
     const hasSharedKeys = sharedKeyGroups.length > 0;
     if (hasSharedKeys) {
-      console.log('%s Shared secret detected among %d group(s)',
-        LOG_PREFIX, sharedKeyGroups.length);
+      console.log('%s Shared secret detected among %d group(s)', LOG_PREFIX, sharedKeyGroups.length);
     }
 
     return { sharedKeyGroups, hasSharedKeys };
