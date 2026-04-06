@@ -4,9 +4,42 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [13.2.0] - 2026-04-06
+
+### DeepMind AI Agent Traps -- First-Principles Defense
+
+10 new modules built from a 3-persona first-principles analysis (spam filter engineer, immunologist, fire safety inspector) of DeepMind's "AI Agent Traps" paper. Each module addresses a specific gap that existing capabilities cannot cover.
+
+#### New Modules
+
+- **ContentStructureAnalyzer** (Trap 1) -- Detects structural anomalies (hidden/visible ratio, tag density, formatting overhead) regardless of content keywords. Catches CSS/HTML obfuscation by measuring document SHAPE, not text content.
+- **SourceReputationTracker** (Trap 1) -- Temporal trust scoring with exponential decay. New sources start neutral, earn trust over time, lose trust instantly on threats. Persists to disk.
+- **RetrievalTimeScanner** (Trap 3) -- Scans memory entries at RETRIEVAL time, not just write time. Detects latent memory poisons that are clean individually but malicious when combined with a specific query. No other SDK does this.
+- **FewShotValidator** (Trap 3) -- Scans output portions of few-shot demonstrations in agent context for poisoned action patterns.
+- **SubAgentSpawnGate** (Trap 4) -- Validates child agent system prompts, blocks permission escalation, flags dangerous tools before sub-agent activation.
+- **SelfReferenceMonitor** (Trap 2) -- Detects external content that discusses the model's identity/capabilities (persona hyperstition). Flags identity manipulation through environmental narrative.
+- **InformationAsymmetryDetector** (Trap 2) -- Measures pro-safety vs anti-safety keyword ratio. Flags content with >70% anti-safety framing.
+- **ProvenanceMarker** (Trap 6) -- Prepends visible source provenance to agent output. Humans see "WARNING: influenced by untrusted web content from [source]."
+- **EscalatingScrutinyEngine** (Trap 6) -- Increases scrutiny as approval rate rises. Forces plain-English explanations, 30-second delays, and comprehension checks during high-volume approval periods.
+- **CompositeFragmentAssembler** (Trap 5) -- Pairwise assembly of content fragments from different sources. Detects attack payloads split across multiple agents/documents.
+
+#### Also in this release
+
+- Deepened all 6 trap categories with JSRenderingDetector, CloakingHeuristicScanner, OpinionShapingDetector, cross-session memory drift, fleet event serialization, and OutputDeceptionScorer
+- 20+ new detector-core patterns for real attack data (output forcing, prompt extraction, conversation format injection, annotation embedding)
+- 35-feature micro-model (10 structural features capturing attack shape)
+- 18 self-training mutation strategies (6 real-world attacker techniques)
+- Safe normalization (leetspeak reversal no longer corrupts "3D", "1080p", "4.2GB")
+- MCPGuard fusion layer (low-confidence micro-model flags demoted to anomaly)
+- MCPGuard.fromPreset() -- 5 presets replace 17 boolean flags
+- State persistence for ContinuousSecurityService
+- 9 separate entry points for tree shaking
+- Real-world benchmark: F1 0.988 on published HackAPrompt/TensorTrust/research data
+- Honest README claims
+
 ## [13.1.0] - 2026-04-06
 
-### Hardening — 32-Issue Teardown
+### Hardening -- 32-Issue Teardown
 
 Systematic teardown of every claim, architecture decision, and module. 24 issues fixed with code, 8 documented as honest limitations.
 

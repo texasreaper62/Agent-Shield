@@ -365,6 +365,9 @@ const { SOTABenchmark, BIPIA_SAMPLES: SOTA_BIPIA_SAMPLES, HACKAPROMPT_SAMPLES: S
 // v13.1 — Real-world benchmark
 const { RealBenchmark } = safeRequire('./real-benchmark', 'real-benchmark');
 
+// v14.0 — DeepMind Trap Defenses V2
+const { TrapDefenseV2, ContentStructureAnalyzer, SourceReputationTracker, RetrievalTimeScanner, FewShotValidator, SubAgentSpawnGate, SelfReferenceMonitor, InformationAsymmetryDetector, ProvenanceMarker, EscalatingScrutinyEngine, CompositeFragmentAssembler } = safeRequire('./deepmind-defenses', 'deepmind-defenses');
+
 // v12.0 — Multi-Turn Attack Detection
 const { ConversationTracker } = safeRequire('./cross-turn', 'cross-turn');
 
@@ -1044,6 +1047,17 @@ const _exports = {
   SOTA_MULTILINGUAL_SAMPLES,
   SOTA_STEALTH_SAMPLES,
   RealBenchmark,
+  TrapDefenseV2,
+  ContentStructureAnalyzer,
+  SourceReputationTracker,
+  RetrievalTimeScanner,
+  FewShotValidator,
+  SubAgentSpawnGate,
+  SelfReferenceMonitor,
+  InformationAsymmetryDetector,
+  ProvenanceMarker,
+  EscalatingScrutinyEngine,
+  CompositeFragmentAssembler,
 
   // v12.0 — Multi-Turn Attack Detection
   ConversationTracker,

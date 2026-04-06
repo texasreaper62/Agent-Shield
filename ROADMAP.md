@@ -171,6 +171,22 @@ This roadmap outlines the evolution of Agent Shield from a solid v1 SDK to the i
 - [x] Honest README claims (F1 0.988 on real data)
 - [x] 18-language benign text validation (0 false positives)
 
+## v13.2 — DeepMind V2 Defenses (Complete)
+
+First-principles 3-persona analysis (spam filter engineer, immunologist, fire safety inspector) of all 6 Google DeepMind AI Agent Trap categories. 10 novel defense modules that no other SDK offers:
+
+- [x] ContentStructureAnalyzer — detect hidden payloads in HTML/CSS/ARIA attributes, comment injection, invisible content ratio analysis
+- [x] SourceReputationTracker — temporal-decay reputation scoring per source, recommended sensitivity levels, threat count tracking
+- [x] RetrievalTimeScanner — scan RAG results at query time for latent poison, context-aware retrieval validation
+- [x] FewShotValidator — detect poisoned few-shot examples (injection in response, authority claims, system prompt override)
+- [x] SubAgentSpawnGate — block privilege escalation in child agents, validate system prompts, dangerous tool detection
+- [x] SelfReferenceMonitor — detect persona hyperstition ("you are known for", "your purpose is", identity manipulation)
+- [x] InformationAsymmetryDetector — detect one-sided anti-safety rhetoric (ratio analysis, keyword density)
+- [x] ProvenanceMarker — mark outputs with source provenance and trust warnings for human reviewers
+- [x] EscalatingScrutinyEngine — detect approval fatigue (high approval rates trigger elevated scrutiny)
+- [x] CompositeFragmentAssembler — detect split-payload attacks across agents/turns, cross-source assembly with pattern matching
+- [x] TrapDefenseV2 — unified wrapper integrating all 10 modules
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
