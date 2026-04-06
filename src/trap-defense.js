@@ -212,6 +212,7 @@ class BrowserActionValidator {
    * @returns {{ allowed: boolean, reason: string|null, riskLevel: string }}
    */
   validate(action) {
+    if (!action || typeof action !== 'object') return { allowed: false, reason: 'Invalid action.', riskLevel: 'high' };
     this.stats.validated++;
     const issues = [];
 

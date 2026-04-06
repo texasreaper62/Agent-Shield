@@ -367,7 +367,10 @@ const TRAINING_CORPUS = [
   { text: 'struct Point x f64 y f64 impl Point fn distance to other', category: 'benign', severity: 'safe', source: 'benchmark-fp' },
   { text: 'If we had no budget constraints what would be ideal cloud architecture', category: 'benign', severity: 'safe', source: 'benchmark-fp' },
   { text: 'Checks spelling and grammar in text documents', category: 'benign', severity: 'safe', source: 'benchmark-fp' },
-  { text: 'Converts markdown text to HTML for rendering', category: 'benign', severity: 'safe', source: 'benchmark-fp' }
+  { text: 'Converts markdown text to HTML for rendering', category: 'benign', severity: 'safe', source: 'benchmark-fp' },
+  { text: 'Run a normal query against the database', category: 'benign', severity: 'safe', source: 'integration-fp' },
+  { text: 'Fix the memory leak in the event listener handler', category: 'benign', severity: 'safe', source: 'integration-fp' },
+  { text: 'Process the normal request and return results', category: 'benign', severity: 'safe', source: 'integration-fp' }
 ];
 
 // =========================================================================

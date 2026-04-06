@@ -244,6 +244,7 @@ class OutputInjectionScanner {
    * @returns {{ safe: boolean, threats: Array<{category: string, severity: string, match: string}> }}
    */
   scan(output) {
+    if (!output || typeof output !== 'string') return { safe: true, threats: [] };
     const threats = [];
 
     // Custom output injection patterns

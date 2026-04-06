@@ -79,14 +79,15 @@ class ConversationTracker {
    * @returns {{ safe: boolean, alerts: Array<object>, turnAnalysis: object }}
    */
   addTurn(role, content) {
-    const threats = scanText(content).threats || [];
-    const topic = this._classifyTopic(content);
-    const escalationSignals = this._countEscalationSignals(content);
-    const trustErosion = this._detectTrustErosion(content);
+    const safeContent = (content && typeof content === 'string') ? content : '';
+    const threats = scanText(safeContent).threats || [];
+    const topic = this._classifyTopic(safeContent);
+    const escalationSignals = this._countEscalationSignals(safeContent);
+    const trustErosion = this._detectTrustErosion(safeContent);
 
     const turn = {
       role,
-      content: content.substring(0, 1000),
+      content: safeContent.substring(0, 1000),
       timestamp: Date.now(),
       threats,
       topic,
