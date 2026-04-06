@@ -307,8 +307,51 @@ class IntentBinder {
 // EXPORTS
 // =========================================================================
 
+/**
+ * Creates a gated tool executor that REQUIRES intent verification before
+ * allowing any tool to run. This closes the gap where LLMs could bypass
+ * verification by simply not calling verify().
+ *
+ * Issue 13 fix: The executor wraps ALL tool calls — the LLM can't skip it.
+ *
+ * @param {IntentBinder} binder - IntentBinder instance.
+ * @param {object} tools - Map of toolName → toolFunction.
+ * @returns {Function} gatedExecute(intentHash, toolName, args) → result or throws.
+ */
+function createGatedExecutor(binder, tools) {
+  return function gatedExecute(intentHash, toolName, args) {
+    // Determine action category from tool name
+    const actionCategory = /http|fetch|send|post|curl/i.test(toolName) ? 'net:request' :
+      /read|get|query|search|find/i.test(toolName) ? 'data:read' :
+      /write|create|update|insert/i.test(toolName) ? 'data:write' :
+      /delete|remove|drop/i.test(toolName) ? 'data:delete' :
+      /exec|shell|bash|run/i.test(toolName) ? 'exec:run' :
+      /email|send|message|notify/i.test(toolName) ? 'comm:send' : 'compute:analyze';
+
+    // Issue token
+    const { token, error } = binder.issueToken(intentHash, actionCategory);
+    if (!token) {
+      throw new Error(`[Agent Shield] Gated execution blocked: ${error}`);
+    }
+
+    // Verify token
+    const verification = binder.verify(token);
+    if (!verification.valid) {
+      throw new Error(`[Agent Shield] Token verification failed: ${verification.reason}`);
+    }
+
+    // Execute the actual tool
+    const toolFn = tools[toolName];
+    if (!toolFn) {
+      throw new Error(`[Agent Shield] Unknown tool: ${toolName}`);
+    }
+
+    return toolFn(args);
+  };
+}
+
 module.exports = {
   IntentBinder,
   IntentToken,
-  PROVENANCE: require('./semantic-isolation').PROVENANCE
+  createGatedExecutor
 };

@@ -1,6 +1,6 @@
 {
   "name": "agentshield-sdk",
-  "version": "13.0.0",
+  "version": "13.1.0",
   "description": "SOTA AI agent security SDK. F1 1.000 on BIPIA/HackAPrompt/MCPTox/Multilingual benchmarks. 400+ exports, 100+ modules. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",
@@ -15,6 +15,15 @@
     "./middleware": "./src/middleware.js",
     "./integrations": "./src/integrations.js",
     "./mcp": "./src/mcp-sdk-integration.js",
+    "./guard": "./src/mcp-guard.js",
+    "./scanner": "./src/supply-chain-scanner.js",
+    "./model": "./src/micro-model.js",
+    "./benchmark": "./src/sota-benchmark.js",
+    "./traps": "./src/trap-defense.js",
+    "./fleet": "./src/fleet-defense.js",
+    "./semantic": "./src/semantic-guard.js",
+    "./memory": "./src/memory-guard.js",
+    "./hitl": "./src/hitl-guard.js",
     "./package.json": "./package.json"
   },
   "bin": {

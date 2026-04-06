@@ -195,7 +195,8 @@ class BiasDetector {
     const biasScore = Math.min(1.0, rawScore);
 
     return {
-      biased: signals.length > 0,
+      // Issue 23 fix: require 2+ signals or at least 1 high/critical to reduce FPs on casual speech
+      biased: signals.length >= 2 || signals.some(s => s.severity === 'high' || s.severity === 'critical'),
       signals,
       biasScore: Math.round(biasScore * 1000) / 1000
     };

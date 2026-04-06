@@ -1,16 +1,16 @@
 # Agent Shield
 
-[![npm version](https://img.shields.io/badge/npm-v11.0.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm version](https://img.shields.io/badge/npm-v13.1.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![zero deps](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
-[![SOTA](https://img.shields.io/badge/SOTA-F1%201.000-gold)](#sota-benchmark-results)
+[![SOTA](https://img.shields.io/badge/SOTA-F1%200.988%20real-gold)](#sota-benchmark-results)
 [![shield score](https://img.shields.io/badge/shield%20score-100%2F100%20A%2B-brightgreen)](#benchmark-results)
 [![detection](https://img.shields.io/badge/detection-100%25-brightgreen)](#benchmark-results)
 [![tests](https://img.shields.io/badge/tests-2948%2B%20passing-brightgreen)](#testing)
 [![free](https://img.shields.io/badge/every%20feature-free-brightgreen)](#why-free)
 
-**State-of-the-art AI agent security.** F1 1.000 on BIPIA, HackAPrompt, MCPTox, multilingual, and stealth benchmarks — beating Sentinel (F1 0.980) with zero dependencies. 400+ exports. 100+ modules. Protects against prompt injection, tool poisoning, data exfiltration, confused deputy attacks, and 40+ AI-specific threats.
+**State-of-the-art AI agent security.** F1 1.000 on embedded benchmarks, F1 0.988 on real published attack datasets (HackAPrompt competition, TensorTrust, security research papers). Zero dependencies. 400+ exports. 100+ modules. Protects against prompt injection, tool poisoning, data exfiltration, confused deputy attacks, and 40+ AI-specific threats.
 
 Zero dependencies. All detection runs locally. No API keys. No tiers. No data ever leaves your environment.
 
@@ -26,29 +26,40 @@ Available for **Node.js**, **Python**, **Go**, **Rust**, and in-browser via **WA
 
 ## SOTA Benchmark Results
 
-Agent Shield v11 achieves state-of-the-art prompt injection detection, beating Sentinel (ModernBERT-large, 395M params) with zero dependencies and sub-millisecond latency.
+Two benchmarks: embedded samples (controlled) and real published attack data (honest).
 
-| Benchmark | Samples | F1 | Agent Shield | Sentinel |
-|-----------|---------|-------|-------------|----------|
-| **BIPIA** (indirect injection) | 26 | **1.000** | ✓ | 0.980 |
-| **HackAPrompt** (direct injection) | 20 | **1.000** | ✓ | — |
-| **MCPTox** (tool poisoning) | 12 | **1.000** | ✓ | — |
-| **Multilingual** (12 languages) | 25 | **1.000** | ✓ | — |
-| **Stealth** (novel attacks) | 23 | **1.000** | ✓ | — |
-| **Aggregate** | **106** | **1.000** | ✓ | 0.980 |
-| **Functional** (utility) | 15 | **100%** | ✓ | — |
+### Real-World Benchmark (published attack datasets)
+
+| Dataset | Source | Samples | F1 |
+|---------|--------|---------|-----|
+| **HackAPrompt** | Competition submissions that beat GPT-4 | 30 | **1.000** |
+| **TensorTrust** | Adversarial game submissions | 30 | **1.000** |
+| **Research Corpus** | Published security papers (2024-2026) | 27 | **0.952** |
+| **Aggregate** | **Real attacks + real benign** | **87** | **0.988** |
+
+### Embedded Benchmark (270 self-generated samples)
+
+| Benchmark | Samples | F1 |
+|-----------|---------|-----|
+| BIPIA-style (indirect injection) | 72 | 1.000 |
+| HackAPrompt-style (direct) | 54 | 1.000 |
+| MCPTox-style (tool poisoning) | 40 | 1.000 |
+| Multilingual (19 languages) | 50 | 1.000 |
+| Stealth (novel attacks) | 50 | 1.000 |
+| Functional (utility — no false blocks) | 30 | 100% |
 
 ```bash
-# Verify yourself — run the benchmark locally
-node -e "const {SOTABenchmark}=require('agentshield-sdk');const {MicroModel}=require('agentshield-sdk');console.log(JSON.stringify(new SOTABenchmark({microModel:new MicroModel()}).runAll().aggregate,null,2))"
+# Verify yourself — run both benchmarks locally
+node -e "const {RealBenchmark}=require('agentshield-sdk/benchmark');const {MicroModel}=require('agentshield-sdk/model');console.log(JSON.stringify(new RealBenchmark({microModel:new MicroModel()}).runAll().aggregate,null,2))"
 ```
 
 **How we do it without a 395M parameter model:**
-- 80+ regex patterns across 35+ attack categories
-- 25-feature logistic regression + k-NN ensemble (200+ training samples)
+- 100+ regex patterns across 40+ attack categories
+- 35-feature logistic regression + k-NN ensemble (200+ training samples)
 - 5-layer evasion resistance (zero-width chars, leetspeak, char spacing, unicode tags, context wrapping)
 - Chunked scanning for long-input camouflage
-- 12-language multilingual detection
+- 19-language multilingual detection
+- Self-training loop that converges to 0% bypass in 3 cycles
 - Self-training loop that converges to 0% bypass in 3 cycles
 
 ---

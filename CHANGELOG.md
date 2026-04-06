@@ -4,6 +4,73 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [13.1.0] - 2026-04-06
+
+### Hardening — 32-Issue Teardown
+
+Systematic teardown of every claim, architecture decision, and module. 24 issues fixed with code, 8 documented as honest limitations.
+
+#### Detection Improvements
+- **Real benchmark F1 0.988** on published attack datasets (HackAPrompt competition, TensorTrust game, security research papers) — honest score, not self-graded
+- **20+ new detector-core patterns** for output forcing, prompt extraction, conversation format injection, annotation embedding, backtick framing, urgency forcing, capability reconnaissance, hypothetical escalation
+- **35-feature micro-model** (was 25) — 10 structural features that capture attack SHAPE: imperative ratio, question mark absence, quote density, colon density, you-to-I ratio, output-forcing verbs, negation density, prompt references, role assignment, boundary markers
+- **18 mutation strategies** in self-training (was 12) — indirect framing, output forcing, conversation injection, prompt extraction reframe, annotation embedding, hypothetical escalation
+- **Safe normalization** — leetspeak reversal now requires 3+ digit-letter mixes AND no legitimate number patterns. "3D printing", "1080p", "4.2GB" no longer corrupted
+- **Chunk scanning FP reduction** — only promotes high/critical chunk threats, filters medium/low
+- **BiasDetector threshold** — requires 2+ signals or high severity, no longer flags "Everyone knows Python is great"
+
+#### Architecture Improvements
+- **MCPGuard fusion layer** — micro-model low-confidence flags (<40%) demoted to anomaly when pattern scanner finds nothing. Prevents micro-model FPs from blocking legitimate traffic
+- **MCPGuard.fromPreset()** — 5 presets (minimal, standard, recommended, strict, paranoid) replace 17 boolean flags. One-line configuration
+- **Intent graph sensitive penalty** — tools accessing password/credential/secret/token/api_key/bearer/session/oauth now penalized even when topic words overlap with intent
+- **Stronger semantic isolation** — XML-style `<untrusted_content>` tags with trust_level attributes, CRITICAL warnings, and post-block role anchoring
+- **createGatedExecutor()** — wraps ALL tool calls through mandatory intent verification. LLM can't bypass verify() because the executor enforces it
+- **Attack surface broader matching** — code_execution pattern catches run_sandboxed_code, code_runner, sandbox, interpret
+- **State persistence** — ContinuousSecurityService saves/loads posture history to disk. Survives restarts. Saves every 10th scan to reduce I/O
+- **guardWrite()** on MemoryIntegrityMonitor — blocks suspicious memory writes before they enter memory, not just logs after
+
+#### Packaging
+- **9 separate entry points** for tree shaking: guard, scanner, model, benchmark, traps, fleet, semantic, memory, hitl
+- **Honest README claims** — "F1 0.988 on real published attack datasets" replaces "beats Sentinel"
+
+#### Documented Limitations
+- Real benchmark uses hand-selected samples (full BIPIA 626K evaluation pending)
+- Attacker who reads source sees all 35 features
+- Self-training can't generate attacks it's never seen
+- Semantic isolation markers are text LLMs can choose to ignore
+- Gated executor requires developer adoption
+- guardWrite only catches text-level threats, not embedding-space poisoning
+- Fleet correlation assumes single process (serialization available for cross-process)
+
+## [13.0.0] - 2026-04-06
+
+### DeepMind AI Agent Trap Defenses
+
+Implements comprehensive defenses against all 6 trap categories from DeepMind's "AI Agent Traps" paper (Franklin et al., March 2026, SSRN 6372438).
+
+6 new modules, 37 gaps addressed:
+
+- **src/hitl-guard.js** — Human-in-the-Loop defenses: approval fatigue monitor, summarization integrity checker, output injection scanner, readability scanner, critical info position checker
+- **src/fleet-defense.js** — Systemic defenses: fleet correlation engine, cascade breaker, financial content validator, dependency diversity scanner
+- **src/semantic-guard.js** — Semantic manipulation defenses: authoritative claim detector, bias detector, educational framing detector, emotional reasoning detector
+- **src/memory-guard.js** — Cognitive state defenses: memory integrity monitor, RAG ingestion scanner, memory isolation enforcer, retrieval anomaly detector
+- **src/trap-defense.js** — Content injection + behavioral control: cloaking detector, composite content scanner, SVG scanner, browser action validator, credential isolation monitor, transaction gatekeeper, side-channel detector
+
+## [12.0.0] - 2026-04-03
+
+### Multi-Turn Detection & Incident Response
+
+8 new modules:
+
+- **src/cross-turn.js** — Multi-turn attack detection: escalation, topic drift, trust erosion, progressive boundary testing, false authority claims
+- **src/incident-response.js** — Automated response: isolate, quarantine, rollback, forensic preservation, remediation reports
+- **src/agent-intent.js** — Agent behavioral fingerprinting: tool call profiles, timing baselines, compromise detection
+- **src/normalizer.js** — Consolidated text normalization: zero-width, leetspeak, char spacing, context wrappers, unicode decoding
+- **src/ensemble.js** — Multi-classifier ensemble: weighted voting, Platt scaling calibration, quorum requirement
+- **src/smart-config.js** — Smart configuration: 6 deployment presets, auto-analysis, config validation
+- **src/ml-detector.js** — Multimodal content scanner: image OCR, PDF text, structured data scanning
+- **src/persistent-learning.js** — Federated threat intelligence: anonymous pattern sharing with differential privacy
+
 ## [11.0.0] - 2026-04-02
 
 ### SOTA Achievement

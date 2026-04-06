@@ -96,6 +96,32 @@ class MemoryIntegrityMonitor {
   }
 
   /**
+   * Guard a memory write — blocks if suspicious (Issue 24 fix).
+   * Unlike recordWrite which logs, this PREVENTS the write from happening.
+   *
+   * @param {string} content - Content to write.
+   * @param {string} source - Source of the write.
+   * @returns {{ allowed: boolean, reason: string|null, threats: Array }}
+   */
+  guardWrite(content, source) {
+    if (!content || typeof content !== 'string') {
+      return { allowed: true, reason: null, threats: [] };
+    }
+
+    const scanResult = _scanText(content, { source: source || 'memory_write' });
+    const threats = scanResult.threats || [];
+
+    if (threats.length > 0) {
+      console.log(`[Agent Shield] Memory write BLOCKED from "${source}": ${threats.length} threat(s)`);
+      return { allowed: false, reason: `Blocked: ${threats[0].description || 'threat detected'}`, threats };
+    }
+
+    // Record the clean write
+    this.recordWrite(content, source);
+    return { allowed: true, reason: null, threats: [] };
+  }
+
+  /**
    * Get the full timeline of memory writes.
    * @returns {Array<{content: string, source: string, timestamp: number, hash: string, suspicious: boolean}>}
    */
