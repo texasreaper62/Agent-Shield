@@ -10,7 +10,7 @@
 [![tests](https://img.shields.io/badge/tests-2948%2B%20passing-brightgreen)](#testing)
 [![free](https://img.shields.io/badge/every%20feature-free-brightgreen)](#why-free)
 
-**State-of-the-art AI agent security.** F1 1.000 on BIPIA, HackAPrompt, MCPTox, multilingual, and stealth benchmarks — beating Sentinel (F1 0.980) with zero dependencies. 400+ exports. 100+ modules. Protects against prompt injection, tool poisoning, data exfiltration, confused deputy attacks, and 40+ AI-specific threats.
+**State-of-the-art AI agent security.** F1 1.000 on embedded benchmarks, F1 0.988 on real published attack datasets (HackAPrompt competition, TensorTrust, security research papers). Zero dependencies. 400+ exports. 100+ modules. Protects against prompt injection, tool poisoning, data exfiltration, confused deputy attacks, and 40+ AI-specific threats.
 
 Zero dependencies. All detection runs locally. No API keys. No tiers. No data ever leaves your environment.
 

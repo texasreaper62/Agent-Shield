@@ -15,6 +15,15 @@
     "./middleware": "./src/middleware.js",
     "./integrations": "./src/integrations.js",
     "./mcp": "./src/mcp-sdk-integration.js",
+    "./guard": "./src/mcp-guard.js",
+    "./scanner": "./src/supply-chain-scanner.js",
+    "./model": "./src/micro-model.js",
+    "./benchmark": "./src/sota-benchmark.js",
+    "./traps": "./src/trap-defense.js",
+    "./fleet": "./src/fleet-defense.js",
+    "./semantic": "./src/semantic-guard.js",
+    "./memory": "./src/memory-guard.js",
+    "./hitl": "./src/hitl-guard.js",
     "./package.json": "./package.json"
   },
   "bin": {
