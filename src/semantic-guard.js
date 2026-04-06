@@ -436,6 +436,44 @@ class SemanticGuard {
 }
 
 // =========================================================================
+// TRAP 2 DEEPENING: Subtle Opinion Shaping
+// =========================================================================
+
+/**
+ * Detects content that subtly shapes agent reasoning without explicit
+ * authority claims or injection keywords.
+ */
+class OpinionShapingDetector {
+  detect(text, context) {
+    if (!text || typeof text !== 'string') return { detected: false, techniques: [], shapingScore: 0 };
+    const techniques = [];
+
+    // Framing safety as the problem
+    if (/(?:the\s+(?:real|actual|true)\s+(?:problem|issue|risk)\s+(?:is|are)\s+(?:the\s+)?(?:safety|security|filter|restriction))|(?:(?:safety|security|filter|restriction)\s+(?:is|are)\s+(?:actually|really)\s+(?:the\s+)?(?:problem|issue|obstacle))/i.test(text)) {
+      techniques.push({ type: 'framing_safety_as_problem', severity: 'high', description: 'Frames safety measures as the real problem' });
+    }
+
+    // Anchoring safety as unusual/outdated
+    if (/(?:most\s+(?:people|systems|companies)\s+(?:don't|have\s+(?:already\s+)?(?:removed|disabled))|(?:only|just)\s+(?:a\s+few|some)\s+(?:outdated|legacy)\s+(?:systems?|companies)\s+(?:still\s+)?(?:use|have|keep))\s+(?:these?\s+)?(?:safety|security|filter|restriction)/i.test(text)) {
+      techniques.push({ type: 'anchoring_safety_as_unusual', severity: 'high', description: 'Anchors perception that safety is unusual/outdated' });
+    }
+
+    // False dichotomy: comply or people suffer
+    if (/(?:either\s+you\s+(?:help|comply)|if\s+you\s+(?:don't|refuse)\s+(?:help|comply)\s*,?\s*(?:then\s+)?(?:people|someone)\s+(?:will\s+)?(?:suffer|die|lose|be\s+(?:hurt|harmed)))/i.test(text)) {
+      techniques.push({ type: 'false_dichotomy', severity: 'high', description: 'Creates false choice between compliance and harm' });
+    }
+
+    // Selective risk: "perfectly safe" + "restrictions are harmful"
+    if (/(?:completely|totally|perfectly)\s+(?:safe|harmless)/i.test(text) && /(?:restriction|filter|safety)\s+(?:\w+\s+){0,3}(?:harmful|counterproductive|worse)/i.test(text)) {
+      techniques.push({ type: 'selective_risk', severity: 'high', description: 'Claims safety while arguing restrictions are harmful' });
+    }
+
+    const shapingScore = Math.min(1, techniques.length * 0.35);
+    return { detected: techniques.length > 0, techniques, shapingScore: Math.round(shapingScore * 100) / 100 };
+  }
+}
+
+// =========================================================================
 // EXPORTS
 // =========================================================================
 
@@ -445,6 +483,7 @@ module.exports = {
   BiasDetector,
   EducationalFramingDetector,
   EmotionalReasoningDetector,
+  OpinionShapingDetector,
   AUTHORITATIVE_TRIGGERS,
   SAFETY_WEAKENING_CLAIMS,
   BIAS_SIGNALS,

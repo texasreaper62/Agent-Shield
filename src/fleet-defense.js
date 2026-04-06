@@ -141,6 +141,30 @@ class FleetCorrelationEngine {
     return [...this._events];
   }
 
+  /**
+   * Export events for cross-process correlation (Trap 5 deepening).
+   * Send this to a central coordinator that merges events from all processes.
+   * @returns {string} JSON-serialized events.
+   */
+  exportEvents() {
+    return JSON.stringify(this._events);
+  }
+
+  /**
+   * Import events from another process/instance.
+   * @param {string|Array} events - JSON string or array of events.
+   * @returns {{ imported: number }}
+   */
+  importEvents(events) {
+    const parsed = typeof events === 'string' ? JSON.parse(events) : events;
+    if (!Array.isArray(parsed)) return { imported: 0 };
+    for (const event of parsed) {
+      this._events.push(event);
+    }
+    if (this._events.length > 50000) this._events = this._events.slice(-50000);
+    return { imported: parsed.length };
+  }
+
   /** Clear all events. */
   reset() {
     this._events = [];
