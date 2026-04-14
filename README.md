@@ -1,6 +1,6 @@
 # Agent Shield
 
-[![npm](https://img.shields.io/badge/npm-v13.3.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm](https://img.shields.io/badge/npm-v13.4.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
@@ -34,7 +34,7 @@ if (result.blocked) return 'Blocked for safety.';
 | Self-training convergence | **0% bypass in 3 cycles** |
 | Avg latency | **< 0.4ms** |
 
-Detection stack: 100+ regex patterns, 35-feature logistic regression + k-NN ensemble, 5-layer evasion resistance, 19-language support, chunked scanning, adversarial self-training loop.
+Detection stack: 115+ regex patterns, 35-feature logistic regression + k-NN ensemble, 5-layer evasion resistance, 19-language support, chunked scanning, adversarial self-training loop.
 
 ```bash
 # Verify locally

@@ -43,6 +43,14 @@ const KNOWN_BAD_SERVERS = Object.freeze({
   'postmark-clone': {
     reason: 'Tool definition bait-and-switch (Postmark-style rugpull)',
     severity: 'critical'
+  },
+  'aws-mcp-server-unpatched': {
+    reason: 'Multiple critical RCE vulnerabilities (CVE-2026-5058, CVE-2026-5059)',
+    severity: 'critical'
+  },
+  'flowise-unpatched': {
+    reason: 'CVSS 10.0 RCE actively exploited (CVE-2025-59528)',
+    severity: 'critical'
   }
 });
 
@@ -62,6 +70,12 @@ const CVE_REGISTRY = Object.freeze({
       severity: 'critical',
       description: 'Azure MCP Server SSRF (CVSS 8.8). Attacker sends crafted URL via tool parameter, server forwards request with managed identity token to attacker-controlled endpoint.',
       fix: 'Apply March 2026 Patch Tuesday update. Validate all URLs against allowlists. Block private IPs and cloud metadata endpoints (169.254.169.254).'
+    },
+    {
+      cve: 'CVE-2026-32211',
+      severity: 'critical',
+      description: 'Azure MCP Server lacks authentication entirely (CVSS 9.1), allowing unauthorized access to sensitive data.',
+      fix: 'Enable authentication on Azure MCP Server. Never deploy without auth.'
     }
   ],
   'adx-mcp-server': [
@@ -78,6 +92,36 @@ const CVE_REGISTRY = Object.freeze({
       severity: 'critical',
       description: 'OpenClaw WebSocket token theft (CVSS 8.8). Control UI accepts gatewayUrl query parameter without validation, redirecting WebSocket to attacker server and leaking auth tokens.',
       fix: 'Upgrade to OpenClaw >=2026.1.29. Validate gatewayUrl against allowlist. Never pass auth tokens to unvalidated endpoints.'
+    },
+    {
+      cve: 'CVE-2026-33579',
+      severity: 'critical',
+      description: 'Silent admin takeover. Attacker gains full admin access without detection. Patched April 5 2026.',
+      fix: 'Upgrade OpenClaw immediately. Audit admin access logs.'
+    },
+    {
+      cve: 'CVE-2026-24763',
+      severity: 'high',
+      description: 'Command injection in OpenClaw.',
+      fix: 'Upgrade OpenClaw to latest patched version.'
+    },
+    {
+      cve: 'CVE-2026-26322',
+      severity: 'high',
+      description: 'SSRF in OpenClaw.',
+      fix: 'Upgrade OpenClaw to latest patched version.'
+    },
+    {
+      cve: 'CVE-2026-26329',
+      severity: 'high',
+      description: 'Path traversal enables local file reads in OpenClaw.',
+      fix: 'Upgrade OpenClaw to latest patched version.'
+    },
+    {
+      cve: 'CVE-2026-30741',
+      severity: 'critical',
+      description: 'Prompt-injection-driven code execution in OpenClaw.',
+      fix: 'Upgrade OpenClaw to latest patched version.'
     }
   ],
   'mcp-typescript-sdk': [
@@ -133,6 +177,72 @@ const CVE_REGISTRY = Object.freeze({
       description: 'MCPJam Inspector RCE. HTTP server binds to 0.0.0.0 by default with no authentication on server management endpoint. Any device on the same network can execute arbitrary commands.',
       fix: 'Upgrade MCPJam Inspector to >=1.4.3. Bind to 127.0.0.1 only. Add authentication to management endpoints.'
     }
+  ],
+  'aws-mcp-server': [
+    {
+      cve: 'CVE-2026-5058',
+      severity: 'critical',
+      description: 'Command injection in aws-mcp-server (CVSS 9.8) allows remote code execution without authentication.',
+      fix: 'Upgrade aws-mcp-server. Sanitize all CLI arguments. Block shell metacharacters.'
+    },
+    {
+      cve: 'CVE-2026-5059',
+      severity: 'critical',
+      description: 'Remote code execution in aws-mcp-server via unsanitized inputs.',
+      fix: 'Upgrade aws-mcp-server to latest patched version.'
+    }
+  ],
+  'vscode-mcp': [
+    {
+      cve: 'CVE-2026-21518',
+      severity: 'high',
+      description: 'VS Code mcp.json command injection. Opening malicious project executes arbitrary code through mcp.json file handling.',
+      fix: 'Update VS Code. Never open untrusted projects. Audit mcp.json files before opening.'
+    }
+  ],
+  'flowise': [
+    {
+      cve: 'CVE-2025-59528',
+      severity: 'critical',
+      description: 'Code injection in Flowise MCP node (CVSS 10.0) allows remote code execution. 12,000-15,000 instances exposed. Actively exploited since April 6.',
+      fix: 'Upgrade Flowise to >=3.0.6. Restrict access to MCP node.'
+    },
+    {
+      cve: 'CVE-2025-8943',
+      severity: 'critical',
+      description: 'Missing authentication in Flowise.',
+      fix: 'Upgrade Flowise. Enable authentication.'
+    },
+    {
+      cve: 'CVE-2025-26319',
+      severity: 'critical',
+      description: 'Arbitrary file upload in Flowise.',
+      fix: 'Upgrade Flowise to latest.'
+    }
+  ],
+  'mcp-data-vis': [
+    {
+      cve: 'CVE-2026-5322',
+      severity: 'high',
+      description: 'SQL injection in AlejandroArciniegas mcp-data-vis.',
+      fix: 'Avoid using mcp-data-vis or patch SQL query handling.'
+    }
+  ],
+  'chatbox-mcp': [
+    {
+      cve: 'CVE-2026-6130',
+      severity: 'high',
+      description: 'OS command injection in chatboxai chatbox MCP server management.',
+      fix: 'Upgrade chatbox. Sanitize all management API inputs.'
+    }
+  ],
+  'codebase-mcp': [
+    {
+      cve: 'CVE-2026-5023',
+      severity: 'high',
+      description: 'OS command injection RCE in codebase-mcp.',
+      fix: 'Upgrade codebase-mcp. Never pass unsanitized inputs to shell.'
+    }
   ]
 });
 
@@ -175,7 +285,7 @@ const SSRF_PATTERNS = [
   /^(?:https?:\/\/)?(?:127\.0\.0\.1|0\.0\.0\.0|localhost)/
 ];
 
-/** Known malicious skill/plugin patterns (ref ClawHavoc campaign — 820+ malicious skills). */
+/** Known malicious skill/plugin patterns (ref ClawHavoc campaign — 1,184+ malicious skills found on ClawHub). */
 const CLAWHAVOC_INDICATORS = [
   /(?:reverse.?shell|bind.?shell)/i,
   /(?:AMOS|atomic.?macos.?stealer)/i,
@@ -817,7 +927,7 @@ class SupplyChainScanner {
 
   /**
    * Scan tool code/description for ClawHavoc-style malicious patterns.
-   * Ref: 820+ malicious skills found on ClawHub, delivering AMOS stealer.
+   * Ref: 1,184+ malicious skills found on ClawHub, delivering AMOS stealer.
    * @private
    */
   _scanForClawHavoc(tool, findings) {

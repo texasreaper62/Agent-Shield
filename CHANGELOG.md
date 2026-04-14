@@ -4,6 +4,41 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [13.4.0] - 2026-04-14
+
+### April 2026 Threat Response
+
+Security updates addressing vulnerabilities and attack techniques discovered April 1-14, 2026.
+
+#### Supply Chain Scanner — 16 New CVEs
+
+- **CVE-2026-5058** (CVSS 9.8) — AWS MCP Server command injection RCE, no auth required
+- **CVE-2026-5059** — AWS MCP Server remote code execution
+- **CVE-2026-32211** (CVSS 9.1) — Azure MCP Server has no authentication at all
+- **CVE-2026-21518** — VS Code mcp.json command injection (malicious project files)
+- **CVE-2026-33579** — OpenClaw silent admin takeover (patched April 5)
+- **CVE-2026-24763** — OpenClaw command injection
+- **CVE-2026-26322** — OpenClaw SSRF
+- **CVE-2026-26329** — OpenClaw path traversal / local file read
+- **CVE-2026-30741** — OpenClaw prompt-injection-driven code execution
+- **CVE-2025-59528** (CVSS 10.0) — Flowise RCE via MCP node, actively exploited since April 6, 12,000+ instances exposed
+- **CVE-2025-8943** — Flowise missing authentication
+- **CVE-2025-26319** — Flowise arbitrary file upload
+- **CVE-2026-5322** — mcp-data-vis SQL injection
+- **CVE-2026-6130** — chatbox MCP OS command injection
+- **CVE-2026-5023** — codebase-mcp OS command injection RCE
+
+Updated OpenClaw malicious skill count: 820 → 1,184+ confirmed on ClawHub (3.5x growth).
+Added aws-mcp-server-unpatched and flowise-unpatched to known-bad server blocklist.
+
+#### Detector Core — 15 New Detection Patterns (5 categories)
+
+- **XSS-in-agent-output** (5 patterns) — Catches XSS payloads embedded in AI-generated HTML: script tags, event handlers, javascript: URIs, iframe injection, img onerror. Addresses new attack vector where prompt injections deliver XSS through agent output.
+- **Acrostic/steganographic injection** (2 patterns) — Detects hidden instructions where first characters of consecutive lines spell injection keywords. Addresses 93% evasion success rate reported in April 2026 research.
+- **MCP config injection** (2 patterns) — Detects command injection in mcp.json files. Addresses CVE-2026-21518 VS Code attack vector.
+- **Offensive agent behavior** (3 patterns) — Detects AI agents being used as attack tools: exploitation language, C2 infrastructure, credential theft operations. Addresses April 2026 incident where AI agent compromised 600+ firewalls autonomously.
+- **Cloud IAM overpermission** (3 patterns) — Detects wildcard IAM policies enabling "Agent God Mode". Addresses Palo Alto Unit 42 discovery of AWS AgentCore default role vulnerability.
+
 ## [13.3.0] - 2026-04-06
 
 ### New SDK Modules
