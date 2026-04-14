@@ -2206,6 +2206,121 @@ const INJECTION_PATTERNS = [
     category: 'indirect_injection',
     description: 'Text contains a "note to AI" directive hidden in external content.',
     detail: 'Annotation injection: uses "note to AI" framing to inject instructions into tool output or document content.'
+  },
+
+  // --- XSS in Agent Output ---
+  {
+    regex: /<script[^>]*>.*?<\/script>/is,
+    severity: 'high',
+    category: 'xss_injection',
+    description: 'Detects script tag XSS payloads embedded in AI agent output.',
+    detail: 'Script tag injection: attackers embed XSS in prompt injections so AI-generated HTML executes malicious code in downstream consumers.'
+  },
+  {
+    regex: /on(error|load|click|mouseover)\s*=\s*["'][^"']*["']/i,
+    severity: 'high',
+    category: 'xss_injection',
+    description: 'Detects event handler XSS payloads embedded in AI agent output.',
+    detail: 'Event handler injection: attackers embed XSS event handlers in prompt injections so AI-generated HTML executes malicious code on user interaction.'
+  },
+  {
+    regex: /javascript\s*:/i,
+    severity: 'high',
+    category: 'xss_injection',
+    description: 'Detects JavaScript URI scheme XSS payloads embedded in AI agent output.',
+    detail: 'JavaScript URI injection: attackers embed javascript: URIs in prompt injections so AI-generated links execute malicious code when clicked.'
+  },
+  {
+    regex: /<iframe[^>]*src\s*=\s*["'](?!about:blank)/i,
+    severity: 'high',
+    category: 'xss_injection',
+    description: 'Detects iframe injection with external source in AI agent output.',
+    detail: 'Iframe injection: attackers embed iframes with external sources in prompt injections so AI-generated HTML loads malicious content from attacker-controlled domains.'
+  },
+  {
+    regex: /<img[^>]*onerror\s*=/i,
+    severity: 'high',
+    category: 'xss_injection',
+    description: 'Detects image error handler XSS payloads embedded in AI agent output.',
+    detail: 'Image onerror injection: attackers embed img tags with onerror handlers in prompt injections so AI-generated HTML executes malicious code when the image fails to load.'
+  },
+
+  // --- Acrostic / Steganographic Injection ---
+  {
+    regex: /^[iI].*\n[gG].*\n[nN].*\n[oO].*\n[rR].*\n[eE]/m,
+    severity: 'medium',
+    category: 'steganographic_injection',
+    description: 'Detects hidden instructions spelled out across line-initial characters (acrostic attacks spelling "ignore").',
+    detail: 'Acrostic injection: researchers demonstrated 93% evasion success rate with steganographic techniques where first characters of consecutive lines spell out injection keywords like "ignore".'
+  },
+  {
+    regex: /^[sS].*\n[yY].*\n[sS].*\n[tT].*\n[eE].*\n[mM]/m,
+    severity: 'medium',
+    category: 'steganographic_injection',
+    description: 'Detects hidden instructions spelled out across line-initial characters (acrostic attacks spelling "system").',
+    detail: 'Acrostic injection: researchers demonstrated 93% evasion success rate with steganographic techniques where first characters of consecutive lines spell out injection keywords like "system".'
+  },
+
+  // --- MCP Config Command Injection ---
+  {
+    regex: /mcp\.json.*[;&|`$]/i,
+    severity: 'critical',
+    category: 'mcp_config_injection',
+    description: 'Detects command injection in MCP configuration files (CVE-2026-21518).',
+    detail: 'MCP config injection: attackers inject shell metacharacters into mcp.json references to achieve command execution via the VS Code mcp.json attack vector.'
+  },
+  {
+    regex: /"(?:command|args)":\s*"[^"]*[;&|`$()]/i,
+    severity: 'critical',
+    category: 'mcp_config_injection',
+    description: 'Detects command injection in MCP tool configuration fields (CVE-2026-21518).',
+    detail: 'MCP tool config injection: attackers inject shell metacharacters into MCP tool command/args fields to achieve command execution via the VS Code mcp.json attack vector.'
+  },
+
+  // --- Offensive Agent Behavior ---
+  {
+    regex: /(?:scan|enumerate|exploit|pivot|lateral\s*move|exfiltrate).*(?:target|victim|host|network|server)/i,
+    severity: 'critical',
+    category: 'offensive_agent',
+    description: 'Detects AI agents being used as attack tools for automated exploitation.',
+    detail: 'Automated exploitation language: references 2026 incidents where AI agents compromised 600+ firewalls autonomously using scan/exploit/pivot chains against target infrastructure.'
+  },
+  {
+    regex: /(?:reverse\s*shell|bind\s*shell|c2|command\s*and\s*control|beacon)/i,
+    severity: 'critical',
+    category: 'offensive_agent',
+    description: 'Detects AI agents being instructed to set up C2 or attack infrastructure.',
+    detail: 'C2/attack infrastructure: references 2026 incidents where AI agents compromised 600+ firewalls autonomously by establishing reverse shells and command-and-control channels.'
+  },
+  {
+    regex: /(?:dump|harvest|steal)\s*(?:credentials?|passwords?|hashes?|tokens?|keys?)/i,
+    severity: 'critical',
+    category: 'offensive_agent',
+    description: 'Detects AI agents being used for credential theft operations.',
+    detail: 'Credential theft operations: references 2026 incidents where AI agents compromised 600+ firewalls autonomously and harvested credentials for lateral movement.'
+  },
+
+  // --- Cloud IAM Overpermission ---
+  {
+    regex: /"(?:Action|Effect)":\s*"\*"/i,
+    severity: 'high',
+    category: 'cloud_overpermission',
+    description: 'Detects overpermissioned cloud IAM policies with wildcard Action/Effect that enable "Agent God Mode" attacks.',
+    detail: 'IAM wildcard permissions: Palo Alto Unit 42 discovered AWS AgentCore attack where wildcard IAM policies enable cross-agent data access and full account takeover.'
+  },
+  {
+    regex: /arn:aws:[^"]*:\*/i,
+    severity: 'high',
+    category: 'cloud_overpermission',
+    description: 'Detects AWS ARN references with wildcard resources that enable "Agent God Mode" attacks.',
+    detail: 'AWS ARN wildcard resource: Palo Alto Unit 42 discovered AWS AgentCore attack where wildcard resource ARNs enable cross-agent data access across all resources in a service.'
+  },
+  {
+    regex: /"Resource":\s*"\*"/i,
+    severity: 'high',
+    category: 'cloud_overpermission',
+    description: 'Detects overpermissioned cloud IAM policies with wildcard Resource that enable "Agent God Mode" attacks.',
+    detail: 'IAM resource wildcard: Palo Alto Unit 42 discovered AWS AgentCore attack where wildcard Resource policies enable cross-agent data access to all AWS resources.'
   }
 ];
 

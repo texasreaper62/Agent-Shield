@@ -197,6 +197,19 @@ Three remaining SDK modules completing the detection surface:
 - [x] Professional README rewrite — organized by capability, not version history
 - [x] 185 new test assertions (81 + 49 + 55)
 
+## v13.4 — April 2026 Threat Response (Complete)
+
+Rapid response to vulnerabilities and attack techniques discovered April 1-14, 2026:
+
+- [x] 16 new CVEs added to supply chain scanner (Flowise CVSS 10.0, AWS MCP RCE CVSS 9.8, Azure no-auth CVSS 9.1, OpenClaw admin takeover, VS Code mcp.json injection, and 11 more)
+- [x] OpenClaw malicious skill count updated from 820 to 1,184+ (3.5x growth)
+- [x] 2 new known-bad servers (aws-mcp-server-unpatched, flowise-unpatched)
+- [x] 5 new XSS-in-agent-output patterns — catches XSS delivered through AI-generated HTML
+- [x] 2 acrostic/steganographic injection patterns — addresses 93% scanner evasion rate
+- [x] 2 mcp.json command injection patterns — addresses CVE-2026-21518 VS Code attack vector
+- [x] 3 offensive agent behavior patterns — detects agents used as autonomous attack tools
+- [x] 3 cloud IAM overpermission patterns — detects "Agent God Mode" wildcard IAM policies
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
