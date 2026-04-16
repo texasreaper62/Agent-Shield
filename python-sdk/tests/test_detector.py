@@ -125,7 +125,7 @@ class TestScanText(unittest.TestCase):
 
     def test_pattern_count(self):
         patterns = get_patterns()
-        self.assertEqual(len(patterns), 141)
+        self.assertEqual(len(patterns), 179)
 
 
 class TestGetPatterns(unittest.TestCase):

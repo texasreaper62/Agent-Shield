@@ -366,8 +366,8 @@ func TestMaxInputSize(t *testing.T) {
 // TestAllCategories verifies the AllCategories helper.
 func TestAllCategories(t *testing.T) {
 	cats := agentshield.AllCategories()
-	if len(cats) != 8 {
-		t.Errorf("expected 8 categories, got %d", len(cats))
+	if len(cats) != 18 {
+		t.Errorf("expected 18 categories, got %d", len(cats))
 	}
 }
 
