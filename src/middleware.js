@@ -12,10 +12,86 @@ const { RateLimiter } = require('./circuit-breaker');
 const { createShieldError } = require('./errors');
 
 /**
+ * Default maximum body size (in bytes) enforced by expressMiddleware
+ * when `options.maxBodySize` is not provided. Defaults to 1 MB.
+ */
+const DEFAULT_MAX_BODY_SIZE = 1 * 1024 * 1024;
+
+/**
+ * Computes the approximate size in bytes of a parsed request body.
+ * - String: exact UTF-8 byte length
+ * - Buffer: exact length
+ * - Object: JSON.stringify length (fallback)
+ *
+ * @param {*} body
+ * @returns {number}
+ */
+const computeBodySize = (body) => {
+  if (body == null) return 0;
+  if (Buffer.isBuffer(body)) return body.length;
+  if (typeof body === 'string') return Buffer.byteLength(body, 'utf8');
+  if (typeof body === 'object') {
+    try {
+      return JSON.stringify(body).length;
+    } catch (_) {
+      return 0;
+    }
+  }
+  return 0;
+};
+
+/**
+ * Attaches a cumulative byte-counter to the raw request stream and aborts
+ * the request with 413 once the configured limit is exceeded. This runs
+ * in addition to the post-parse body size check so attackers cannot
+ * bypass the limit by streaming a huge payload before the body parser
+ * buffers it.
+ *
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {number} limit
+ * @returns {boolean} True if the stream watcher was attached.
+ */
+const attachRawSizeGuard = (req, res, limit) => {
+  if (!req || typeof req.on !== 'function') return false;
+  // Already read/parsed — nothing to guard.
+  if (req._agentShieldRawGuardAttached) return false;
+  req._agentShieldRawGuardAttached = true;
+
+  let received = 0;
+  const onData = (chunk) => {
+    received += chunk ? chunk.length : 0;
+    if (received > limit) {
+      req.removeListener('data', onData);
+      try {
+        if (typeof req.pause === 'function') req.pause();
+        if (!res.headersSent) {
+          res.status(413).json({
+            error: 'Payload Too Large',
+            message: `Request body exceeds maximum allowed size of ${limit} bytes`,
+            maxBodySize: limit
+          });
+        }
+        if (typeof req.destroy === 'function') req.destroy();
+      } catch (_) {
+        // Swallow — the response has already been sent or the socket closed.
+      }
+    }
+  };
+  req.on('data', onData);
+  return true;
+};
+
+/**
  * Creates an Express/Connect-style middleware that scans request bodies
  * for AI-specific threats before they reach your agent endpoint.
  *
+ * Enforces a configurable body-size limit (default 1MB) so callers do
+ * not need to configure body-parser separately. Oversized payloads are
+ * rejected with HTTP 413 before any scanning takes place.
+ *
  * @param {object} [config] - AgentShield configuration.
+ * @param {number} [config.maxBodySize=1048576] - Maximum accepted request body size in bytes.
  * @returns {Function} Express middleware function.
  *
  * @example
@@ -24,7 +100,7 @@ const { createShieldError } = require('./errors');
  *
  * const app = express();
  * app.use(express.json());
- * app.use(expressMiddleware({ blockOnThreat: true, blockThreshold: 'high' }));
+ * app.use(expressMiddleware({ blockOnThreat: true, blockThreshold: 'high', maxBodySize: 512 * 1024 }));
  *
  * app.post('/agent', (req, res) => {
  *   // req.agentShield contains scan results
@@ -36,11 +112,31 @@ const { createShieldError } = require('./errors');
  */
 const expressMiddleware = (config = {}) => {
   const shield = new AgentShield({ blockOnThreat: true, ...config });
+  const maxBodySize = Number.isFinite(config.maxBodySize) && config.maxBodySize > 0
+    ? config.maxBodySize
+    : DEFAULT_MAX_BODY_SIZE;
+
+  console.log('[Agent Shield] Middleware body size limit: %dKB. Configure options.maxBodySize to override.', Math.round(maxBodySize / 1024));
 
   return (req, res, next) => {
+    // Attach raw-stream guard for unparsed requests so attackers cannot
+    // bypass the post-parse size check with huge streamed payloads.
+    attachRawSizeGuard(req, res, maxBodySize);
+
     if (!req.body) {
       req.agentShield = { status: 'safe', threats: [], blocked: false };
       return next();
+    }
+
+    // Enforce body-size limit before scanning to avoid DoS via huge inputs.
+    const bodySize = computeBodySize(req.body);
+    if (bodySize > maxBodySize) {
+      return res.status(413).json({
+        error: 'Payload Too Large',
+        message: `Request body (${bodySize} bytes) exceeds maximum allowed size of ${maxBodySize} bytes`,
+        maxBodySize,
+        receivedSize: bodySize
+      });
     }
 
     // Extract text from common request body shapes
@@ -303,4 +399,13 @@ const shieldMiddleware = (config = {}) => {
   };
 };
 
-module.exports = { expressMiddleware, wrapAgent, shieldTools, extractTextFromBody, rateLimitMiddleware, shieldMiddleware };
+module.exports = {
+  expressMiddleware,
+  wrapAgent,
+  shieldTools,
+  extractTextFromBody,
+  rateLimitMiddleware,
+  shieldMiddleware,
+  computeBodySize,
+  DEFAULT_MAX_BODY_SIZE
+};

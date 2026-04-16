@@ -225,6 +225,20 @@ Tightens existing defenses and addresses security scan findings:
 - [x] Document scanner — maxDocumentSize limit (10MB) prevents DoS
 - [x] Audit log sanitization — PII/key/prompt redaction option
 
+## v13.6 — Performance Leap + Hardening (Complete)
+
+Path A polish pass — honest performance, security scan gap closure, real audits:
+
+- [x] Long-benign fast path: 15.7ms → 112μs p99 (140x faster) via attack-specific prefilter
+- [x] Honest latency benchmark (p50/p95/p99/p99.9/max, not averages)
+- [x] Plugin VM sandbox (`IsolatedPluginSandbox`): real isolation, prototype-pollution contained, HMAC-SHA256 plugin signing, 58 tests
+- [x] Express middleware body-size limits (1MB default, raw-stream enforcement)
+- [x] Multi-tenant auth validation (`tenantVerifier`, `strictAuth`, `withAuth()`)
+- [x] ReDoS audit: all 297 patterns verified clean (0 risky)
+- [x] Pattern quality audit: 120 active, 177 dead (defensive patterns, never FP)
+- [ ] Python SDK pattern sync (deferred to v14 — 282 current, 297 target)
+- [ ] Go SDK pattern sync (deferred to v14 — 141 current, 297 target)
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks

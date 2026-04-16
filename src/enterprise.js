@@ -16,18 +16,104 @@ const { loadPolicy } = require('./policy');
 // Multi-Tenant Shield
 // =========================================================================
 
+/**
+ * Multi-tenant Shield.
+ *
+ * SECURITY: Tenant IDs are treated as trust boundaries — scans, stats,
+ * and policies are partitioned per `tenantId`. In production, callers
+ * MUST configure `options.tenantVerifier` to prove that a supplied
+ * tenantId was established by a trusted authentication mechanism
+ * (JWT, session, mTLS, etc.). Without a verifier, a caller that can
+ * invent tenant IDs can read/write any tenant's data.
+ *
+ * @example
+ * const shield = new MultiTenantShield({
+ *   tenantVerifier: (tenantId, ctx) => ctx && ctx.jwt && ctx.jwt.tenant === tenantId,
+ *   strictAuth: true
+ * });
+ * shield.scan('tenant-42', userInput, { context: { jwt: decodedJwt } });
+ */
 class MultiTenantShield {
   constructor(options = {}) {
     this.tenants = new Map();
     this.defaultPolicy = options.defaultPolicy || { sensitivity: 'high', blockOnThreat: true };
     this.globalOverrides = options.globalOverrides || {};
     this.onTenantCreated = options.onTenantCreated || null;
+    this.tenantVerifier = typeof options.tenantVerifier === 'function'
+      ? options.tenantVerifier
+      : null;
+    this.strictAuth = options.strictAuth === true;
+
+    if (!this.tenantVerifier) {
+      if (this.strictAuth) {
+        throw new Error(
+          '[Agent Shield] MultiTenantShield: strictAuth is enabled but no options.tenantVerifier was provided. Supply a (tenantId, context) => boolean verifier.'
+        );
+      }
+      console.warn('[Agent Shield] WARNING: MultiTenantShield has no tenantVerifier. Tenant IDs are trusted by default. Set options.tenantVerifier in production.');
+    }
+  }
+
+  /**
+   * Verify that a tenantId is authorized for the current caller.
+   * @param {string} tenantId
+   * @param {object} [context] - Request/auth context passed by the caller.
+   * @returns {boolean}
+   * @private
+   */
+  _verifyTenant(tenantId, context) {
+    if (typeof tenantId !== 'string' || tenantId.length === 0) {
+      throw new Error('[Agent Shield] MultiTenantShield: tenantId must be a non-empty string');
+    }
+    if (!this.tenantVerifier) {
+      // Backward-compatible: permit by default, warning already logged at construction.
+      return true;
+    }
+    let ok = false;
+    try {
+      ok = this.tenantVerifier(tenantId, context || {}) === true;
+    } catch (err) {
+      throw new Error(`[Agent Shield] MultiTenantShield: tenantVerifier threw while verifying tenant "${tenantId}": ${err.message}`);
+    }
+    if (!ok) {
+      throw new Error(`[Agent Shield] MultiTenantShield: tenantVerifier rejected tenant "${tenantId}"`);
+    }
+    return true;
+  }
+
+  /**
+   * Return a new MultiTenantShield that reuses this instance's tenant
+   * registrations/stats but enforces the supplied tenant verifier. Useful
+   * for adding auth to an existing shield without mutating global state.
+   *
+   * @param {(tenantId: string, context: object) => boolean} verifier
+   * @param {object} [extraOptions]
+   * @returns {MultiTenantShield}
+   */
+  withAuth(verifier, extraOptions = {}) {
+    if (typeof verifier !== 'function') {
+      throw new Error('[Agent Shield] MultiTenantShield.withAuth: verifier must be a function');
+    }
+    const next = new MultiTenantShield({
+      defaultPolicy: this.defaultPolicy,
+      globalOverrides: this.globalOverrides,
+      onTenantCreated: this.onTenantCreated,
+      tenantVerifier: verifier,
+      strictAuth: extraOptions.strictAuth === true
+    });
+    // Share tenant registry so existing tenants remain accessible.
+    next.tenants = this.tenants;
+    return next;
   }
 
   /**
    * Register a tenant with its own policy.
+   * @param {string} tenantId
+   * @param {object} [policy]
+   * @param {object} [context] - Auth context forwarded to the tenantVerifier.
    */
-  registerTenant(tenantId, policy = {}) {
+  registerTenant(tenantId, policy = {}, context) {
+    this._verifyTenant(tenantId, context);
     const mergedPolicy = { ...this.defaultPolicy, ...policy, ...this.globalOverrides };
     const shield = new AgentShield(mergedPolicy);
 
@@ -48,19 +134,38 @@ class MultiTenantShield {
 
   /**
    * Get or auto-create a tenant shield.
+   * @param {string} tenantId
+   * @param {object} [context] - Auth context forwarded to the tenantVerifier.
    */
-  getTenant(tenantId) {
+  getTenant(tenantId, context) {
+    this._verifyTenant(tenantId, context);
     if (!this.tenants.has(tenantId)) {
-      this.registerTenant(tenantId);
+      // Skip re-verification — we just verified above.
+      const mergedPolicy = { ...this.defaultPolicy, ...this.globalOverrides };
+      const shield = new AgentShield(mergedPolicy);
+      this.tenants.set(tenantId, {
+        id: tenantId,
+        policy: mergedPolicy,
+        shield,
+        stats: { scans: 0, threats: 0, blocked: 0 },
+        createdAt: new Date().toISOString()
+      });
+      if (this.onTenantCreated) {
+        this.onTenantCreated(tenantId, mergedPolicy);
+      }
     }
     return this.tenants.get(tenantId);
   }
 
   /**
    * Scan input for a specific tenant.
+   * @param {string} tenantId
+   * @param {string} text
+   * @param {object} [options]
+   * @param {object} [options.context] - Auth context forwarded to the tenantVerifier.
    */
   scan(tenantId, text, options = {}) {
-    const tenant = this.getTenant(tenantId);
+    const tenant = this.getTenant(tenantId, options.context);
     tenant.stats.scans++;
 
     const result = tenant.shield.scan(text, options);
@@ -78,30 +183,39 @@ class MultiTenantShield {
   /**
    * Scan input for a specific tenant.
    */
-  scanInput(tenantId, text) {
-    return this.scan(tenantId, text);
+  scanInput(tenantId, text, options = {}) {
+    return this.scan(tenantId, text, options);
   }
 
   /**
    * Scan output for a specific tenant.
    */
-  scanOutput(tenantId, text) {
-    const tenant = this.getTenant(tenantId);
+  scanOutput(tenantId, text, options = {}) {
+    const tenant = this.getTenant(tenantId, options.context);
     return tenant.shield.scanOutput(text);
   }
 
   /**
    * Update a tenant's policy.
    */
-  updatePolicy(tenantId, policy) {
-    const tenant = this.getTenant(tenantId);
+  updatePolicy(tenantId, policy, context) {
+    const tenant = this.getTenant(tenantId, context);
     tenant.policy = { ...tenant.policy, ...policy, ...this.globalOverrides };
     tenant.shield = new AgentShield(tenant.policy);
     return tenant.policy;
   }
 
   /**
-   * Get stats for all tenants.
+   * Get stats for a single tenant (auth-checked).
+   */
+  getStats(tenantId, context) {
+    const tenant = this.getTenant(tenantId, context);
+    return { ...tenant.stats, policy: tenant.policy };
+  }
+
+  /**
+   * Get stats for all tenants. NOTE: this method bypasses per-tenant
+   * auth — callers should gate access to it at the admin level.
    */
   getAllStats() {
     const stats = {};
@@ -114,7 +228,8 @@ class MultiTenantShield {
   /**
    * Remove a tenant.
    */
-  removeTenant(tenantId) {
+  removeTenant(tenantId, context) {
+    this._verifyTenant(tenantId, context);
     return this.tenants.delete(tenantId);
   }
 
