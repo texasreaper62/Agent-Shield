@@ -236,8 +236,20 @@ Path A polish pass — honest performance, security scan gap closure, real audit
 - [x] Multi-tenant auth validation (`tenantVerifier`, `strictAuth`, `withAuth()`)
 - [x] ReDoS audit: all 297 patterns verified clean (0 risky)
 - [x] Pattern quality audit: 120 active, 177 dead (defensive patterns, never FP)
-- [ ] Python SDK pattern sync (deferred to v14 — 282 current, 297 target)
-- [ ] Go SDK pattern sync (deferred to v14 — 141 current, 297 target)
+## v14.0 — Platform Parity (Complete)
+
+Closes the gap with Microsoft's Agent Governance Toolkit while maintaining zero-dependency local-first architecture:
+
+- [x] OpenAI Agents SDK integration (`shieldOpenAIAgent`) — input/output/tool guardrails for @openai/agents (April 2026 release), 34 Node + 15 Python tests
+- [x] CrewAI integration (`shieldCrewAI`) — task-level before/after scanning
+- [x] Google ADK integration (`shieldGoogleADK`) — tool call, tool result, generation prompt scanning
+- [x] MS Agent Framework integration (`shieldMSAgentFramework`) — async middleware pipeline
+- [x] Rust NAPI scanner bridge — native module loaded when available, silent JS fallback
+- [x] Python SDK pattern sync: 141 → 179 patterns (+38), 10 new categories
+- [x] Go SDK pattern sync: 141 → 179 patterns (+38), 10 new categories
+- [x] Microsoft Agent Governance Toolkit parity audit (`research/ms-agent-toolkit-parity.md`)
+- [x] `GETTING_STARTED.md` — 5-minute path from install to protected agent
+- [x] 36 framework integration tests + example at `examples/openai-agents-sdk.js`
 
 ## Ongoing
 

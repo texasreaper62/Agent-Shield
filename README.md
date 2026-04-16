@@ -1,6 +1,6 @@
 # Agent Shield
 
-[![npm](https://img.shields.io/badge/npm-v13.6.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm](https://img.shields.io/badge/npm-v14.0.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
