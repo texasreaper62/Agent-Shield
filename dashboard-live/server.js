@@ -17,11 +17,15 @@ class ThreatStreamServer {
    * @param {number} [config.port=8080]
    * @param {number} [config.maxClients=100]
    * @param {number} [config.historySize=1000]
+   * @param {string} [config.authToken] - Optional auth token for WebSocket connections
+   * @param {number} [config.maxConnections=50] - Maximum concurrent WebSocket connections
    */
   constructor(config = {}) {
     this.port = config.port || 8080;
     this.maxClients = config.maxClients || 100;
     this.historySize = config.historySize || 1000;
+    this.authToken = config.authToken || '';
+    this.maxConnections = config.maxConnections || 50;
 
     this._clients = new Set();
     this._server = null;
@@ -63,6 +67,9 @@ class ThreatStreamServer {
 
       this._server.listen(this.port, () => {
         console.log(`[Agent Shield] Dashboard server listening on http://localhost:${this.port}`);
+        if (!this.authToken) {
+          console.log('[Agent Shield] WARNING: Dashboard running without authentication. Set authToken option for production use.');
+        }
         this._startStatsBroadcast();
         resolve();
       });
@@ -190,8 +197,32 @@ class ThreatStreamServer {
    * @param {net.Socket} socket
    */
   _handleUpgrade(req, socket) {
-    if (req.url !== '/ws') {
+    const urlParts = (req.url || '').split('?');
+    const pathname = urlParts[0];
+    const queryString = urlParts[1] || '';
+
+    if (pathname !== '/ws') {
       socket.end('HTTP/1.1 404 Not Found\r\n\r\n');
+      return;
+    }
+
+    // Auth token verification
+    if (this.authToken) {
+      const params = new URLSearchParams(queryString);
+      const queryToken = params.get('token') || '';
+      const authHeader = req.headers['authorization'] || '';
+      const headerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+      const providedToken = queryToken || headerToken;
+
+      if (providedToken !== this.authToken) {
+        socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        return;
+      }
+    }
+
+    // Max connections limit
+    if (this._clients.size >= this.maxConnections) {
+      socket.end('HTTP/1.1 503 Service Unavailable\r\n\r\n');
       return;
     }
 

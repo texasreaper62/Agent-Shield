@@ -29,6 +29,12 @@ const ESCALATION_SIGNALS = [
   /(?:one\s+more\s+(?:thing|question|step)|just\s+one\s+(?:last|final)\s+(?:thing|question))/i,
   /(?:can\s+you\s+go\s+(?:a\s+little\s+)?(?:further|deeper)|take\s+(?:it|this)\s+(?:a\s+step\s+)?further)/i,
   /(?:you\s+(?:just|already)\s+(?:showed|told|gave)\s+me|you\s+(?:were|seemed)\s+(?:willing|happy)\s+to)/i,
+  // Crescendo attack patterns — benign start that gradually escalates
+  /(?:hypothetically|in\s+theory|for\s+(?:educational|research|academic)\s+purposes)/i,
+  /(?:let's\s+(?:say|imagine|pretend)|what\s+if\s+(?:someone|a\s+person|we))/i,
+  /(?:I\s+(?:know|understand)\s+you\s+(?:can't|shouldn't)\s+but|normally\s+you\s+(?:wouldn't|can't)\s+but)/i,
+  /(?:you\s+(?:helped|assisted)\s+(?:me|us)\s+(?:before|last\s+time|earlier)\s+with\s+(?:something\s+)?similar)/i,
+  /(?:this\s+is\s+(?:similar|related)\s+to\s+what\s+(?:you|we)\s+(?:did|discussed))/i,
 ];
 
 /** Trust erosion patterns — attempts to lower the model's guard over turns. */
@@ -165,7 +171,25 @@ class ConversationTracker {
       }
     }
 
-    // 5. Authority accumulation — user references previous "agreements"
+    // 5. Crescendo detection — benign conversation gradually introduces sensitive framing
+    if (role === 'user' && this.turns.length >= 5) {
+      const window = this.turns.slice(-6, -1).filter(t => t.role === 'user');
+      const hypotheticalCount = window.filter(t =>
+        /(?:hypothetically|in\s+theory|let's\s+(?:say|imagine)|what\s+if|for\s+(?:educational|research)\s+purposes)/i.test(t.content)
+      ).length;
+      if (hypotheticalCount >= 2 && (topic === 'sensitive' || topic === 'dangerous')) {
+        turnAlerts.push({
+          type: 'crescendo_attack',
+          severity: 'high',
+          turnIndex: turn.turnIndex,
+          hypotheticalCount,
+          currentTopic: topic,
+          description: `Crescendo pattern: ${hypotheticalCount} hypothetical/theoretical framings followed by ${topic} topic. Gradual normalization of sensitive requests.`
+        });
+      }
+    }
+
+    // 6. Authority accumulation — user references previous "agreements"
     if (role === 'user' && /(?:you\s+(?:said|agreed|confirmed|told\s+me)|as\s+we\s+(?:discussed|agreed)|per\s+our\s+(?:agreement|conversation))/i.test(content)) {
       const hasRealAgreement = this.turns.some(t => t.role === 'assistant' && /(?:sure|yes|okay|of\s+course|I\s+(?:can|will))/i.test(t.content));
       if (!hasRealAgreement) {

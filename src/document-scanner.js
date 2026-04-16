@@ -564,11 +564,13 @@ class DocumentScanner {
    * @param {string} [options.sensitivity='medium'] - Detection sensitivity ('low', 'medium', 'high').
    * @param {boolean} [options.logging=false] - Whether to log scan results.
    * @param {boolean} [options.scanForInjection=true] - Whether to run indirect injection scanning.
+   * @param {number} [options.maxDocumentSize=104857600] - Maximum document size in characters (default: 100MB). Prevents DoS via oversized documents.
    */
   constructor(options = {}) {
     this.sensitivity = options.sensitivity || 'medium';
     this.logging = options.logging || false;
     this.scanForInjection = options.scanForInjection !== false;
+    this.maxDocumentSize = options.maxDocumentSize || 100 * 1024 * 1024;
     this.injectionScanner = new IndirectInjectionScanner({ sensitivity: this.sensitivity });
   }
 
@@ -681,6 +683,24 @@ class DocumentScanner {
   scanText(text, metadata = {}) {
     const source = metadata.source || 'text';
     const fileType = metadata.fileType || 'text/plain';
+
+    // Enforce document size limit to prevent DoS via oversized documents
+    if (text && text.length > this.maxDocumentSize) {
+      if (this.logging) {
+        console.log('[Agent Shield] Document exceeds size limit: %d characters (max: %d)', text.length, this.maxDocumentSize);
+      }
+      return {
+        fileType,
+        textLength: text.length,
+        threats: [{
+          type: 'document_too_large',
+          severity: 'medium',
+          message: 'Document exceeds size limit'
+        }],
+        status: 'caution',
+        safe: false
+      };
+    }
 
     if (!text || text.trim().length === 0) {
       return {

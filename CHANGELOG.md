@@ -4,6 +4,35 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [13.5.0] - 2026-04-16
+
+### Detection Hardening + Security Scan Remediation
+
+Tightens existing defenses based on Unit 42 real-world attack research and addresses findings from the Agent Shield security scan.
+
+#### Detector Core — 11 New Patterns (3 categories)
+
+- **Encoding chain detection** (3 patterns) — Detects multi-layer encoding (base64 inside unicode inside URL encoding). Addresses evasion technique that bypasses single-layer decoders.
+- **SVG-based injection** (4 patterns) — Detects hidden prompts in SVG elements, foreignObject, hidden text, and desc tags. Addresses Unit 42 finding of real-world attacks using SVG encapsulation with 24 layered injection attempts.
+- **Structured data injection** (4 patterns) — Detects hidden instructions in JSON metadata fields, XML CDATA sections, YAML/CSV comments, and comment syntax across formats.
+
+#### Cross-Turn Detector — Crescendo Attack Defense
+
+- 5 new escalation signal patterns for crescendo attacks: hypothetical framing, imaginary scenarios, permission boundary softening, false-prior-interaction claims, similarity-based escalation.
+- New crescendo-specific detection: flags conversations that start with hypothetical/theoretical framing and drift toward sensitive/dangerous topics over multiple turns.
+
+#### MemoryGuard — Persistent Memory Poisoning Defense
+
+- `scanSummarization(originalMessages, summary)` detects when context compaction silently injects instructions. Addresses Unit 42 March 2026 research on persistent memory poisoning that survives across sessions.
+
+#### Security Scan Remediation
+
+- **Sidecar server**: API key authentication, request body size limit (1MB default), rate limiting (100 req/min default), CORS hardened from `*` to `same-origin`.
+- **Dashboard WebSocket**: Authentication token support, max connections limit (50 default), startup warning if no auth configured.
+- **GitHub App**: Webhook signature enforced for non-localhost requests, CRITICAL warning if `GITHUB_WEBHOOK_SECRET` not set.
+- **Document scanner**: `maxDocumentSize` limit (10MB default) prevents DoS via oversized documents.
+- **Audit logs**: `sanitizeLogs` option redacts emails, SSNs, API keys, and truncates content fields before writing.
+
 ## [13.4.0] - 2026-04-14
 
 ### April 2026 Threat Response

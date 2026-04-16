@@ -251,6 +251,17 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // Reject non-localhost requests when no webhook secret is configured
+      if (!WEBHOOK_SECRET) {
+        const remoteAddr = req.socket.remoteAddress || '';
+        const isLocalhost = remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+        if (!isLocalhost) {
+          console.log(`[Agent Shield] Rejected unsigned webhook from non-localhost IP: ${remoteAddr}`);
+          sendJSON(res, 403, { error: 'Webhook secret required for non-localhost requests' });
+          return;
+        }
+      }
+
       const event = req.headers['x-github-event'] || '';
       const payload = JSON.parse(body);
 
@@ -288,7 +299,7 @@ server.listen(PORT, () => {
   console.log(`[Agent Shield] Health check:     GET  /health`);
   if (!APP_ID) console.warn('[Agent Shield] WARNING: GITHUB_APP_ID not set');
   if (!PRIVATE_KEY) console.warn('[Agent Shield] WARNING: GITHUB_PRIVATE_KEY not set');
-  if (!WEBHOOK_SECRET) console.warn('[Agent Shield] WARNING: GITHUB_WEBHOOK_SECRET not set');
+  if (!WEBHOOK_SECRET) console.log('[Agent Shield] CRITICAL: No GITHUB_WEBHOOK_SECRET configured. Webhook signature verification is DISABLED. Set this in production.');
 });
 
 module.exports = { server, verifySignature, handlePullRequest, handleCheckSuite };

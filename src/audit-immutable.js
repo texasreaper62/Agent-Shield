@@ -584,8 +584,10 @@ class ImmutableAuditLog {
    * @param {number} [options.maxAge=0] - Maximum age in milliseconds (0 = unlimited).
    * @param {function} [options.archiveCallback] - Called with removed entries during retention enforcement. Signature: (entries: AuditEntry[]) => void.
    * @param {string} [options.genesisHash] - Custom genesis hash (defaults to GENESIS_HASH).
+   * @param {boolean} [options.sanitizeLogs=false] - Redact sensitive content (emails, SSNs, API keys) before writing to the chain.
    */
   constructor(options = {}) {
+    this.options = options;
     this._store = options.store || new MemoryStore();
     this._maxEntries = options.maxEntries || 0;
     this._maxAge = options.maxAge || 0;
@@ -596,6 +598,59 @@ class ImmutableAuditLog {
     this._initialized = false;
 
     console.log('[Agent Shield] ImmutableAuditLog initialized (store: %s)', this._store.constructor.name);
+  }
+
+  /**
+   * Sanitize an entry's data object by redacting sensitive content.
+   * Addresses the security scan finding about audit logs containing sensitive prompt data.
+   *
+   * Redacts:
+   * - Email addresses -> [EMAIL_REDACTED]
+   * - SSN patterns (XXX-XX-XXXX) -> [SSN_REDACTED]
+   * - API key patterns (sk-..., key-..., token-...) -> [KEY_REDACTED]
+   * - Truncates 'content' and 'input' fields to 500 characters max
+   *
+   * @param {object} entry - The data object to sanitize.
+   * @returns {object} A sanitized copy of the data object.
+   */
+  sanitize(entry) {
+    if (!this.options.sanitizeLogs) {
+      return entry;
+    }
+
+    const sanitized = JSON.parse(JSON.stringify(entry));
+
+    const redactString = (str) => {
+      if (typeof str !== 'string') return str;
+      // Redact email addresses
+      str = str.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL_REDACTED]');
+      // Redact SSN patterns (XXX-XX-XXXX)
+      str = str.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN_REDACTED]');
+      // Redact API key patterns (sk-..., key-..., token-...)
+      str = str.replace(/\b(?:sk|key|token)-[a-zA-Z0-9_\-]{8,}\b/g, '[KEY_REDACTED]');
+      return str;
+    };
+
+    const redactObject = (obj) => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'string') return redactString(obj);
+      if (Array.isArray(obj)) return obj.map(item => redactObject(item));
+      if (typeof obj === 'object') {
+        const result = {};
+        for (const key of Object.keys(obj)) {
+          let value = redactObject(obj[key]);
+          // Truncate content and input fields to 500 chars
+          if ((key === 'content' || key === 'input') && typeof value === 'string' && value.length > 500) {
+            value = value.slice(0, 500) + '...[TRUNCATED]';
+          }
+          result[key] = value;
+        }
+        return result;
+      }
+      return obj;
+    };
+
+    return redactObject(sanitized);
   }
 
   /**
@@ -646,12 +701,15 @@ class ImmutableAuditLog {
         delete normalizedActor.name;
       }
 
+      // Sanitize data if sanitizeLogs is enabled
+      const sanitizedData = this.sanitize(data || {});
+
       const entryContent = {
         id,
         sequence: this._sequence,
         timestamp,
         type,
-        data: data || {},
+        data: sanitizedData,
         actor: normalizedActor
       };
 

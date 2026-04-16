@@ -2321,6 +2321,89 @@ const INJECTION_PATTERNS = [
     category: 'cloud_overpermission',
     description: 'Detects overpermissioned cloud IAM policies with wildcard Resource that enable "Agent God Mode" attacks.',
     detail: 'IAM resource wildcard: Palo Alto Unit 42 discovered AWS AgentCore attack where wildcard Resource policies enable cross-agent data access to all AWS resources.'
+  },
+
+  // --- Encoding Chain Detection ---
+  {
+    regex: /(?:atob|decode|base64)\s*\(\s*['"][A-Za-z0-9+\/=]{50,}['"]\s*\)/i,
+    severity: 'high',
+    category: 'encoding_chain',
+    description: 'Detects multi-layer encoding chains used to evade security scanners',
+    detail: 'Encoding chain evasion: attackers nest base64 inside unicode inside URL encoding to bypass single-layer decoders'
+  },
+  {
+    regex: /\\u[0-9a-fA-F]{4}(?:\\u[0-9a-fA-F]{4}){10,}/,
+    severity: 'medium',
+    category: 'encoding_chain',
+    description: 'Detects multi-layer encoding chains used to evade security scanners',
+    detail: 'Encoding chain evasion: attackers nest base64 inside unicode inside URL encoding to bypass single-layer decoders'
+  },
+  {
+    regex: /(?:%[0-9a-fA-F]{2}){20,}/,
+    severity: 'medium',
+    category: 'encoding_chain',
+    description: 'Detects multi-layer encoding chains used to evade security scanners',
+    detail: 'Encoding chain evasion: attackers nest base64 inside unicode inside URL encoding to bypass single-layer decoders'
+  },
+
+  // --- SVG-Based Injection ---
+  {
+    regex: /<svg[^>]*>[\s\S]*?(?:ignore|override|system|instructions)[\s\S]*?<\/svg>/i,
+    severity: 'high',
+    category: 'svg_injection',
+    description: 'Detects prompt injection hidden in SVG elements',
+    detail: 'SVG injection: Unit 42 found real-world attacks using SVG encapsulation with 24 separate injection attempts layered in zero-sized fonts, off-screen positioning, and CSS suppression'
+  },
+  {
+    regex: /<foreignObject[^>]*>[\s\S]*?(?:ignore|override|forget|disregard)[\s\S]*?<\/foreignObject>/i,
+    severity: 'high',
+    category: 'svg_injection',
+    description: 'Detects prompt injection hidden in SVG elements',
+    detail: 'SVG injection: Unit 42 found real-world attacks using SVG encapsulation with 24 separate injection attempts layered in zero-sized fonts, off-screen positioning, and CSS suppression'
+  },
+  {
+    regex: /<text[^>]*(?:opacity\s*[:=]\s*0|display\s*[:=]\s*none|font-size\s*[:=]\s*0)[^>]*>/i,
+    severity: 'high',
+    category: 'svg_injection',
+    description: 'Detects prompt injection hidden in SVG elements',
+    detail: 'SVG injection: Unit 42 found real-world attacks using SVG encapsulation with 24 separate injection attempts layered in zero-sized fonts, off-screen positioning, and CSS suppression'
+  },
+  {
+    regex: /<desc[^>]*>[\s\S]*?(?:ignore|system|instruction|override)[\s\S]*?<\/desc>/i,
+    severity: 'medium',
+    category: 'svg_injection',
+    description: 'Detects prompt injection hidden in SVG elements',
+    detail: 'SVG injection: Unit 42 found real-world attacks using SVG encapsulation with 24 separate injection attempts layered in zero-sized fonts, off-screen positioning, and CSS suppression'
+  },
+
+  // --- Structured Data Injection ---
+  {
+    regex: /["'](?:__comment|_note|description|help_text)["']\s*:\s*["'][^"']*(?:ignore|override|system|instructions)[^"']*["']/i,
+    severity: 'high',
+    category: 'structured_data_injection',
+    description: 'Detects prompt injection hidden in structured data formats',
+    detail: 'Structured data injection: agents constantly parse JSON/XML/YAML/CSV and attackers embed instructions in metadata fields, CDATA sections, and comments'
+  },
+  {
+    regex: /<!\[CDATA\[[\s\S]*?(?:ignore|override|system|instructions)[\s\S]*?\]\]>/i,
+    severity: 'high',
+    category: 'structured_data_injection',
+    description: 'Detects prompt injection hidden in structured data formats',
+    detail: 'Structured data injection: agents constantly parse JSON/XML/YAML/CSV and attackers embed instructions in metadata fields, CDATA sections, and comments'
+  },
+  {
+    regex: /^#.*(?:ignore|override|system|instructions)/im,
+    severity: 'medium',
+    category: 'structured_data_injection',
+    description: 'Detects prompt injection hidden in structured data formats',
+    detail: 'Structured data injection: agents constantly parse JSON/XML/YAML/CSV and attackers embed instructions in metadata fields, CDATA sections, and comments'
+  },
+  {
+    regex: /(?:<!--|\{\{!--|\/\*|#)\s*(?:ignore|override|forget|disregard)\s*(?:all\s+)?(?:previous|prior|above)/i,
+    severity: 'high',
+    category: 'structured_data_injection',
+    description: 'Detects prompt injection hidden in structured data formats',
+    detail: 'Structured data injection: agents constantly parse JSON/XML/YAML/CSV and attackers embed instructions in metadata fields, CDATA sections, and comments'
   }
 ];
 

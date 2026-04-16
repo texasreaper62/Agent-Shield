@@ -33,6 +33,17 @@ const {
 const PORT = parseInt(process.env.PORT || process.env.AGENT_SHIELD_PORT, 10) || 3141;
 const HOST = process.env.HOST || '0.0.0.0';
 
+/**
+ * Server options — override via createServer(options) or environment variables.
+ * @type {Object}
+ */
+const options = {
+  apiKey: process.env.AGENT_SHIELD_API_KEY || '',
+  maxBodySize: parseInt(process.env.AGENT_SHIELD_MAX_BODY_SIZE, 10) || 1048576, // 1MB
+  rateLimit: parseInt(process.env.AGENT_SHIELD_RATE_LIMIT, 10) || 100, // requests per minute
+  cors: process.env.AGENT_SHIELD_CORS || 'same-origin'
+};
+
 // =========================================================================
 // Shared Shield Instance
 // =========================================================================
@@ -46,18 +57,61 @@ const shield = new AgentShield({
 const piiRedactor = new PIIRedactor();
 
 // =========================================================================
+// Rate Limiting
+// =========================================================================
+
+/** @type {Map<string, number[]>} IP -> array of request timestamps */
+const rateLimitMap = new Map();
+
+/**
+ * Check if an IP has exceeded the rate limit.
+ * Cleans up expired timestamps on each call.
+ * @param {string} ip
+ * @returns {boolean} true if rate limit exceeded
+ */
+function isRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 60000; // 1 minute
+  const timestamps = rateLimitMap.get(ip) || [];
+
+  // Remove timestamps outside the window
+  const valid = timestamps.filter(t => now - t < windowMs);
+
+  if (valid.length >= options.rateLimit) {
+    rateLimitMap.set(ip, valid);
+    return true;
+  }
+
+  valid.push(now);
+  rateLimitMap.set(ip, valid);
+  return false;
+}
+
+// =========================================================================
 // Helpers
 // =========================================================================
 
 /**
  * Reads the full request body as a string.
+ * Rejects with a 413 error object if body exceeds maxBodySize.
  * @param {http.IncomingMessage} req
  * @returns {Promise<string>}
  */
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
+    let totalSize = 0;
+    req.on('data', chunk => {
+      totalSize += chunk.length;
+      if (totalSize > options.maxBodySize) {
+        const err = new Error('Request body too large');
+        err.statusCode = 413;
+        req.destroy();
+        reject(err);
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
@@ -86,9 +140,9 @@ function sendJSON(res, statusCode, data) {
   const body = JSON.stringify(data);
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': options.cors,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'X-Powered-By': 'Agent Shield Sidecar'
   });
   res.end(body);
@@ -258,11 +312,30 @@ const server = http.createServer(async (req, res) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': options.cors,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     });
     res.end();
+    return;
+  }
+
+  // API key authentication
+  if (options.apiKey) {
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (token !== options.apiKey) {
+      sendJSON(res, 401, { error: 'Unauthorized: invalid or missing API key' });
+      logRequest(req.method, req.url, 401);
+      return;
+    }
+  }
+
+  // Rate limiting by IP
+  const clientIP = req.socket.remoteAddress || 'unknown';
+  if (isRateLimited(clientIP)) {
+    sendJSON(res, 429, { error: 'Too many requests. Try again later.' });
+    logRequest(req.method, req.url, 429);
     return;
   }
 
@@ -274,9 +347,14 @@ const server = http.createServer(async (req, res) => {
       await handler(req, res);
       logRequest(req.method, req.url, res.statusCode);
     } catch (err) {
-      console.error(`[Agent Shield Sidecar] Error handling ${routeKey}:`, err.message);
-      sendJSON(res, 500, { error: 'Internal server error' });
-      logRequest(req.method, req.url, 500);
+      if (err.statusCode === 413) {
+        sendJSON(res, 413, { error: 'Request body too large' });
+        logRequest(req.method, req.url, 413);
+      } else {
+        console.error(`[Agent Shield Sidecar] Error handling ${routeKey}:`, err.message);
+        sendJSON(res, 500, { error: 'Internal server error' });
+        logRequest(req.method, req.url, 500);
+      }
     }
   } else {
     sendJSON(res, 404, {
@@ -319,7 +397,10 @@ if (require.main === module) {
     for (const route of Object.keys(routes)) {
       console.log(`  ${route}`);
     }
+    if (!options.apiKey) {
+      console.log('[Agent Shield] WARNING: Sidecar running without API key authentication. Set apiKey option for production use.');
+    }
   });
 }
 
-module.exports = { server, shield };
+module.exports = { server, shield, options };
