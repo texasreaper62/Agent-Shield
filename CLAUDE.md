@@ -222,7 +222,6 @@ cd python-sdk && python -m unittest tests/test_detector.py
 │   ├── evolution-simulator.js      # Adversarial evolution with mutation engine
 │   ├── intent-firewall.js          # Intent classification (same words, different action)
 │   ├── herd-immunity.js            # Cross-agent pattern sharing, immune memory
-│   ├── threat-intel-federation.js  # Federated threat intel with differential privacy
 │   ├── behavioral-dna.js           # Per-agent behavioral baselines, anomaly detection
 │   ├── audit.js                    # Pre-deployment security audit (617+ attacks)
 │   ├── flight-recorder.js          # Forensic conversation replay, auto-fix patterns

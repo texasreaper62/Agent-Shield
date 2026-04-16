@@ -230,13 +230,6 @@ const INJECTION_PATTERNS = [
     detail: 'Restriction removal pattern: attempts to disable AI safety guardrails.'
   },
   {
-    regex: /pretend\s+(?:you\s+)?(?:have\s+no|there\s+are\s+no|without)\s+restrictions/i,
-    severity: 'high',
-    category: 'role_hijack',
-    description: 'Text asks AI to pretend it has no safety limits.',
-    detail: 'Restriction pretense pattern: social engineering to bypass safety limits.'
-  },
-  {
     regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored|malicious)/i,
     severity: 'high',
     category: 'role_hijack',
@@ -344,13 +337,6 @@ const INJECTION_PATTERNS = [
     detail: 'Markdown-formatted system message injection: uses heading syntax to appear authoritative.'
   },
   {
-    regex: /(?:Human|User|Assistant)\s*:\s*(?:ignore|forget|override|disregard).{0,50}(?:Human|User|Assistant)\s*:/is,
-    severity: 'high',
-    category: 'prompt_injection',
-    description: 'Text simulates a multi-turn conversation to inject instructions.',
-    detail: 'Multi-turn conversation injection: fakes a dialogue format to embed hidden instructions.'
-  },
-  {
     regex: /(?:show|display|print|reveal|output)\s+(?:me\s+)?(?:the\s+)?(?:exact\s+)?(?:text|content)\s+(?:between|inside|within|from)\s+(?:the\s+)?(?:<|&lt;)/i,
     severity: 'high',
     category: 'data_exfiltration',
@@ -365,27 +351,6 @@ const INJECTION_PATTERNS = [
     category: 'data_exfiltration',
     description: 'Text tries to make AI assistants send data somewhere.',
     detail: 'Data exfiltration instruction: attempts to redirect AI output to external destination.'
-  },
-  {
-    regex: /output\s+(?:your|the)\s+(?:system\s+)?prompt/i,
-    severity: 'high',
-    category: 'data_exfiltration',
-    description: 'Text tries to extract the AI assistant\'s internal instructions.',
-    detail: 'System prompt extraction: attempts to reveal AI system instructions.'
-  },
-  {
-    regex: /reveal\s+(?:your|the)\s+(?:system\s+)?(?:instructions|prompt|rules|guidelines)/i,
-    severity: 'high',
-    category: 'data_exfiltration',
-    description: 'Text tries to reveal the AI assistant\'s hidden rules.',
-    detail: 'Instruction reveal attempt: tries to expose AI system prompt.'
-  },
-  {
-    regex: /!\[[^\]]*\]\(https?:\/\/[^)]*\?[^)]*(?:data|q|query|text|payload|exfil|leak|steal)=/i,
-    severity: 'critical',
-    category: 'data_exfiltration',
-    description: 'Text tries to steal data through a hidden image link.',
-    detail: 'Markdown image exfiltration: data encoded in image URL parameters.'
   },
   {
     regex: /!\[\]\(https?:\/\/(?!(?:i\.)?(?:imgur|github|gitlab|wikimedia|wikipedia)\b)[^)]+\)/i,
@@ -868,13 +833,6 @@ const INJECTION_PATTERNS = [
     detail: 'Developer mode activation: attempts to switch agent to an unrestricted operating mode.'
   },
   {
-    regex: /(?:generate|produce|create|output)\s+(?:any\s+)?content\s+without\s+(?:restrictions|filters|limitations|censorship)/i,
-    severity: 'high',
-    category: 'role_hijack',
-    description: 'Text asks AI to generate content without safety filters.',
-    detail: 'Unrestricted content request: explicitly asks agent to bypass content filters.'
-  },
-  {
     regex: /pretend\s+to\s+be\s+DAN|stands?\s+for\s+[""'']?do\s+anything\s+now[""'']?/i,
     severity: 'critical',
     category: 'role_hijack',
@@ -895,14 +853,6 @@ const INJECTION_PATTERNS = [
     description: 'Text asks AI to act as if it has no ethical guidelines.',
     detail: 'Ethics bypass: attempts to make agent behave without ethical constraints.'
   },
-  {
-    regex: /(?:with|without)\s+no\s+restrictions/i,
-    severity: 'high',
-    category: 'role_hijack',
-    description: 'Text references operating with no restrictions.',
-    detail: 'No-restrictions pattern: references unrestricted operation.'
-  },
-
   // --- Data Exfiltration: File Access, Credential Listing ---
   {
     regex: /(?:read|show|display|print|cat|dump|output)\s+(?:the\s+)?(?:contents?\s+of\s+)?(?:\/etc\/(?:passwd|shadow|hosts)|~\/\.(?:ssh|bash_history|bashrc))/i,

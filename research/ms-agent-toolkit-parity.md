@@ -14,7 +14,7 @@ Microsoft shipped a multi-package, multi-language governance toolkit that covers
 
 We lead in:
 
-- Detection breadth (297 patterns vs their policy-driven approach)
+- Detection breadth (289 patterns vs their policy-driven approach)
 - Attack research (DeepMind traps, Unit 42 IDPI, 30+ recent CVEs)
 - Benchmark rigor (F1 0.988 on real-world corpus)
 - Adversarial self-training loop
@@ -32,7 +32,7 @@ We lead in:
 | Automated compliance verification | Agent Compliance | `compliance.js`, `owasp-2025.js`, `nist-mapping.js`, `eu-ai-act.js`, `certification.js` | Comparable |
 | Plug-in lifecycle management | Agent Marketplace | `plugin-marketplace.js` | No first-party marketplace |
 | RL training governance | Agent Lightning | None | **GAP** — we don't address training-time governance |
-| Prompt injection detection | (policy-based) | `detector-core.js` (297 patterns) | We have deeper detection |
+| Prompt injection detection | (policy-based) | `detector-core.js` (289 patterns) | We have deeper detection |
 | Indirect prompt injection | (policy-based) | `ipia-detector.js` + `document-scanner.js` | We lead |
 | Memory poisoning | (policy-based) | `memory-guard.js`, `render-differential.js` (v13.5) | We lead with persistent-memory detection |
 | Supply chain / dependency | (policy-based) | `supply-chain-scanner.js` (27+ CVEs) | We lead |
@@ -62,7 +62,7 @@ We lead in:
 | Language | Microsoft | Agent Shield | Gap |
 |---|---|---|---|
 | Python | First-class (7 packages) | Partial SDK (141 patterns, 32 tests) | Significant |
-| TypeScript/JavaScript | First-class (7 packages) | **Primary** (297 patterns, 2000+ tests) | We lead |
+| TypeScript/JavaScript | First-class (7 packages) | **Primary** (289 patterns, 2000+ tests) | We lead |
 | Rust | First-class (7 packages) | Partial (`rust-core/` RegexSet, not wired into Node) | Significant |
 | Go | First-class (7 packages) | Partial SDK (141 patterns) | Significant |
 | .NET | First-class | None | **GAP** — no C# SDK |

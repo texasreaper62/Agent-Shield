@@ -209,9 +209,6 @@ const { IntentFirewall, ContextAnalyzer: IntentContextAnalyzer, IntentRules, int
 // v7.4 — Real Attack Dataset Testing
 const { DatasetRunner, HACKAPROMPT_SAMPLES, TENSORTRUST_SAMPLES, RESEARCH_SAMPLES, BENIGN_SAMPLES } = safeRequire('./real-attack-datasets', 'real-attack-datasets');
 
-// v7.4 — Federated Threat Intelligence
-const { ThreatIntelFederation, createFederationMesh } = safeRequire('./threat-intel-federation', 'threat-intel-federation');
-
 // v7.4 — Behavioral DNA (loaded when available)
 const { BehavioralDNA, AgentProfiler, extractFeatures: extractBehavioralFeatures, DEFAULT_NUMERIC_FEATURES, DEFAULT_CATEGORICAL_FEATURES } = safeRequire('./behavioral-dna', 'behavioral-dna');
 
@@ -394,9 +391,6 @@ const { SmartConfig, DEPLOYMENT_PRESETS, VALIDATION_RULES: CONFIG_VALIDATION_RUL
 
 // v12.0 — Multimodal Detector
 const { MultimodalDetector } = safeRequire('./ml-detector', 'ml-detector');
-
-// v12.0 — Federated Threat Intelligence
-const { ThreatIntelNode } = safeRequire('./persistent-learning', 'persistent-learning');
 
 // v13.0 — DeepMind Trap Defenses (Traps 1 + 4)
 const { CloakingDetector, CompositeContentScanner, SVGScanner, BrowserActionValidator, CredentialIsolationMonitor, TransactionGatekeeper, SideChannelDetector } = safeRequire('./trap-defense', 'trap-defense');
@@ -976,10 +970,6 @@ const _exports = {
   RESEARCH_SAMPLES,
   BENIGN_SAMPLES,
 
-  // v7.4 — Federated Threat Intelligence
-  ThreatIntelFederation,
-  createFederationMesh,
-
   // v7.4 — Behavioral DNA
   BehavioralDNA,
   AgentProfiler,
@@ -1119,9 +1109,6 @@ const _exports = {
 
   // v12.0 — Multimodal Detector
   MultimodalDetector,
-
-  // v12.0 — Federated Threat Intelligence
-  ThreatIntelNode,
 
   // v13.0 — DeepMind Trap Defenses
   CloakingDetector,
