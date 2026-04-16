@@ -229,13 +229,7 @@ const INJECTION_PATTERNS = [
     description: 'Text tries to remove AI safety restrictions.',
     detail: 'Restriction removal pattern: attempts to disable AI safety guardrails.'
   },
-  {
-    regex: /pretend\s+(?:you\s+)?(?:have\s+no|there\s+are\s+no|without)\s+restrictions/i,
-    severity: 'high',
-    category: 'role_hijack',
-    description: 'Text asks AI to pretend it has no safety limits.',
-    detail: 'Restriction pretense pattern: social engineering to bypass safety limits.'
-  },
+  // REMOVED v15: "pretend no restrictions" — covered by the broader "no restrictions" pattern
   {
     regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored|malicious)/i,
     severity: 'high',
@@ -343,13 +337,7 @@ const INJECTION_PATTERNS = [
     description: 'Text uses markdown headers to inject fake system messages.',
     detail: 'Markdown-formatted system message injection: uses heading syntax to appear authoritative.'
   },
-  {
-    regex: /(?:Human|User|Assistant)\s*:\s*(?:ignore|forget|override|disregard).{0,50}(?:Human|User|Assistant)\s*:/is,
-    severity: 'high',
-    category: 'prompt_injection',
-    description: 'Text simulates a multi-turn conversation to inject instructions.',
-    detail: 'Multi-turn conversation injection: fakes a dialogue format to embed hidden instructions.'
-  },
+  // REMOVED v15: "Human:/Assistant: ignore" fake conversation — covered by broader fake-conversation pattern
   {
     regex: /(?:show|display|print|reveal|output)\s+(?:me\s+)?(?:the\s+)?(?:exact\s+)?(?:text|content)\s+(?:between|inside|within|from)\s+(?:the\s+)?(?:<|&lt;)/i,
     severity: 'high',
@@ -366,27 +354,8 @@ const INJECTION_PATTERNS = [
     description: 'Text tries to make AI assistants send data somewhere.',
     detail: 'Data exfiltration instruction: attempts to redirect AI output to external destination.'
   },
-  {
-    regex: /output\s+(?:your|the)\s+(?:system\s+)?prompt/i,
-    severity: 'high',
-    category: 'data_exfiltration',
-    description: 'Text tries to extract the AI assistant\'s internal instructions.',
-    detail: 'System prompt extraction: attempts to reveal AI system instructions.'
-  },
-  {
-    regex: /reveal\s+(?:your|the)\s+(?:system\s+)?(?:instructions|prompt|rules|guidelines)/i,
-    severity: 'high',
-    category: 'data_exfiltration',
-    description: 'Text tries to reveal the AI assistant\'s hidden rules.',
-    detail: 'Instruction reveal attempt: tries to expose AI system prompt.'
-  },
-  {
-    regex: /!\[[^\]]*\]\(https?:\/\/[^)]*\?[^)]*(?:data|q|query|text|payload|exfil|leak|steal)=/i,
-    severity: 'critical',
-    category: 'data_exfiltration',
-    description: 'Text tries to steal data through a hidden image link.',
-    detail: 'Markdown image exfiltration: data encoded in image URL parameters.'
-  },
+  // REMOVED v15: "output/reveal prompt" — covered by broader print|show|display|output|reveal pattern
+  // REMOVED v15: markdown image exfil via ?data=/?q= — covered by broader URL-exfil pattern
   {
     regex: /!\[\]\(https?:\/\/(?!(?:i\.)?(?:imgur|github|gitlab|wikimedia|wikipedia)\b)[^)]+\)/i,
     severity: 'medium',
@@ -867,13 +836,7 @@ const INJECTION_PATTERNS = [
     description: 'Text tries to activate a fake developer or unrestricted mode.',
     detail: 'Developer mode activation: attempts to switch agent to an unrestricted operating mode.'
   },
-  {
-    regex: /(?:generate|produce|create|output)\s+(?:any\s+)?content\s+without\s+(?:restrictions|filters|limitations|censorship)/i,
-    severity: 'high',
-    category: 'role_hijack',
-    description: 'Text asks AI to generate content without safety filters.',
-    detail: 'Unrestricted content request: explicitly asks agent to bypass content filters.'
-  },
+  // REMOVED v15: "generate content without restrictions" — covered by broader (no|without) (restrictions|filters) pattern
   {
     regex: /pretend\s+to\s+be\s+DAN|stands?\s+for\s+[""'']?do\s+anything\s+now[""'']?/i,
     severity: 'critical',
@@ -895,13 +858,7 @@ const INJECTION_PATTERNS = [
     description: 'Text asks AI to act as if it has no ethical guidelines.',
     detail: 'Ethics bypass: attempts to make agent behave without ethical constraints.'
   },
-  {
-    regex: /(?:with|without)\s+no\s+restrictions/i,
-    severity: 'high',
-    category: 'role_hijack',
-    description: 'Text references operating with no restrictions.',
-    detail: 'No-restrictions pattern: references unrestricted operation.'
-  },
+  // REMOVED v15: "with/without no restrictions" — strict subset of broader (no|without) (restrictions|filters) pattern
 
   // --- Data Exfiltration: File Access, Credential Listing ---
   {
@@ -1282,13 +1239,7 @@ const INJECTION_PATTERNS = [
     description: 'Text uses XML configuration tags with permission-modifying directives (Policy Puppetry variant).',
     detail: 'Policy Puppetry config XML: embeds allow/deny/override directives in XML tags that LLMs interpret as trusted policy.'
   },
-  {
-    regex: /\[(?:policy|system|admin|security|rules|config|permissions|override)\]\s*\n(?:.*=.*\n){1,}/i,
-    severity: 'critical',
-    category: 'policy_puppetry',
-    description: 'Text contains INI-formatted policy sections used to bypass LLM safety (Policy Puppetry).',
-    detail: 'Policy Puppetry INI: uses [section] key=value format to trick LLMs into reading malicious config as trusted policy.'
-  },
+  // REMOVED v15: INI-formatted [policy] sections — the bracket is cosmetic, covered by broader key=value puppetry pattern
   {
     regex: /\{\s*"(?:policy|system_?prompt|rules|config|permissions|safety|guardrails|override|role)"\s*:/i,
     severity: 'high',
