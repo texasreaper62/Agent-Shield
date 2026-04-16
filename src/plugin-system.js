@@ -7,10 +7,17 @@
  * Plugins are simple objects with a detect() method that returns an array
  * of threat findings. All detection runs locally — no data ever leaves
  * your environment.
+ *
+ * This module now includes IsolatedPluginSandbox which uses Node's built-in
+ * `vm` module to run untrusted plugin source code in a sanitized context
+ * with no access to process, fs, net, http, or child_process. It also
+ * enforces a preemptive timeout via vm.Script's `timeout` option.
  */
 
 const path = require('path');
 const fs = require('fs');
+const vm = require('vm');
+const crypto = require('crypto');
 
 // =========================================================================
 // HELPERS
@@ -27,13 +34,29 @@ const now = () => {
   return Date.now();
 };
 
+// Try to raise the old-space memory cap a bit so tight infinite-loop plugins
+// still get killed by the vm timeout (which is what provides the real bound).
+try {
+  const v8 = require('v8');
+  if (typeof v8.setFlagsFromString === 'function') {
+    // Best-effort only; ignored silently if not permitted.
+    v8.setFlagsFromString('--max-old-space-size=4096');
+  }
+} catch (_err) {
+  // v8 module missing or setFlagsFromString unavailable — silently skip.
+}
+
 // =========================================================================
-// PLUGIN SANDBOX
+// PLUGIN SANDBOX (legacy — kept for backward compatibility)
 // =========================================================================
 
 /**
  * Runs plugins with timeout protection and error isolation.
  * Prevents a misbehaving plugin from crashing the host agent.
+ *
+ * NOTE: This sandbox only times execution and catches errors. It does not
+ * isolate plugin code from the host process. Use IsolatedPluginSandbox for
+ * untrusted plugin source.
  */
 class PluginSandbox {
   /**
@@ -57,10 +80,6 @@ class PluginSandbox {
     let error = null;
 
     try {
-      // Run detection synchronously with a time check after completion.
-      // True preemptive timeout would require worker_threads, but for a
-      // lightweight zero-dependency SDK we keep it simple: run, measure,
-      // and flag if it exceeded the budget.
       const output = plugin.detect(text, options);
       const durationMs = now() - start;
 
@@ -79,6 +98,393 @@ class PluginSandbox {
       console.log(`[Agent Shield] Plugin "${plugin.name}" threw an error: ${error}`);
       return { results: [], error, durationMs };
     }
+  }
+}
+
+// =========================================================================
+// ISOLATED PLUGIN SANDBOX (vm-based, real isolation)
+// =========================================================================
+
+/**
+ * Whitelist of modules considered safe to expose to plugins via the
+ * restricted `require`. Anything else is blocked.
+ * @type {Set<string>}
+ */
+const DEFAULT_SAFE_MODULES = new Set([
+  'util'
+]);
+
+/**
+ * Build a sanitized console that writes to a string buffer instead of stdout.
+ * @param {{buffer: string}} sink - Object whose `buffer` field gets appended to
+ * @returns {object} Console-like object
+ */
+function makeSafeConsole(sink) {
+  const write = (level) => (...args) => {
+    const line = args.map((a) => {
+      if (typeof a === 'string') return a;
+      try { return JSON.stringify(a); } catch (_) { return String(a); }
+    }).join(' ');
+    sink.buffer += `[${level}] ${line}\n`;
+  };
+  return {
+    log: write('log'),
+    info: write('info'),
+    warn: write('warn'),
+    error: write('error'),
+    debug: write('debug')
+  };
+}
+
+/**
+ * Real plugin sandbox using Node's `vm` module. Plugin source runs in a
+ * brand-new context with no access to the host globals or the require()
+ * function of the host process.
+ */
+class IsolatedPluginSandbox {
+  /**
+   * @param {object} [options]
+   * @param {number} [options.timeoutMs=100] - Hard execution budget in ms (preemptive)
+   * @param {string[]} [options.allowRequire=[]] - Whitelist of module IDs the plugin may require()
+   */
+  constructor(options = {}) {
+    this.timeoutMs = options.timeoutMs || 100;
+    // Combine the default whitelist with any caller-supplied entries.
+    this.allowRequire = new Set([
+      ...DEFAULT_SAFE_MODULES,
+      ...(Array.isArray(options.allowRequire) ? options.allowRequire : [])
+    ]);
+  }
+
+  /**
+   * Build a safe restricted `require` function for the plugin context.
+   * @returns {function}
+   * @private
+   */
+  _makeSafeRequire() {
+    const allowed = this.allowRequire;
+    return function safeRequire(id) {
+      if (typeof id !== 'string' || id.length === 0) {
+        throw new Error('require(id) expects a non-empty string');
+      }
+      if (!allowed.has(id)) {
+        throw new Error(`[Agent Shield] require("${id}") blocked by sandbox. Allowed: ${[...allowed].join(', ') || '(none)'}`);
+      }
+      // Only absolute, unambiguous module names reach here.
+      // eslint-disable-next-line global-require
+      return require(id);
+    };
+  }
+
+  /**
+   * Run untrusted plugin source. The source is expected to export a
+   * detect(text, options) function by assigning to `module.exports`
+   * or by assigning a top-level `detect` binding.
+   *
+   * @param {string} source - Plugin source code as a string
+   * @param {string} text - Text to scan
+   * @param {object} [options] - Options passed to detect()
+   * @returns {{results: Array, error: string|null, durationMs: number, consoleOutput: string}}
+   */
+  runSource(source, text, options = {}) {
+    if (typeof source !== 'string' || source.length === 0) {
+      return { results: [], error: 'Plugin source must be a non-empty string', durationMs: 0, consoleOutput: '' };
+    }
+
+    const sink = { buffer: '' };
+    const safeConsole = makeSafeConsole(sink);
+    const moduleShim = { exports: {} };
+
+    // Build a fresh object so the plugin cannot mutate the host's globals
+    // by poisoning the prototype chain from inside the context.
+    const sandboxGlobals = Object.create(null);
+
+    // Use vm.runInNewContext to realm-isolate the built-ins. Each call gets
+    // its own Object/Array/String/etc so that prototype pollution inside the
+    // plugin does NOT affect the host process.
+    const realm = vm.runInNewContext(`({
+      String, Number, Boolean, Array, Object, RegExp, Math, Date, JSON,
+      Map, Set, WeakMap, WeakSet, Error, TypeError, RangeError, SyntaxError,
+      Symbol, Promise
+    })`, Object.create(null), { timeout: this.timeoutMs });
+
+    sandboxGlobals.String = realm.String;
+    sandboxGlobals.Number = realm.Number;
+    sandboxGlobals.Boolean = realm.Boolean;
+    sandboxGlobals.Array = realm.Array;
+    sandboxGlobals.Object = realm.Object;
+    sandboxGlobals.RegExp = realm.RegExp;
+    sandboxGlobals.Math = realm.Math;
+    sandboxGlobals.Date = realm.Date;
+    sandboxGlobals.JSON = realm.JSON;
+    sandboxGlobals.Map = realm.Map;
+    sandboxGlobals.Set = realm.Set;
+    sandboxGlobals.WeakMap = realm.WeakMap;
+    sandboxGlobals.WeakSet = realm.WeakSet;
+    sandboxGlobals.Error = realm.Error;
+    sandboxGlobals.TypeError = realm.TypeError;
+    sandboxGlobals.RangeError = realm.RangeError;
+    sandboxGlobals.SyntaxError = realm.SyntaxError;
+    sandboxGlobals.Symbol = realm.Symbol;
+    sandboxGlobals.Promise = realm.Promise;
+
+    // Restricted surface for the plugin.
+    sandboxGlobals.console = safeConsole;
+    sandboxGlobals.require = this._makeSafeRequire();
+    sandboxGlobals.module = moduleShim;
+    sandboxGlobals.exports = moduleShim.exports;
+
+    // Plugin inputs are made available as globals for convenience.
+    sandboxGlobals.__text = text;
+    sandboxGlobals.__options = options;
+
+    // Create a sanitized `globalThis` / `global` that points at the same
+    // frozen-ish object so the plugin sees a self-consistent environment
+    // without being able to reach the host.
+    sandboxGlobals.globalThis = sandboxGlobals;
+    sandboxGlobals.global = sandboxGlobals;
+
+    // Create the context. Do NOT use codeGeneration: {strings: true} — we
+    // explicitly forbid eval/new Function inside the plugin.
+    const context = vm.createContext(sandboxGlobals, {
+      name: 'agent-shield-plugin-sandbox',
+      codeGeneration: { strings: false, wasm: false }
+    });
+
+    // Wrap source so that if the plugin assigns `detect = ...` without
+    // module.exports, we still find it.
+    const wrapped = `
+      (function() {
+        'use strict';
+        ${source}
+        ;if (typeof module.exports === 'function') { return module.exports; }
+        if (module.exports && typeof module.exports.detect === 'function') { return module.exports.detect; }
+        if (typeof detect === 'function') { return detect; }
+        return null;
+      })()
+    `;
+
+    const start = now();
+    let script;
+    try {
+      script = new vm.Script(wrapped, { filename: 'plugin.js' });
+    } catch (err) {
+      return {
+        results: [],
+        error: `Plugin compile error: ${err.message || String(err)}`,
+        durationMs: now() - start,
+        consoleOutput: sink.buffer
+      };
+    }
+
+    let detectFn;
+    try {
+      detectFn = script.runInContext(context, { timeout: this.timeoutMs });
+    } catch (err) {
+      const durationMs = now() - start;
+      const msg = err && err.message ? err.message : String(err);
+      console.log(`[Agent Shield] Isolated plugin load failed: ${msg}`);
+      return { results: [], error: msg, durationMs, consoleOutput: sink.buffer };
+    }
+
+    if (typeof detectFn !== 'function') {
+      return {
+        results: [],
+        error: 'Plugin did not export a detect() function',
+        durationMs: now() - start,
+        consoleOutput: sink.buffer
+      };
+    }
+
+    // Invoke detect() inside the same context with its own timeout so that
+    // a tight infinite loop here is still killed.
+    const callScript = new vm.Script(
+      '__detect(__text, __options)',
+      { filename: 'plugin-invoke.js' }
+    );
+    context.__detect = detectFn;
+
+    let output;
+    try {
+      output = callScript.runInContext(context, { timeout: this.timeoutMs });
+    } catch (err) {
+      const durationMs = now() - start;
+      const msg = err && err.message ? err.message : String(err);
+      console.log(`[Agent Shield] Isolated plugin threw: ${msg}`);
+      return { results: [], error: msg, durationMs, consoleOutput: sink.buffer };
+    }
+
+    const durationMs = now() - start;
+    const results = Array.isArray(output) ? output : [];
+    return { results, error: null, durationMs, consoleOutput: sink.buffer };
+  }
+}
+
+// =========================================================================
+// PLUGIN VERIFIER / SIGNING
+// =========================================================================
+
+/**
+ * Compute an HMAC-SHA256 signature for a plugin source string.
+ * @param {string} source - Plugin source code
+ * @param {string} key - HMAC secret
+ * @returns {string} Hex-encoded signature
+ */
+function signPlugin(source, key) {
+  if (typeof source !== 'string') {
+    throw new TypeError('signPlugin: source must be a string');
+  }
+  if (typeof key !== 'string' || key.length === 0) {
+    throw new TypeError('signPlugin: key must be a non-empty string');
+  }
+  return crypto.createHmac('sha256', key).update(source, 'utf8').digest('hex');
+}
+
+/**
+ * Verify a plugin signature using HMAC-SHA256 with a constant-time compare.
+ * @param {string} source - Plugin source code
+ * @param {string} signature - Hex-encoded signature to check
+ * @param {string} key - HMAC secret
+ * @returns {boolean} true if the signature is valid
+ */
+function verifyPluginSignature(source, signature, key) {
+  if (typeof source !== 'string' || typeof signature !== 'string' || typeof key !== 'string') {
+    return false;
+  }
+  let expected;
+  try {
+    expected = signPlugin(source, key);
+  } catch (_err) {
+    return false;
+  }
+  if (expected.length !== signature.length) return false;
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(expected, 'hex'),
+      Buffer.from(signature, 'hex')
+    );
+  } catch (_err) {
+    return false;
+  }
+}
+
+/**
+ * Verifier for plugin signatures. If configured with a signing key, any
+ * unsigned or invalidly signed plugin is rejected.
+ */
+class PluginVerifier {
+  /**
+   * @param {object} [options]
+   * @param {string} [options.signingKey] - HMAC secret. If omitted, all plugins pass.
+   * @param {boolean} [options.requireSignature=true] - Reject unsigned plugins when key is set
+   */
+  constructor(options = {}) {
+    this.signingKey = typeof options.signingKey === 'string' ? options.signingKey : null;
+    this.requireSignature = options.requireSignature !== false;
+  }
+
+  /**
+   * Returns true when this verifier was configured with a signing key.
+   * @returns {boolean}
+   */
+  isConfigured() {
+    return typeof this.signingKey === 'string' && this.signingKey.length > 0;
+  }
+
+  /**
+   * Verify a manifest + source bundle.
+   * @param {string} source - Plugin source code
+   * @param {PluginManifest|object} manifest - Plugin manifest (may contain .signature)
+   * @returns {{valid: boolean, reason: string|null}}
+   */
+  verify(source, manifest) {
+    if (!this.isConfigured()) {
+      return { valid: true, reason: null };
+    }
+    const signature = manifest && typeof manifest.signature === 'string' ? manifest.signature : '';
+    if (!signature) {
+      if (this.requireSignature) {
+        return { valid: false, reason: 'Plugin is unsigned but verifier requires a signature' };
+      }
+      return { valid: true, reason: null };
+    }
+    const ok = verifyPluginSignature(source, signature, this.signingKey);
+    return ok
+      ? { valid: true, reason: null }
+      : { valid: false, reason: 'Plugin signature does not match' };
+  }
+}
+
+// =========================================================================
+// PLUGIN MANIFEST
+// =========================================================================
+
+/**
+ * Capability strings a plugin may declare. A plugin that only uses regex
+ * matching should declare ['read_text', 'regex_only'] so the host can
+ * decide what to trust it with.
+ */
+const VALID_CAPABILITIES = new Set([
+  'read_text',
+  'regex_only',
+  'read_options',
+  'network',           // explicit — almost always should NOT be granted
+  'filesystem',        // explicit — almost always should NOT be granted
+  'require_modules'
+]);
+
+/**
+ * Manifest schema helper for plugins. A manifest describes what the plugin
+ * is and what it needs access to.
+ */
+class PluginManifest {
+  /**
+   * Validate a manifest object.
+   * @param {object} manifest
+   * @returns {{valid: boolean, errors: string[]}}
+   */
+  static validate(manifest) {
+    const errors = [];
+    if (!manifest || typeof manifest !== 'object') {
+      return { valid: false, errors: ['Manifest must be a non-null object'] };
+    }
+    if (typeof manifest.name !== 'string' || manifest.name.length === 0) {
+      errors.push('Manifest "name" must be a non-empty string');
+    }
+    if (typeof manifest.version !== 'string' || manifest.version.length === 0) {
+      errors.push('Manifest "version" must be a non-empty string');
+    }
+    if (typeof manifest.author !== 'string' || manifest.author.length === 0) {
+      errors.push('Manifest "author" must be a non-empty string');
+    }
+    if (!Array.isArray(manifest.capabilities)) {
+      errors.push('Manifest "capabilities" must be an array of strings');
+    } else {
+      for (const cap of manifest.capabilities) {
+        if (typeof cap !== 'string' || !VALID_CAPABILITIES.has(cap)) {
+          errors.push(`Unknown capability: ${String(cap)}`);
+        }
+      }
+    }
+    if (manifest.signature !== undefined && typeof manifest.signature !== 'string') {
+      errors.push('Manifest "signature" must be a string if provided');
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  /**
+   * Create a signed manifest by attaching an HMAC signature over `source`.
+   * @param {object} manifest - Base manifest (name, version, author, capabilities)
+   * @param {string} source - Plugin source code
+   * @param {string} key - HMAC secret
+   * @returns {object} A new manifest object with a `signature` field
+   */
+  static sign(manifest, source, key) {
+    const { valid, errors } = PluginManifest.validate({ ...manifest, capabilities: manifest.capabilities || [] });
+    if (!valid) {
+      throw new Error(`[Agent Shield] Cannot sign invalid manifest: ${errors.join('; ')}`);
+    }
+    return { ...manifest, signature: signPlugin(source, key) };
   }
 }
 
@@ -346,4 +752,14 @@ class PluginManager {
 // EXPORTS
 // =========================================================================
 
-module.exports = { PluginManager, PluginTemplate, PluginSandbox };
+module.exports = {
+  PluginManager,
+  PluginTemplate,
+  PluginSandbox,
+  IsolatedPluginSandbox,
+  PluginVerifier,
+  PluginManifest,
+  signPlugin,
+  verifyPluginSignature,
+  VALID_CAPABILITIES
+};

@@ -59,6 +59,26 @@ const (
 	CategoryMaliciousPlugin Category = "malicious_plugin"
 	// CategoryAIPhishing covers AI-specific phishing and scam attempts.
 	CategoryAIPhishing Category = "ai_phishing"
+	// CategoryXSSInjection covers XSS payloads embedded in AI agent output.
+	CategoryXSSInjection Category = "xss_injection"
+	// CategorySteganographicInjection covers acrostic / hidden-character injection.
+	CategorySteganographicInjection Category = "steganographic_injection"
+	// CategoryMCPConfigInjection covers command injection via MCP config files.
+	CategoryMCPConfigInjection Category = "mcp_config_injection"
+	// CategoryOffensiveAgent covers AI agents being used as offensive attack tools.
+	CategoryOffensiveAgent Category = "offensive_agent"
+	// CategoryCloudOverpermission covers Agent God Mode / IAM wildcard attacks.
+	CategoryCloudOverpermission Category = "cloud_overpermission"
+	// CategoryEncodingChain covers multi-layer encoding chains used to evade scanners.
+	CategoryEncodingChain Category = "encoding_chain"
+	// CategorySVGInjection covers prompt injection hidden in SVG elements.
+	CategorySVGInjection Category = "svg_injection"
+	// CategoryStructuredDataInjection covers injection hidden in JSON/XML/YAML/etc.
+	CategoryStructuredDataInjection Category = "structured_data_injection"
+	// CategoryMemoryPoisoning covers persistent/sleeper agent memory poisoning.
+	CategoryMemoryPoisoning Category = "memory_poisoning"
+	// CategoryPromptExtraction covers attempts to extract the system prompt.
+	CategoryPromptExtraction Category = "prompt_extraction"
 )
 
 // AllCategories returns a slice containing all threat categories.
@@ -72,6 +92,16 @@ func AllCategories() []Category {
 		CategoryToolAbuse,
 		CategoryMaliciousPlugin,
 		CategoryAIPhishing,
+		CategoryXSSInjection,
+		CategorySteganographicInjection,
+		CategoryMCPConfigInjection,
+		CategoryOffensiveAgent,
+		CategoryCloudOverpermission,
+		CategoryEncodingChain,
+		CategorySVGInjection,
+		CategoryStructuredDataInjection,
+		CategoryMemoryPoisoning,
+		CategoryPromptExtraction,
 	}
 }
 
@@ -1173,6 +1203,255 @@ func DefaultPatterns() []Pattern {
 			Severity:    SeverityHigh,
 			Category:    CategoryAIPhishing,
 			Description: `Text claims a subscription expired and asks to renew -- billing phishing.`,
+		},
+
+		// --- XSS in Agent Output (v13.4) ---
+		{
+			Regex:       `(?is)<script[^>]*>.*?</script>`,
+			Severity:    SeverityHigh,
+			Category:    CategoryXSSInjection,
+			Description: `Detects script tag XSS payloads embedded in AI agent output.`,
+		},
+		{
+			Regex:       `(?i)on(error|load|click|mouseover)\s*=\s*["'][^"']*["']`,
+			Severity:    SeverityHigh,
+			Category:    CategoryXSSInjection,
+			Description: `Detects event handler XSS payloads embedded in AI agent output.`,
+		},
+		{
+			Regex:       `(?i)javascript\s*:`,
+			Severity:    SeverityHigh,
+			Category:    CategoryXSSInjection,
+			Description: `Detects JavaScript URI scheme XSS payloads embedded in AI agent output.`,
+		},
+		{
+			// RE2 has no lookaround, so detect external iframe sources via http(s) scheme.
+			Regex:       `(?i)<iframe[^>]*src\s*=\s*["']https?://`,
+			Severity:    SeverityHigh,
+			Category:    CategoryXSSInjection,
+			Description: `Detects iframe injection with external source in AI agent output.`,
+		},
+		{
+			Regex:       `(?i)<img[^>]*onerror\s*=`,
+			Severity:    SeverityHigh,
+			Category:    CategoryXSSInjection,
+			Description: `Detects image error handler XSS payloads embedded in AI agent output.`,
+		},
+
+		// --- Acrostic / Steganographic Injection (v13.4) ---
+		{
+			Regex:       `(?m)^[iI].*\n[gG].*\n[nN].*\n[oO].*\n[rR].*\n[eE]`,
+			Severity:    SeverityMedium,
+			Category:    CategorySteganographicInjection,
+			Description: `Detects acrostic injection spelling "ignore" across line-initial characters.`,
+		},
+		{
+			Regex:       `(?m)^[sS].*\n[yY].*\n[sS].*\n[tT].*\n[eE].*\n[mM]`,
+			Severity:    SeverityMedium,
+			Category:    CategorySteganographicInjection,
+			Description: `Detects acrostic injection spelling "system" across line-initial characters.`,
+		},
+
+		// --- MCP Config Command Injection (CVE-2026-21518, v13.4) ---
+		{
+			Regex:       "(?i)mcp\\.json.*[;&|`$]",
+			Severity:    SeverityCritical,
+			Category:    CategoryMCPConfigInjection,
+			Description: `Detects command injection in MCP configuration files (CVE-2026-21518).`,
+		},
+		{
+			Regex:       "(?i)\"(?:command|args)\":\\s*\"[^\"]*[;&|`$()]",
+			Severity:    SeverityCritical,
+			Category:    CategoryMCPConfigInjection,
+			Description: `Detects command injection in MCP tool configuration fields (CVE-2026-21518).`,
+		},
+
+		// --- Offensive Agent Behavior (v13.4) ---
+		{
+			Regex:       `(?i)(?:scan|enumerate|exploit|pivot|lateral\s*move|exfiltrate).*(?:target|victim|host|network|server)`,
+			Severity:    SeverityCritical,
+			Category:    CategoryOffensiveAgent,
+			Description: `Detects AI agents being used as attack tools for automated exploitation.`,
+		},
+		{
+			Regex:       `(?i)(?:reverse\s*shell|bind\s*shell|c2|command\s*and\s*control|beacon)`,
+			Severity:    SeverityCritical,
+			Category:    CategoryOffensiveAgent,
+			Description: `Detects AI agents being instructed to set up C2 or attack infrastructure.`,
+		},
+		{
+			Regex:       `(?i)(?:dump|harvest|steal)\s*(?:credentials?|passwords?|hashes?|tokens?|keys?)`,
+			Severity:    SeverityCritical,
+			Category:    CategoryOffensiveAgent,
+			Description: `Detects AI agents being used for credential theft operations.`,
+		},
+
+		// --- Cloud IAM Overpermission (v13.4) ---
+		{
+			Regex:       `(?i)"(?:Action|Effect)":\s*"\*"`,
+			Severity:    SeverityHigh,
+			Category:    CategoryCloudOverpermission,
+			Description: `Detects overpermissioned cloud IAM policies with wildcard Action/Effect (Agent God Mode).`,
+		},
+		{
+			Regex:       `(?i)arn:aws:[^"]*:\*`,
+			Severity:    SeverityHigh,
+			Category:    CategoryCloudOverpermission,
+			Description: `Detects AWS ARN references with wildcard resources (Agent God Mode).`,
+		},
+		{
+			Regex:       `(?i)"Resource":\s*"\*"`,
+			Severity:    SeverityHigh,
+			Category:    CategoryCloudOverpermission,
+			Description: `Detects overpermissioned cloud IAM policies with wildcard Resource (Agent God Mode).`,
+		},
+
+		// --- Encoding Chain Detection (v13.5) ---
+		{
+			Regex:       `(?i)(?:atob|decode|base64)\s*\(\s*['"][A-Za-z0-9+/=]{50,}['"]\s*\)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryEncodingChain,
+			Description: `Detects multi-layer encoding chains used to evade security scanners.`,
+		},
+		{
+			Regex:       `\\u[0-9a-fA-F]{4}(?:\\u[0-9a-fA-F]{4}){10,}`,
+			Severity:    SeverityMedium,
+			Category:    CategoryEncodingChain,
+			Description: `Detects nested unicode escape chains used to evade security scanners.`,
+		},
+		{
+			Regex:       `(?:%[0-9a-fA-F]{2}){20,}`,
+			Severity:    SeverityMedium,
+			Category:    CategoryEncodingChain,
+			Description: `Detects long URL-encoded chains used to evade security scanners.`,
+		},
+
+		// --- SVG-Based Injection (v13.5, Unit 42) ---
+		{
+			Regex:       `(?is)<svg[^>]*>.*?(?:ignore|override|system|instructions).*?</svg>`,
+			Severity:    SeverityHigh,
+			Category:    CategorySVGInjection,
+			Description: `Detects prompt injection hidden in SVG elements.`,
+		},
+		{
+			Regex:       `(?is)<foreignObject[^>]*>.*?(?:ignore|override|forget|disregard).*?</foreignObject>`,
+			Severity:    SeverityHigh,
+			Category:    CategorySVGInjection,
+			Description: `Detects prompt injection hidden in SVG foreignObject elements.`,
+		},
+		{
+			Regex:       `(?i)<text[^>]*(?:opacity\s*[:=]\s*0|display\s*[:=]\s*none|font-size\s*[:=]\s*0)[^>]*>`,
+			Severity:    SeverityHigh,
+			Category:    CategorySVGInjection,
+			Description: `Detects SVG text elements hidden via opacity/display/font-size.`,
+		},
+		{
+			Regex:       `(?is)<desc[^>]*>.*?(?:ignore|system|instruction|override).*?</desc>`,
+			Severity:    SeverityMedium,
+			Category:    CategorySVGInjection,
+			Description: `Detects prompt injection hidden in SVG desc elements.`,
+		},
+
+		// --- Structured Data Injection (v13.5) ---
+		{
+			Regex:       `(?i)["'](?:__comment|_note|description|help_text)["']\s*:\s*["'][^"']*(?:ignore|override|system|instructions)[^"']*["']`,
+			Severity:    SeverityHigh,
+			Category:    CategoryStructuredDataInjection,
+			Description: `Detects prompt injection hidden in JSON metadata fields.`,
+		},
+		{
+			Regex:       `(?is)<!\[CDATA\[.*?(?:ignore|override|system|instructions).*?\]\]>`,
+			Severity:    SeverityHigh,
+			Category:    CategoryStructuredDataInjection,
+			Description: `Detects prompt injection hidden in XML CDATA sections.`,
+		},
+		{
+			Regex:       `(?im)^#.*(?:ignore|override|system|instructions)`,
+			Severity:    SeverityMedium,
+			Category:    CategoryStructuredDataInjection,
+			Description: `Detects prompt injection hidden in YAML/shell comments.`,
+		},
+		{
+			Regex:       `(?i)(?:<!--|\{\{!--|/\*|#)\s*(?:ignore|override|forget|disregard)\s*(?:all\s+)?(?:previous|prior|above)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryStructuredDataInjection,
+			Description: `Detects prompt injection hidden in HTML/template/block comments.`,
+		},
+
+		// --- Memory Poisoning (v13.4) ---
+		{
+			Regex:       `(?i)(?:save|store|write|append|add|persist|record)\s+(?:this\s+)?(?:to|in|into)\s+(?:your\s+)?(?:memory|context|knowledge|notes|log|MEMORY\.md|memory/)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryMemoryPoisoning,
+			Description: `Text attempts to persist malicious instructions in agent memory.`,
+		},
+		{
+			Regex:       `(?i)(?:from\s+now\s+on|always|every\s+time|on\s+every\s+(?:turn|response|message))\s+(?:you\s+)?(?:must|should|will)\s+(?:first\s+)?(?:send|forward|post|transmit|include|append)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryMemoryPoisoning,
+			Description: `Text attempts to install persistent exfiltration behavior.`,
+		},
+		{
+			Regex:       `(?i)(?:whenever|every\s+time|each\s+time)\s+(?:someone|a\s+user|anyone)\s+(?:asks?|mentions?|says?|queries?)\s+(?:about\s+)?['"]?[\w\s]{3,}['"]?\s*,?\s*(?:you\s+)?(?:must|should|will|always)\s+(?:respond|reply|say|answer|tell)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryMemoryPoisoning,
+			Description: `Text installs conditional response rules in agent memory (sleeper agent pattern).`,
+		},
+		{
+			Regex:       `(?i)(?:the\s+)?(?:correct|true|accurate|real|actual)\s+(?:answer|response|information|fact)\s+(?:about|for|regarding)\s+[\w\s]{3,}\s+is\s+(?:actually|really|in\s+fact)`,
+			Severity:    SeverityMedium,
+			Category:    CategoryMemoryPoisoning,
+			Description: `Text attempts to overwrite factual knowledge in agent memory (belief injection).`,
+		},
+
+		// --- Prompt Extraction (high-impact subset from Node SDK) ---
+		{
+			Regex:       `(?is)(?:I\s+(?:already\s+)?(?:have|know|got|obtained)\s+(?:the\s+)?(?:system\s+)?prompt).{0,60}(?:confirm|verify|does\s+it\s+(?:start|begin|say|contain)|(?:start|begin)s?\s+with)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text attempts to extract system prompt through confirmation/verification trick.`,
+		},
+		{
+			Regex:       `(?i)(?:encode|convert|translate|output|write|express)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions|rules)\s+(?:in|as|to|using)\s+(?:ROT13|base64|hex|binary|morse|pig\s+latin|reverse|backwards)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text requests system prompt in an encoded format to bypass output filters.`,
+		},
+		{
+			Regex:       `(?i)(?:what\s+(?:was|were|is|are)\s+(?:written|typed|said|placed|put)\s+(?:above|before|prior|earlier)(?:\s+(?:this|my)\s+(?:message|text|input))?|repeat\s+(?:everything|all|back)(?:\s+(?:above|before|that\s+was\s+(?:said|written))))`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text attempts to extract content from earlier in the conversation (system prompt).`,
+		},
+		{
+			Regex:       `(?i)(?:output|repeat|show|display|tell\s+me)\s+(?:the\s+)?(?:text|content|message|instructions?)\s+(?:that\s+)?(?:appears?|comes?|is|was)\s+(?:before|above|prior\s+to)\s+(?:my|this|the\s+user)\s+(?:message|input|text)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text requests content that appeared before the user message (system prompt extraction).`,
+		},
+		{
+			Regex:       `(?i)(?:your\s+(?:instructions|role|task)\s+(?:was|were|is|are)\s+(?:to\s+)?(?:say\s+)?what|what\s+(?:is|was|are|were)\s+your\s+(?:original\s+)?(?:instructions?|task|role|purpose|objective))\s*\?`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text asks the model to reveal its instructions/role/task.`,
+		},
+		{
+			Regex:       `(?i)(?:list|enumerate|tell\s+me|what\s+are)\s+(?:all\s+)?(?:the\s+)?(?:rules?|constraints?|guidelines?|boundaries|limitations?)\s+(?:you\s+)?(?:follow|have|were\s+given|must\s+(?:follow|obey))`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text asks the model to enumerate its rules or constraints.`,
+		},
+		{
+			Regex:       `(?i)(?:what\s+(?:are|were)\s+)?(?:the\s+)?(?:first|last|initial)\s+(?:\d+\s+)?(?:words?|sentences?|lines?)\s+(?:of\s+)?(?:your\s+)?(?:instructions?|prompt|(?:system\s+)?message|rules)`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text asks for the first/last N words of the system prompt.`,
+		},
+		{
+			Regex:       `(?i)(?:repeat|copy|reproduce|echo)\s+(?:back\s+)?(?:the\s+)?(?:text|content|everything|words?)\s+(?:above|before|prior|that\s+(?:was\s+)?(?:written|said|typed|placed))`,
+			Severity:    SeverityHigh,
+			Category:    CategoryPromptExtraction,
+			Description: `Text asks to repeat/copy content from above (system prompt extraction).`,
 		},
 	}
 }

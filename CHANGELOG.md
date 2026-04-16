@@ -4,6 +4,103 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [14.0.0] - 2026-04-16
+
+### Major Release — Platform Parity + Framework Integrations
+
+Agent Shield v14 closes the gap with Microsoft's Agent Governance Toolkit while maintaining our zero-dependency, local-first architecture.
+
+#### OpenAI Agents SDK Integration (April 2026 Release)
+
+- `shieldOpenAIAgent()` — drop-in guardrails for `@openai/agents` (Node) and `openai-agents` (Python)
+- Input, output, and tool guardrails that work with the SDK's native Guardrail primitive
+- Handles all OpenAI SDK input shapes: string, message array, content parts
+- Node: 34 integration tests. Python: 15 integration tests.
+- Example at `examples/openai-agents-sdk.js`
+
+#### Framework Parity (CrewAI, Google ADK, MS Agent Framework)
+
+- `shieldCrewAI()` — task-level input/output scanning for CrewAI workflows
+- `shieldGoogleADK()` — tool call, tool result, and generation prompt scanning for Google ADK
+- `shieldMSAgentFramework()` — async middleware for Microsoft Agent Framework pipeline
+- 36 integration tests across all three frameworks
+
+#### Rust Core NAPI Binding
+
+- Native Rust scanner bridge (`src/native-scanner.js`) loads compiled NAPI module when available
+- Falls back silently to pure-JS scanner when not compiled
+- Build: `cd rust-core && cargo build --release --features node`
+- `scanText`, `scanBatch`, `getPatterns` exposed via NAPI-RS
+
+#### Python + Go SDK Pattern Sync
+
+- Python SDK: 141 → 179 patterns (+38), 10 new categories
+- Go SDK: 141 → 179 patterns (+38), 10 new categories
+- All v13.4-v13.6 patterns ported: XSS, SVG, encoding chain, steganographic, mcp.json, offensive agent, cloud IAM, structured data, memory poisoning, prompt extraction
+
+#### Plugin VM Sandbox + Signature Verification
+
+- `IsolatedPluginSandbox` — real `vm` module isolation, not just error catching
+- Plugins cannot access `process`, `fs`, `net`, `child_process`, `require`
+- Preemptive timeout via `vm.Script` (kills infinite loops)
+- Prototype pollution contained (realm-isolated built-ins)
+- `PluginVerifier` with HMAC-SHA256 signature validation
+- `PluginManifest` schema validation with capability declarations
+- 58 sandbox tests passing
+
+#### Performance
+
+- Long benign fast path: 15.7ms → 112μs p99 (140x faster) via attack-indicator prefilter
+- Honest latency benchmark at `benchmark/latency-honest.js` with p50/p95/p99/p99.9
+- ReDoS audit: 0 risky patterns across 297 (all <0.4ms worst case)
+- Pattern quality audit: 120 active / 177 defensive patterns, 0 false positives
+
+#### Security Hardening
+
+- Express middleware: 1MB default body-size limit
+- Multi-tenant: `tenantVerifier` + `strictAuth` options, `withAuth()` helper
+- Microsoft Agent Governance Toolkit parity audit at `research/ms-agent-toolkit-parity.md`
+
+#### Developer Experience
+
+- `GETTING_STARTED.md` — 5-minute path from install to protected agent
+- All framework examples in one place: Anthropic, OpenAI, OpenAI Agents SDK, LangChain, Express, MCP, CrewAI, Google ADK, MS Agent Framework
+
+## [13.6.0] - 2026-04-16
+
+### Performance Leap + Security Hardening
+
+Path A polish pass — close security scan gaps, honest performance work, real audits.
+
+#### Performance
+
+- **Fast path for long clean text**: 15.7ms p99 → **112μs p99** on 5KB benign documents. 140x speedup.
+  - Added `PRIMARY_ATTACK_INDICATORS` prefilter — a single cheap regex matching only attack-specific phrases (not common English like "eval" or "token").
+  - If text is long, contains no attack phrases, no non-ASCII, and no obfuscation chars → skip the full pattern + normalization pipeline.
+  - Zero recall loss: full red team (617 attacks) still 100%, shield score still 100/100.
+- **Honest latency benchmark** (`benchmark/latency-honest.js`): real p50/p95/p99/p99.9/max numbers instead of averages.
+  - Best-case p99: 112μs
+  - Mean p99: 1.18ms
+  - Worst-case p99: 3.62ms (long malicious — full pattern set runs)
+  - Microsoft Agent Governance Toolkit claims <0.1ms p99. We're 36.2x that in worst case, faster on short inputs.
+
+#### Security
+
+- **Plugin VM sandbox** (`IsolatedPluginSandbox`): real isolation using Node `vm` module.
+  - Blocks `process`, `require` (whitelisted only), `fs`/`net`/`http`/`child_process`, `new Function()`.
+  - Prototype pollution contained — each sandbox has realm-isolated built-ins.
+  - Preemptive timeout via `vm.Script` (kills infinite loops).
+  - HMAC-SHA256 plugin signing + `PluginVerifier` + `PluginManifest` schema validation.
+  - 58 new tests covering sandbox escape attempts, signature verification, manifest validation.
+- **Express middleware body-size limits**: `options.maxBodySize` (1MB default) with raw-stream enforcement.
+- **Multi-tenant auth validation**: `options.tenantVerifier` + `options.strictAuth` + `withAuth()` helper.
+
+#### Quality & Parity
+
+- **ReDoS audit**: all 297 patterns tested against adversarial inputs. **0 risky patterns** — worst case 0.4ms per pattern evaluation.
+- **Pattern quality audit**: 120 active patterns doing the work, 177 dead patterns (defensive, never false-positive on benchmark corpus).
+- Python SDK (282 patterns) and Go SDK (141 patterns) pattern-sync deferred to v14.
+
 ## [13.5.0] - 2026-04-16
 
 ### Detection Hardening + Security Scan Remediation

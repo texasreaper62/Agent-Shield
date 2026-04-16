@@ -81,7 +81,10 @@ const { PrometheusExporter, DatadogLogger, MetricsCollector: ObservabilityMetric
 const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, BenchmarkReportGenerator } = safeRequire('./benchmark-harness', 'benchmark-harness');
 
 // Integrations
-const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
+const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldOpenAIAgent, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
+
+// Framework Integrations (CrewAI, Google ADK, MS Agent Framework)
+const { shieldCrewAI, shieldGoogleADK, shieldMSAgentFramework } = safeRequire('./integrations-frameworks', 'integrations-frameworks');
 
 // Red Team
 const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK_PAYLOADS } = safeRequire('./redteam', 'redteam');
@@ -493,9 +496,15 @@ const _exports = {
   ShieldCallbackHandler,
   shieldAnthropicClient,
   shieldOpenAIClient,
+  shieldOpenAIAgent,
   shieldVercelAI,
   shieldFetch,
   ShieldBlockError,
+
+  // Framework Integrations (CrewAI, Google ADK, MS Agent Framework)
+  shieldCrewAI,
+  shieldGoogleADK,
+  shieldMSAgentFramework,
 
   // Red Team
   AttackSimulator,

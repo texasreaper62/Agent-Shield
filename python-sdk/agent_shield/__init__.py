@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .detector import scan_text, get_patterns, SEVERITY_ORDER, INJECTION_PATTERNS
 from .shield import AgentShield
+from .openai_agents import shield_openai_agent
 
 __all__ = [
     'AgentShield',
@@ -15,6 +16,7 @@ __all__ = [
     'get_patterns',
     'SEVERITY_ORDER',
     'INJECTION_PATTERNS',
+    'shield_openai_agent',
 ]
 
-__version__ = '7.2.1'
+__version__ = '13.6.0'

@@ -225,6 +225,32 @@ Tightens existing defenses and addresses security scan findings:
 - [x] Document scanner — maxDocumentSize limit (10MB) prevents DoS
 - [x] Audit log sanitization — PII/key/prompt redaction option
 
+## v13.6 — Performance Leap + Hardening (Complete)
+
+Path A polish pass — honest performance, security scan gap closure, real audits:
+
+- [x] Long-benign fast path: 15.7ms → 112μs p99 (140x faster) via attack-specific prefilter
+- [x] Honest latency benchmark (p50/p95/p99/p99.9/max, not averages)
+- [x] Plugin VM sandbox (`IsolatedPluginSandbox`): real isolation, prototype-pollution contained, HMAC-SHA256 plugin signing, 58 tests
+- [x] Express middleware body-size limits (1MB default, raw-stream enforcement)
+- [x] Multi-tenant auth validation (`tenantVerifier`, `strictAuth`, `withAuth()`)
+- [x] ReDoS audit: all 297 patterns verified clean (0 risky)
+- [x] Pattern quality audit: 120 active, 177 dead (defensive patterns, never FP)
+## v14.0 — Platform Parity (Complete)
+
+Closes the gap with Microsoft's Agent Governance Toolkit while maintaining zero-dependency local-first architecture:
+
+- [x] OpenAI Agents SDK integration (`shieldOpenAIAgent`) — input/output/tool guardrails for @openai/agents (April 2026 release), 34 Node + 15 Python tests
+- [x] CrewAI integration (`shieldCrewAI`) — task-level before/after scanning
+- [x] Google ADK integration (`shieldGoogleADK`) — tool call, tool result, generation prompt scanning
+- [x] MS Agent Framework integration (`shieldMSAgentFramework`) — async middleware pipeline
+- [x] Rust NAPI scanner bridge — native module loaded when available, silent JS fallback
+- [x] Python SDK pattern sync: 141 → 179 patterns (+38), 10 new categories
+- [x] Go SDK pattern sync: 141 → 179 patterns (+38), 10 new categories
+- [x] Microsoft Agent Governance Toolkit parity audit (`research/ms-agent-toolkit-parity.md`)
+- [x] `GETTING_STARTED.md` — 5-minute path from install to protected agent
+- [x] 36 framework integration tests + example at `examples/openai-agents-sdk.js`
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks

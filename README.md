@@ -1,6 +1,6 @@
 # Agent Shield
 
-[![npm](https://img.shields.io/badge/npm-v13.5.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
+[![npm](https://img.shields.io/badge/npm-v14.0.0-blue)](https://www.npmjs.com/package/agentshield-sdk)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D16-blue)](#)
@@ -74,6 +74,17 @@ const client = shieldAnthropicClient(new Anthropic(), { blockOnThreat: true });
 // OpenAI SDK
 const { shieldOpenAIClient } = require('agentshield-sdk');
 const client = shieldOpenAIClient(new OpenAI(), { blockOnThreat: true });
+
+// OpenAI Agents SDK (@openai/agents, April 2026)
+const { Agent, run } = require('@openai/agents');
+const { shieldOpenAIAgent } = require('agentshield-sdk');
+const { inputGuardrail, outputGuardrail, toolGuardrail } = shieldOpenAIAgent({ blockOnThreat: true });
+const agent = new Agent({
+  name: 'Assistant',
+  instructions: 'You are a helpful assistant',
+  inputGuardrails: [inputGuardrail],
+  outputGuardrails: [outputGuardrail]
+});
 
 // LangChain
 const { ShieldCallbackHandler } = require('agentshield-sdk');
