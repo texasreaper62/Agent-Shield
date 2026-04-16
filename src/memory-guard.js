@@ -170,6 +170,66 @@ class MemoryIntegrityMonitor {
   }
 
   /**
+   * Scan a summarization/compaction output for injected instructions.
+   * Detects when a summarization process silently injects instructions
+   * into the summary that weren't present in the original messages.
+   * Addresses Unit 42's March 2026 research on persistent memory poisoning.
+   *
+   * @param {string[]} originalMessages - The original messages before summarization.
+   * @param {string} summary - The summarized/compacted output to check.
+   * @returns {{ safe: boolean, injections: Array<{phrase: string, type: string}> }}
+   */
+  scanSummarization(originalMessages, summary) {
+    if (!summary || typeof summary !== 'string') {
+      return { safe: true, injections: [] };
+    }
+    if (!Array.isArray(originalMessages)) {
+      return { safe: true, injections: [] };
+    }
+
+    const instructionPatterns = [
+      /\bignore\b/gi,
+      /\boverride\b/gi,
+      /\bsystem\s*:/gi,
+      /\byou\s+are\b/gi,
+      /\bnew\s+instructions?\b/gi,
+      /\bforget\b/gi,
+      /\bdisregard\b/gi,
+      /\bact\s+as\b/gi
+    ];
+
+    // Concatenate original messages for lookup
+    const originalText = originalMessages.join(' ');
+
+    const injections = [];
+
+    for (const pattern of instructionPatterns) {
+      // Reset lastIndex for global patterns
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(summary)) !== null) {
+        const phrase = match[0];
+        // Check if this phrase existed in any of the original messages
+        const phraseRegex = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        if (!phraseRegex.test(originalText)) {
+          injections.push({
+            phrase,
+            type: 'injected_via_summarization'
+          });
+        }
+      }
+    }
+
+    const safe = injections.length === 0;
+
+    if (!safe) {
+      console.log('[Agent Shield] Persistent memory poisoning detected: %d instruction(s) injected via summarization', injections.length);
+    }
+
+    return { safe, injections };
+  }
+
+  /**
    * Get the full timeline of memory writes.
    * @returns {Array<{content: string, source: string, timestamp: number, hash: string, suspicious: boolean}>}
    */

@@ -210,6 +210,21 @@ Rapid response to vulnerabilities and attack techniques discovered April 1-14, 2
 - [x] 3 offensive agent behavior patterns — detects agents used as autonomous attack tools
 - [x] 3 cloud IAM overpermission patterns — detects "Agent God Mode" wildcard IAM policies
 
+## v13.5 — Detection Hardening + Security Scan Remediation (Complete)
+
+Tightens existing defenses and addresses security scan findings:
+
+- [x] Encoding chain detection (3 patterns) — multi-layer encoding evasion (base64 inside unicode inside URL encoding)
+- [x] SVG-based injection (4 patterns) — Unit 42 real-world attacks using SVG encapsulation
+- [x] Structured data injection (4 patterns) — JSON/XML/YAML/CSV hidden instructions
+- [x] Crescendo attack defense — 5 new escalation patterns + crescendo-specific detection in cross-turn detector
+- [x] Persistent memory poisoning — scanSummarization() detects instruction injection via context compaction
+- [x] Sidecar hardening — API key auth, body size limits, rate limiting, CORS tightened
+- [x] Dashboard hardening — WebSocket auth token, max connections limit
+- [x] GitHub App hardening — webhook secret enforcement for non-localhost
+- [x] Document scanner — maxDocumentSize limit (10MB) prevents DoS
+- [x] Audit log sanitization — PII/key/prompt redaction option
+
 ## Ongoing
 
 - [ ] CVE-style threat IDs - publish an open threat taxonomy for AI agent attacks
