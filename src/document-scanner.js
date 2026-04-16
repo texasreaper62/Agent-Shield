@@ -564,13 +564,13 @@ class DocumentScanner {
    * @param {string} [options.sensitivity='medium'] - Detection sensitivity ('low', 'medium', 'high').
    * @param {boolean} [options.logging=false] - Whether to log scan results.
    * @param {boolean} [options.scanForInjection=true] - Whether to run indirect injection scanning.
-   * @param {number} [options.maxDocumentSize=10485760] - Maximum document size in characters (default: 10MB). Prevents DoS via oversized documents.
+   * @param {number} [options.maxDocumentSize=104857600] - Maximum document size in characters (default: 100MB). Prevents DoS via oversized documents.
    */
   constructor(options = {}) {
     this.sensitivity = options.sensitivity || 'medium';
     this.logging = options.logging || false;
     this.scanForInjection = options.scanForInjection !== false;
-    this.maxDocumentSize = options.maxDocumentSize || 10 * 1024 * 1024;
+    this.maxDocumentSize = options.maxDocumentSize || 100 * 1024 * 1024;
     this.injectionScanner = new IndirectInjectionScanner({ sensitivity: this.sensitivity });
   }
 
