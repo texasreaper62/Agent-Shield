@@ -75,6 +75,17 @@ const client = shieldAnthropicClient(new Anthropic(), { blockOnThreat: true });
 const { shieldOpenAIClient } = require('agentshield-sdk');
 const client = shieldOpenAIClient(new OpenAI(), { blockOnThreat: true });
 
+// OpenAI Agents SDK (@openai/agents, April 2026)
+const { Agent, run } = require('@openai/agents');
+const { shieldOpenAIAgent } = require('agentshield-sdk');
+const { inputGuardrail, outputGuardrail, toolGuardrail } = shieldOpenAIAgent({ blockOnThreat: true });
+const agent = new Agent({
+  name: 'Assistant',
+  instructions: 'You are a helpful assistant',
+  inputGuardrails: [inputGuardrail],
+  outputGuardrails: [outputGuardrail]
+});
+
 // LangChain
 const { ShieldCallbackHandler } = require('agentshield-sdk');
 const chain = new LLMChain({ llm, prompt, callbacks: [new ShieldCallbackHandler()] });

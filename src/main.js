@@ -81,7 +81,7 @@ const { PrometheusExporter, DatadogLogger, MetricsCollector: ObservabilityMetric
 const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, BenchmarkReportGenerator } = safeRequire('./benchmark-harness', 'benchmark-harness');
 
 // Integrations
-const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
+const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldOpenAIAgent, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
 // Red Team
 const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK_PAYLOADS } = safeRequire('./redteam', 'redteam');
@@ -493,6 +493,7 @@ const _exports = {
   ShieldCallbackHandler,
   shieldAnthropicClient,
   shieldOpenAIClient,
+  shieldOpenAIAgent,
   shieldVercelAI,
   shieldFetch,
   ShieldBlockError,

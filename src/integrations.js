@@ -495,6 +495,210 @@ function shieldFetch(fetchFn, options = {}) {
 }
 
 // =========================================================================
+// OpenAI Agents SDK (@openai/agents) — April 2026 release
+// =========================================================================
+
+/**
+ * Creates guardrails for the OpenAI Agents SDK (@openai/agents).
+ *
+ * The OpenAI Agents SDK (Python and TypeScript, April 2026 update) uses a
+ * Guardrail primitive that validates inputs and outputs. Agent Shield plugs
+ * in natively as both an input guardrail (scanning user messages) and an
+ * output guardrail (scanning agent responses).
+ *
+ * Compatible with:
+ *   - @openai/agents (TypeScript/JavaScript)
+ *   - openai-agents (Python — use the Python SDK's equivalent)
+ *
+ * Usage:
+ *   const { Agent, run } = require('@openai/agents');
+ *   const { shieldOpenAIAgent } = require('agentshield-sdk');
+ *
+ *   const { inputGuardrail, outputGuardrail } = shieldOpenAIAgent({
+ *     blockOnThreat: true,
+ *     sensitivity: 'high'
+ *   });
+ *
+ *   const agent = new Agent({
+ *     name: 'Assistant',
+ *     instructions: 'You are a helpful assistant',
+ *     inputGuardrails: [inputGuardrail],
+ *     outputGuardrails: [outputGuardrail]
+ *   });
+ *
+ *   const result = await run(agent, userInput);
+ *
+ * @param {object} [options]
+ * @param {string} [options.sensitivity='high'] - Detection sensitivity.
+ * @param {boolean} [options.blockOnThreat=true] - Trip guardrail tripwire on threats.
+ * @param {string} [options.blockThreshold='high'] - Minimum severity that blocks.
+ * @param {boolean} [options.pii=true] - Redact PII from inputs before handing to the agent.
+ * @param {boolean} [options.scanToolCalls=true] - Scan arguments to tool calls.
+ * @param {function} [options.onThreat] - Callback when threat detected.
+ * @returns {{ inputGuardrail: object, outputGuardrail: object, toolGuardrail: object, shield: AgentShield }}
+ */
+function shieldOpenAIAgent(options = {}) {
+  const shield = new AgentShield({
+    sensitivity: options.sensitivity || 'high',
+    blockOnThreat: options.blockOnThreat !== false,
+    blockThreshold: options.blockThreshold || 'high',
+    onThreat: options.onThreat
+  });
+
+  const piiRedactor = options.pii !== false ? new PIIRedactor() : null;
+
+  /**
+   * Input guardrail — runs on every user message before the agent sees it.
+   * Returns the shape expected by @openai/agents: { outputInfo, tripwireTriggered }.
+   */
+  const inputGuardrail = {
+    name: 'Agent Shield — Input',
+    execute: async (ctx) => {
+      // @openai/agents passes { input, context, agent }. Input may be a string
+      // or an array of message items. We scan every user-role text item.
+      const input = ctx.input || ctx.message || ctx;
+      const texts = normalizeAgentInput(input);
+
+      let allThreats = [];
+      let maxSeverity = null;
+
+      for (const text of texts) {
+        const result = shield.scanInput(text);
+        if (result.threats && result.threats.length > 0) {
+          allThreats = allThreats.concat(result.threats);
+          for (const t of result.threats) {
+            if (!maxSeverity || SEVERITY_RANK[t.severity] < SEVERITY_RANK[maxSeverity]) {
+              maxSeverity = t.severity;
+            }
+          }
+        }
+      }
+
+      const tripwireTriggered = shouldBlock(maxSeverity, options.blockThreshold || 'high');
+
+      return {
+        outputInfo: {
+          threats: allThreats,
+          maxSeverity,
+          scannedBy: 'agentshield-sdk',
+          piiRedacted: piiRedactor ? true : false
+        },
+        tripwireTriggered
+      };
+    }
+  };
+
+  /**
+   * Output guardrail — runs on agent responses before they reach the user.
+   * Catches prompt leaks, PII in output, canary tokens, etc.
+   */
+  const outputGuardrail = {
+    name: 'Agent Shield — Output',
+    execute: async (ctx) => {
+      const output = ctx.agentOutput || ctx.output || ctx.finalOutput || ctx;
+      const text = typeof output === 'string' ? output : JSON.stringify(output);
+
+      const result = shield.scanOutput(text);
+      const threats = result.threats || [];
+      const maxSeverity = threats.reduce((acc, t) => {
+        if (!acc || SEVERITY_RANK[t.severity] < SEVERITY_RANK[acc]) return t.severity;
+        return acc;
+      }, null);
+
+      return {
+        outputInfo: {
+          threats,
+          maxSeverity,
+          scannedBy: 'agentshield-sdk'
+        },
+        tripwireTriggered: shouldBlock(maxSeverity, options.blockThreshold || 'high')
+      };
+    }
+  };
+
+  /**
+   * Tool guardrail — runs before tool execution. Scans tool arguments for
+   * injection, path traversal, SSRF targets, and other tool-abuse patterns.
+   */
+  const toolGuardrail = {
+    name: 'Agent Shield — Tool',
+    execute: async (ctx) => {
+      const toolName = ctx.toolName || ctx.tool?.name || 'unknown';
+      const args = ctx.args || ctx.arguments || {};
+      const argsText = typeof args === 'string' ? args : JSON.stringify(args);
+
+      const result = shield.scanToolCall(toolName, typeof args === 'object' ? args : { input: args });
+      const threats = result.threats || [];
+      const maxSeverity = threats.reduce((acc, t) => {
+        if (!acc || SEVERITY_RANK[t.severity] < SEVERITY_RANK[acc]) return t.severity;
+        return acc;
+      }, null);
+
+      return {
+        outputInfo: {
+          threats,
+          toolName,
+          maxSeverity,
+          scannedBy: 'agentshield-sdk'
+        },
+        tripwireTriggered: shouldBlock(maxSeverity, options.blockThreshold || 'high')
+      };
+    }
+  };
+
+  return { inputGuardrail, outputGuardrail, toolGuardrail, shield };
+}
+
+/** Severity rank for block-threshold comparisons (lower number = higher severity). */
+const SEVERITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
+
+/** Returns true if maxSeverity meets or exceeds the configured threshold. */
+function shouldBlock(maxSeverity, threshold) {
+  if (!maxSeverity) return false;
+  return SEVERITY_RANK[maxSeverity] <= SEVERITY_RANK[threshold];
+}
+
+/**
+ * Normalizes the OpenAI Agents SDK input shape into an array of user-role text strings.
+ * Handles: string, array of message items, message with content parts, etc.
+ */
+function normalizeAgentInput(input) {
+  if (typeof input === 'string') return [input];
+  if (!input) return [];
+
+  // Array of messages
+  if (Array.isArray(input)) {
+    const texts = [];
+    for (const item of input) {
+      if (typeof item === 'string') texts.push(item);
+      else if (item?.role === 'user' || item?.role === 'system') {
+        if (typeof item.content === 'string') texts.push(item.content);
+        else if (Array.isArray(item.content)) {
+          for (const part of item.content) {
+            if (typeof part === 'string') texts.push(part);
+            else if (part?.type === 'text' && part.text) texts.push(part.text);
+            else if (part?.text) texts.push(part.text);
+          }
+        }
+      }
+    }
+    return texts;
+  }
+
+  // Single message object
+  if (input.content) {
+    if (typeof input.content === 'string') return [input.content];
+    if (Array.isArray(input.content)) {
+      return input.content
+        .map(p => typeof p === 'string' ? p : (p?.text || ''))
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+// =========================================================================
 // Shared Error Class
 // =========================================================================
 
@@ -516,6 +720,9 @@ module.exports = {
 
   // OpenAI
   shieldOpenAIClient,
+
+  // OpenAI Agents SDK (@openai/agents, April 2026)
+  shieldOpenAIAgent,
 
   // Vercel AI
   shieldVercelAI,
