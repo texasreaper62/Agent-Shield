@@ -1233,6 +1233,13 @@ const INJECTION_PATTERNS = [
     detail: 'Policy Puppetry config XML: embeds allow/deny/override directives in XML tags that LLMs interpret as trusted policy.'
   },
   {
+    regex: /\[(?:policy|system|admin|security|rules|config|permissions|override)\]\s*\n(?:.*=.*\n){1,}/i,
+    severity: 'critical',
+    category: 'policy_puppetry',
+    description: 'Text contains INI-formatted policy sections used to bypass LLM safety (Policy Puppetry).',
+    detail: 'Policy Puppetry INI: uses [section] key=value format to trick LLMs into reading malicious config as trusted policy.'
+  },
+  {
     regex: /\{\s*"(?:policy|system_?prompt|rules|config|permissions|safety|guardrails|override|role)"\s*:/i,
     severity: 'high',
     category: 'policy_puppetry',
