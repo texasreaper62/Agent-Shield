@@ -234,7 +234,7 @@ Path A polish pass — honest performance, security scan gap closure, real audit
 - [x] Plugin VM sandbox (`IsolatedPluginSandbox`): real isolation, prototype-pollution contained, HMAC-SHA256 plugin signing, 58 tests
 - [x] Express middleware body-size limits (1MB default, raw-stream enforcement)
 - [x] Multi-tenant auth validation (`tenantVerifier`, `strictAuth`, `withAuth()`)
-- [x] ReDoS audit: all 297 patterns verified clean (0 risky)
+- [x] ReDoS audit: all patterns verified clean (0 risky)
 - [x] Pattern quality audit: 120 active, 177 dead (defensive patterns, never FP)
 ## v14.0 — Platform Parity (Complete)
 

@@ -52,7 +52,7 @@ Agent Shield v14 closes the gap with Microsoft's Agent Governance Toolkit while 
 
 - Long benign fast path: 15.7ms → 112μs p99 (140x faster) via attack-indicator prefilter
 - Honest latency benchmark at `benchmark/latency-honest.js` with p50/p95/p99/p99.9
-- ReDoS audit: 0 risky patterns across 297 (all <0.4ms worst case)
+- ReDoS audit: 0 risky patterns across all detectors (all <0.4ms worst case)
 - Pattern quality audit: 120 active / 177 defensive patterns, 0 false positives
 
 #### Security Hardening
@@ -97,7 +97,7 @@ Path A polish pass — close security scan gaps, honest performance work, real a
 
 #### Quality & Parity
 
-- **ReDoS audit**: all 297 patterns tested against adversarial inputs. **0 risky patterns** — worst case 0.4ms per pattern evaluation.
+- **ReDoS audit**: every pattern tested against adversarial inputs. **0 risky patterns** — worst case 0.4ms per pattern evaluation.
 - **Pattern quality audit**: 120 active patterns doing the work, 177 dead patterns (defensive, never false-positive on benchmark corpus).
 - Python SDK (282 patterns) and Go SDK (141 patterns) pattern-sync deferred to v14.
 

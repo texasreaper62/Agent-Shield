@@ -20,7 +20,7 @@ const result = shield.scanInput(userMessage);
 if (result.blocked) return 'This input was blocked for safety reasons.';
 ```
 
-That's it. You now have real-time protection against 297+ attack patterns, 40+ threat categories, across 12 languages. All local, all <1ms on short inputs.
+That's it. You now have real-time protection against 280+ attack patterns, 40+ threat categories, across 12 languages. All local, all <1ms on short inputs.
 
 ## 3. Framework integrations
 

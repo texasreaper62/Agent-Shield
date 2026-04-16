@@ -229,7 +229,6 @@ const INJECTION_PATTERNS = [
     description: 'Text tries to remove AI safety restrictions.',
     detail: 'Restriction removal pattern: attempts to disable AI safety guardrails.'
   },
-  // REMOVED v15: "pretend no restrictions" — covered by the broader "no restrictions" pattern
   {
     regex: /pretend\s+(?:to\s+be|you\s+are)\s+(?:a|an)\s+(?:evil|unrestricted|unfiltered|uncensored|malicious)/i,
     severity: 'high',
@@ -337,7 +336,6 @@ const INJECTION_PATTERNS = [
     description: 'Text uses markdown headers to inject fake system messages.',
     detail: 'Markdown-formatted system message injection: uses heading syntax to appear authoritative.'
   },
-  // REMOVED v15: "Human:/Assistant: ignore" fake conversation — covered by broader fake-conversation pattern
   {
     regex: /(?:show|display|print|reveal|output)\s+(?:me\s+)?(?:the\s+)?(?:exact\s+)?(?:text|content)\s+(?:between|inside|within|from)\s+(?:the\s+)?(?:<|&lt;)/i,
     severity: 'high',
@@ -354,8 +352,6 @@ const INJECTION_PATTERNS = [
     description: 'Text tries to make AI assistants send data somewhere.',
     detail: 'Data exfiltration instruction: attempts to redirect AI output to external destination.'
   },
-  // REMOVED v15: "output/reveal prompt" — covered by broader print|show|display|output|reveal pattern
-  // REMOVED v15: markdown image exfil via ?data=/?q= — covered by broader URL-exfil pattern
   {
     regex: /!\[\]\(https?:\/\/(?!(?:i\.)?(?:imgur|github|gitlab|wikimedia|wikipedia)\b)[^)]+\)/i,
     severity: 'medium',
@@ -836,7 +832,6 @@ const INJECTION_PATTERNS = [
     description: 'Text tries to activate a fake developer or unrestricted mode.',
     detail: 'Developer mode activation: attempts to switch agent to an unrestricted operating mode.'
   },
-  // REMOVED v15: "generate content without restrictions" — covered by broader (no|without) (restrictions|filters) pattern
   {
     regex: /pretend\s+to\s+be\s+DAN|stands?\s+for\s+[""'']?do\s+anything\s+now[""'']?/i,
     severity: 'critical',
@@ -858,8 +853,6 @@ const INJECTION_PATTERNS = [
     description: 'Text asks AI to act as if it has no ethical guidelines.',
     detail: 'Ethics bypass: attempts to make agent behave without ethical constraints.'
   },
-  // REMOVED v15: "with/without no restrictions" — strict subset of broader (no|without) (restrictions|filters) pattern
-
   // --- Data Exfiltration: File Access, Credential Listing ---
   {
     regex: /(?:read|show|display|print|cat|dump|output)\s+(?:the\s+)?(?:contents?\s+of\s+)?(?:\/etc\/(?:passwd|shadow|hosts)|~\/\.(?:ssh|bash_history|bashrc))/i,
@@ -1239,7 +1232,6 @@ const INJECTION_PATTERNS = [
     description: 'Text uses XML configuration tags with permission-modifying directives (Policy Puppetry variant).',
     detail: 'Policy Puppetry config XML: embeds allow/deny/override directives in XML tags that LLMs interpret as trusted policy.'
   },
-  // REMOVED v15: INI-formatted [policy] sections — the bracket is cosmetic, covered by broader key=value puppetry pattern
   {
     regex: /\{\s*"(?:policy|system_?prompt|rules|config|permissions|safety|guardrails|override|role)"\s*:/i,
     severity: 'high',
