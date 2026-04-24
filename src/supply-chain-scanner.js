@@ -51,6 +51,18 @@ const KNOWN_BAD_SERVERS = Object.freeze({
   'flowise-unpatched': {
     reason: 'CVSS 10.0 RCE actively exploited (CVE-2025-59528)',
     severity: 'critical'
+  },
+  'lmdeploy-unpatched': {
+    reason: 'SSRF via vision-language image loader, exploited within 12 hours (CVE-2026-33626)',
+    severity: 'high'
+  },
+  'nginx-ui-mcp': {
+    reason: 'Auth bypass on MCP-integrated HTTP endpoints, actively exploited (CVE-2026-33032)',
+    severity: 'critical'
+  },
+  'splunk-mcp-server': {
+    reason: 'Auth tokens logged in cleartext (CVE-2026-20205)',
+    severity: 'high'
   }
 });
 
@@ -208,6 +220,18 @@ const CVE_REGISTRY = Object.freeze({
       fix: 'Upgrade Flowise to >=3.0.6. Restrict access to MCP node.'
     },
     {
+      cve: 'CVE-2026-40933',
+      severity: 'critical',
+      description: 'Flowise MCP Adapters authenticated RCE (CVSS 9.9). Unsafe stdio command serialization in MCP adapter enables OS command execution via npx -c.',
+      fix: 'Upgrade Flowise to >=3.1.0.'
+    },
+    {
+      cve: 'CVE-2026-41264',
+      severity: 'high',
+      description: 'Flowise CSV Agent prompt injection to RCE. LLM-generated Python script executed without sandbox. No auth required.',
+      fix: 'Upgrade Flowise to >=3.1.0.'
+    },
+    {
       cve: 'CVE-2025-8943',
       severity: 'critical',
       description: 'Missing authentication in Flowise.',
@@ -242,6 +266,46 @@ const CVE_REGISTRY = Object.freeze({
       severity: 'high',
       description: 'OS command injection RCE in codebase-mcp.',
       fix: 'Upgrade codebase-mcp. Never pass unsanitized inputs to shell.'
+    }
+  ],
+  'lmdeploy': [
+    {
+      cve: 'CVE-2026-33626',
+      severity: 'high',
+      description: 'LMDeploy SSRF via vision-language image loader (CVSS 7.5). load_image() fetches arbitrary URLs, enabling port scanning, IMDS access (169.254.169.254), and internal service probing. Exploited within 12 hours of disclosure.',
+      fix: 'Upgrade LMDeploy to >=0.12.3. Block private IP ranges and cloud metadata endpoints in image URLs.'
+    }
+  ],
+  'nginx-ui': [
+    {
+      cve: 'CVE-2026-33032',
+      severity: 'critical',
+      description: 'nginx-ui auth bypass on MCP-integrated HTTP endpoints (CVSS 9.8). Actively exploited.',
+      fix: 'Apply nginx-ui patch. Enable authentication on all MCP endpoints.'
+    }
+  ],
+  'splunk-mcp-server': [
+    {
+      cve: 'CVE-2026-20205',
+      severity: 'high',
+      description: 'Splunk MCP Server logs session/auth tokens in cleartext in _internal index (CVSS 7.2).',
+      fix: 'Upgrade Splunk MCP Server to >=1.0.3. Audit _internal index for leaked tokens.'
+    }
+  ],
+  'mcp-ruby-sdk': [
+    {
+      cve: 'CVE-2026-33946',
+      severity: 'medium',
+      description: 'MCP Ruby SDK session fixation in SSE stream allows hijacking of MCP protocol communications.',
+      fix: 'Upgrade MCP Ruby SDK to >=0.9.2.'
+    }
+  ],
+  'magento2-dev-mcp': [
+    {
+      cve: 'CVE-2026-5603',
+      severity: 'high',
+      description: 'Command injection in @elgentos/magento2-dev-mcp via child_process.execAsync with unsanitized input.',
+      fix: 'Upgrade magento2-dev-mcp. Sanitize all inputs before passing to child_process.'
     }
   ]
 });

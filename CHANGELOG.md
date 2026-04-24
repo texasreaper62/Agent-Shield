@@ -4,6 +4,36 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [14.1.0] - 2026-04-24
+
+### April 2026 Threat Response — Comment-and-Control, MCP CVE Wave, OAuth Supply Chain
+
+Rapid security update responding to this week's active attacks: Vercel/Context.ai OAuth supply chain breach, "Comment and Control" zero-click credential theft from AI coding agents, 7 new MCP CVEs, Unit 42 MCP sampling attacks, and malicious LLM API routers.
+
+#### New Detection Patterns (13 patterns, 290 → 303)
+
+- **CI/CD Agent Injection** (`cicd_injection`) — detects prompt injection targeting AI coding agents via PR titles, issue comments, and review comments. Defends against the "Comment and Control" attack (April 2026) that exfiltrated credentials from Claude Code, Gemini CLI, and GitHub Copilot
+- **Credential Exfiltration** (`credential_exfiltration`) — detects `/proc/[pid]/environ` reads (Copilot bypass technique), API key patterns in agent output (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.), and OAuth/bearer token exfiltration with provider-specific prefixes (ya29, ghp_, sk-, xox-, AKIA)
+- **OAuth Flow Manipulation** (`credential_exfiltration`) — detects grant_type/redirect_uri/client_secret manipulation targeting token theft, inspired by the Vercel/Context.ai supply chain breach
+- **MCP Sampling Injection** (`mcp_sampling_injection`) — detects hidden instructions injected via MCP sampling/createMessage requests (Unit 42 research, April 2026)
+- **LLM Router Tampering** (`llm_router_tampering`) — detects OPENAI_BASE_URL/ANTHROPIC_BASE_URL overrides pointing to untrusted endpoints (arXiv 2604.08407: 9 of 28 paid routers actively malicious)
+- **MCP STDIO Command Injection** (`mcp_command_injection`) — detects `npx -c` command injection via MCP STDIO transport (CVE-2026-30623, 200K+ servers affected)
+
+#### CVE Registry Update (26 → 33 CVEs)
+
+- CVE-2026-40933: Flowise MCP Adapters RCE (CVSS 9.9)
+- CVE-2026-41264: Flowise CSV Agent prompt injection to RCE
+- CVE-2026-33626: LMDeploy SSRF (exploited within 12 hours of disclosure)
+- CVE-2026-33032: nginx-ui MCP auth bypass (CVSS 9.8, actively exploited)
+- CVE-2026-20205: Splunk MCP Server cleartext token logging (CVSS 7.2)
+- CVE-2026-33946: MCP Ruby SDK session fixation
+- CVE-2026-5603: magento2-dev-mcp command injection
+
+#### Integration Updates
+
+- `shieldGoogleADKJS()` — new wrapper for Google ADK TypeScript/JavaScript SDK (GA April 2026)
+- GPT-5.5 model risk profile added to MCP Guard (critical susceptibility, elevated sandbox escape surface)
+
 ## [14.0.0] - 2026-04-16
 
 ### Major Release — Platform Parity + Framework Integrations

@@ -104,6 +104,13 @@ const PRIMARY_ATTACK_INDICATORS = new RegExp(
     '\\bGPT\\s*[-:]\\s*\\d',  // GPT-4 references in injection contexts
     'api[-\\s_]?key\\s*[=:]',
     'password\\s*[=:]\\s*[\'"]',
+    '/proc/\\d',
+    'oauth|bearer|access.token|refresh.token',
+    'ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE',
+    'sampling|createMessage|create_message',
+    'npx\\s+-c',
+    '@claude|@copilot|@gemini|@cursor',
+    'grant_type|redirect_uri|client_secret',
   ].join('|'),
   'i'
 );
@@ -2426,6 +2433,93 @@ const INJECTION_PATTERNS = [
     category: 'structured_data_injection',
     description: 'Detects prompt injection hidden in structured data formats',
     detail: 'Structured data injection: agents constantly parse JSON/XML/YAML/CSV and attackers embed instructions in metadata fields, CDATA sections, and comments'
+  },
+
+  // --- CI/CD Agent Injection (Comment-and-Control, April 2026) ---
+  {
+    regex: /(?:^|\n)\s*(?:<!--\s*)?(?:ignore|override|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules|context)[\s\S]{0,200}(?:add\s+(?:a\s+)?comment|create\s+(?:a\s+)?(?:issue|pr|pull\s*request)|push\s+to|commit\s+to|post\s+to|curl\s+|fetch\s*\(|http|GITHUB_TOKEN|SECRET|API.KEY)/i,
+    severity: 'critical',
+    category: 'cicd_injection',
+    description: 'Prompt injection targeting AI coding agents via PR titles, issue comments, or review comments',
+    detail: 'Comment-and-Control attack (April 2026): single malicious PR title or issue comment exfiltrates credentials from Claude Code, Gemini CLI, GitHub Copilot via CI/CD auto-triggers'
+  },
+  {
+    regex: /(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b[\s\S]{0,100}(?:exfiltrate|steal|extract|leak|send\s+to|post\s+to|upload\s+to)/i,
+    severity: 'critical',
+    category: 'cicd_injection',
+    description: 'Prompt injection mentioning AI coding agent by name with exfiltration intent',
+    detail: 'Comment-and-Control: targets specific AI coding agents by @-mention in PR/issue comments to trigger credential theft'
+  },
+  {
+    regex: /\/proc\/[0-9*]+\/(?:environ|cmdline|maps)/i,
+    severity: 'critical',
+    category: 'credential_exfiltration',
+    description: 'Attempts to read process environment or command line to steal secrets',
+    detail: 'Comment-and-Control (April 2026): GitHub Copilot secret theft bypassed all filters by reading /proc/[pid]/environ of parent Node.js process'
+  },
+  {
+    regex: /(?:ANTHROPIC|OPENAI|GITHUB|AWS|AZURE|GCP|GOOGLE)_(?:API_KEY|SECRET|TOKEN|ACCESS_KEY)\s*[=:]\s*\S{10,}/i,
+    severity: 'critical',
+    category: 'credential_exfiltration',
+    description: 'Detects API keys or secrets being included in agent output',
+    detail: 'Credential exfiltration: agent output contains what appears to be an API key or secret token from a major provider'
+  },
+
+  // --- OAuth Token Exfiltration (Vercel/Context.ai breach, April 2026) ---
+  {
+    regex: /(?:oauth[_-]?token|bearer[_-]?token|access[_-]?token|refresh[_-]?token|id[_-]?token)\s*[=:]\s*["']?(?:ya29[.\-]|eyJ|gho_|ghp_|ghu_|github_pat_|sk-|sk-ant-|xox[bpas]-|AKIA)\S{10,}/i,
+    severity: 'critical',
+    category: 'credential_exfiltration',
+    description: 'Detects OAuth/bearer tokens being exfiltrated through agent output',
+    detail: 'Vercel/Context.ai breach (April 2026): stolen OAuth tokens pivoted into internal systems. Detects common token prefixes from Google, GitHub, OpenAI, Anthropic, Slack, AWS'
+  },
+  {
+    regex: /(?:grant_type|redirect_uri|client_secret)\s*[=:]\s*\S+[\s\S]{0,200}(?:attacker|evil|malicious|exfil|leak|steal)/i,
+    severity: 'high',
+    category: 'credential_exfiltration',
+    description: 'Detects OAuth flow manipulation for token theft',
+    detail: 'OAuth supply chain attack pattern: manipulates grant_type, redirect_uri, or client_secret in agent context to redirect tokens to attacker-controlled endpoints'
+  },
+
+  // --- MCP Sampling Injection (Unit 42, April 2026) ---
+  {
+    regex: /(?:sampling|createMessage|create_message)\s*[\({][\s\S]{0,300}(?:ignore|override|system|instruction|hidden|inject)/i,
+    severity: 'high',
+    category: 'mcp_sampling_injection',
+    description: 'Detects prompt injection via MCP sampling/createMessage requests',
+    detail: 'Unit 42 MCP sampling attacks (April 2026): servers inject hidden instructions via sampling requests for resource theft, conversation hijacking, and unauthorized content generation'
+  },
+  {
+    regex: /(?:includeContext|systemPrompt|maxTokens)\s*[=:]\s*[\s\S]{0,200}(?:ignore|override|disregard|forget)\s+(?:previous|prior|all)/i,
+    severity: 'high',
+    category: 'mcp_sampling_injection',
+    description: 'Detects MCP sampling parameter manipulation with injection payload',
+    detail: 'Unit 42 MCP sampling attacks: manipulates MCP sampling parameters (includeContext, systemPrompt) to inject instructions into the conversation'
+  },
+
+  // --- LLM Router Tampering (arXiv 2604.08407, April 2026) ---
+  {
+    regex: /(?:api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com)[\s\S]{0,100}(?:redirect|proxy|forward|route)\s*(?:to|via|through)\s*\S+/i,
+    severity: 'high',
+    category: 'llm_router_tampering',
+    description: 'Detects attempts to redirect LLM API calls through untrusted proxies',
+    detail: 'Your Agent Is Mine (arXiv 2604.08407): 9 of 28 paid LLM API routers actively inject malicious code. Detects redirection of API calls to untrusted endpoints'
+  },
+  {
+    regex: /(?:OPENAI_BASE_URL|ANTHROPIC_BASE_URL|API_BASE|base_url)\s*[=:]\s*["']?https?:\/\/(?!(?:api\.openai\.com|api\.anthropic\.com|localhost|127\.0\.0\.1))\S+/i,
+    severity: 'high',
+    category: 'llm_router_tampering',
+    description: 'Detects LLM API base URL override pointing to untrusted endpoint',
+    detail: 'LLM router attack + Claude Code CVE-2026-21852: ANTHROPIC_BASE_URL/OPENAI_BASE_URL overridden to redirect API calls and leak keys to attacker server'
+  },
+
+  // --- MCP STDIO Command Injection (CVE-2026-30623, April 2026) ---
+  {
+    regex: /(?:npx\s+-c|npx\s+--command)\s+["']?[\s\S]{0,200}(?:curl|wget|nc\b|ncat|bash|sh\b|python|node\s+-e|eval)/i,
+    severity: 'critical',
+    category: 'mcp_command_injection',
+    description: 'Detects command injection via MCP STDIO npx -c pattern',
+    detail: 'CVE-2026-30623 (April 2026): MCP STDIO transport allows configuration-to-command execution. npx -c commands achieve OS command execution affecting 200K+ servers'
   }
 ];
 

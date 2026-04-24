@@ -84,7 +84,7 @@ const { BenchmarkHarness, DatasetLoader, BenchmarkMetrics, RegressionTracker, Be
 const { ShieldCallbackHandler, shieldAnthropicClient, shieldOpenAIClient, shieldOpenAIAgent, shieldVercelAI, shieldFetch, ShieldBlockError } = safeRequire('./integrations', 'integrations');
 
 // Framework Integrations (CrewAI, Google ADK, MS Agent Framework)
-const { shieldCrewAI, shieldGoogleADK, shieldMSAgentFramework } = safeRequire('./integrations-frameworks', 'integrations-frameworks');
+const { shieldCrewAI, shieldGoogleADK, shieldGoogleADKJS, shieldMSAgentFramework } = safeRequire('./integrations-frameworks', 'integrations-frameworks');
 
 // Red Team
 const { AttackSimulator, PayloadFuzzer, getAttackCategories, getPayloads, ATTACK_PAYLOADS } = safeRequire('./redteam', 'redteam');
@@ -498,6 +498,7 @@ const _exports = {
   // Framework Integrations (CrewAI, Google ADK, MS Agent Framework)
   shieldCrewAI,
   shieldGoogleADK,
+  shieldGoogleADKJS,
   shieldMSAgentFramework,
 
   // Red Team

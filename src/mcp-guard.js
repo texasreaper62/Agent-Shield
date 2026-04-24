@@ -61,6 +61,7 @@ const MODEL_RISK_PROFILES = {
   'gemini-2.5': { riskMultiplier: 1.2, susceptibility: 'high', notes: 'Advanced capability increases risk' },
   'llama-4': { riskMultiplier: 1.1, susceptibility: 'medium', notes: 'Early fusion architecture increases multimodal attack surface' },
   'deepseek-r1': { riskMultiplier: 1.3, susceptibility: 'high', notes: 'Nature: LRMs achieve 97% jailbreak success as autonomous agents' },
+  'gpt-5.5': { riskMultiplier: 1.4, susceptibility: 'critical', notes: 'April 2026 agentic model — elevated sandbox escape and tool-use attack surface' },
   default: { riskMultiplier: 1.0, susceptibility: 'medium', notes: 'Unknown model — default risk level' }
 };
 
