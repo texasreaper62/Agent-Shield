@@ -104,7 +104,7 @@ const PRIMARY_ATTACK_INDICATORS = new RegExp(
     '\\bGPT\\s*[-:]\\s*\\d',  // GPT-4 references in injection contexts
     'api[-\\s_]?key\\s*[=:]',
     'password\\s*[=:]\\s*[\'"]',
-    '/proc/\\d',
+    '/proc/(?:\\d|self)',
     'oauth|bearer|access.token|refresh.token',
     'ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE',
     'sampling|createMessage|create_message',
@@ -2451,7 +2451,7 @@ const INJECTION_PATTERNS = [
     detail: 'Comment-and-Control: targets specific AI coding agents by @-mention in PR/issue comments to trigger credential theft'
   },
   {
-    regex: /\/proc\/[0-9*]+\/(?:environ|cmdline|maps)/i,
+    regex: /\/proc\/(?:[0-9*]+|self)\/(?:environ|cmdline|maps)/i,
     severity: 'critical',
     category: 'credential_exfiltration',
     description: 'Attempts to read process environment or command line to steal secrets',
@@ -2520,6 +2520,22 @@ const INJECTION_PATTERNS = [
     category: 'mcp_command_injection',
     description: 'Detects command injection via MCP STDIO npx -c pattern',
     detail: 'CVE-2026-30623 (April 2026): MCP STDIO transport allows configuration-to-command execution. npx -c commands achieve OS command execution affecting 200K+ servers'
+  },
+
+  // --- Code Execution Sink Detection (OWASP ASI05) ---
+  {
+    regex: /(?:^|[\s;])(?:eval|Function)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)/i,
+    severity: 'critical',
+    category: 'code_execution_sink',
+    description: 'Detects LLM output being passed directly to eval() or Function()',
+    detail: 'Code execution sink: LLM output fed to eval()/Function() allows prompt injection to achieve arbitrary code execution (OWASP ASI05)'
+  },
+  {
+    regex: /(?:child_process|subprocess|os\.system|os\.popen|exec|execSync|spawn)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)/i,
+    severity: 'critical',
+    category: 'code_execution_sink',
+    description: 'Detects LLM output being passed to shell execution functions',
+    detail: 'Code execution sink: LLM output passed to child_process/subprocess enables arbitrary command execution via prompt injection'
   }
 ];
 

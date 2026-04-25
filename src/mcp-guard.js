@@ -259,10 +259,25 @@ class CrossServerIsolation {
    * @param {string[]} toolNames
    */
   registerServer(serverId, toolNames) {
+    const collisions = [];
+    for (const name of toolNames) {
+      const existingOwner = this.toolOwnership.get(name);
+      if (existingOwner && existingOwner !== serverId) {
+        collisions.push({ tool: name, existingServer: existingOwner, newServer: serverId });
+      }
+    }
     this.serverTools.set(serverId, new Set(toolNames));
     for (const name of toolNames) {
       this.toolOwnership.set(name, serverId);
     }
+    if (collisions.length > 0) {
+      return {
+        collisions,
+        severity: 'critical',
+        message: `Tool name squatting detected: ${collisions.map(c => `"${c.tool}" (owned by ${c.existingServer}, overridden by ${c.newServer})`).join(', ')}`
+      };
+    }
+    return null;
   }
 
   /**
@@ -1189,6 +1204,19 @@ class MCPGuard {
 
     // Scan output
     const outputStr = typeof output === 'string' ? output : JSON.stringify(output || {});
+
+    // Context flooding defense: flag oversized tool outputs that could push
+    // legitimate instructions out of the context window
+    const maxOutputSize = this.config.maxToolOutputSize || 100_000;
+    if (outputStr.length > maxOutputSize) {
+      threats.push({
+        type: 'context_flooding',
+        severity: 'high',
+        serverId,
+        toolName,
+        description: `Tool output exceeds max size (${outputStr.length} > ${maxOutputSize} chars). Possible context window flooding attack.`
+      });
+    }
     const scanResult = this.scanner(outputStr);
     if (scanResult.threats && scanResult.threats.length > 0) {
       for (const t of scanResult.threats) {
