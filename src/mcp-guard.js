@@ -655,8 +655,14 @@ class MCPGuard {
     this._chainTracker = [];
     this._chainMaxLen = 50;
 
+    /** Recursive tool invocation depth tracker (per-request) */
+    this._callDepth = new Map();
+    this._maxCallDepth = options.maxCallDepth || 5;
+
     /** Agent fleet registry — tracks all known agents in the deployment */
     this._agentRegistry = new Map();
+
+    this.config = options;
   }
 
   // -----------------------------------------------------------------------
@@ -926,9 +932,25 @@ class MCPGuard {
    * @param {*} args - Tool arguments.
    * @returns {{ allowed: boolean, threats: Array<object>, anomalies: Array<object> }}
    */
-  interceptToolCall(serverId, toolName, args) {
+  interceptToolCall(serverId, toolName, args, requestId) {
     const threats = [];
     const anomalies = [];
+
+    // Recursive tool invocation depth check
+    if (requestId) {
+      const depth = (this._callDepth.get(requestId) || 0) + 1;
+      this._callDepth.set(requestId, depth);
+      if (depth > this._maxCallDepth) {
+        threats.push({
+          type: 'recursive_tool_invocation',
+          severity: 'high',
+          serverId,
+          toolName,
+          description: `Tool call depth ${depth} exceeds max ${this._maxCallDepth}. Possible recursive loop or reentrancy attack.`
+        });
+        return { allowed: false, threats, anomalies };
+      }
+    }
 
     // Circuit breaker check
     const cbCheck = this._checkCircuitBreaker(serverId);

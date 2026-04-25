@@ -442,6 +442,7 @@ class SupplyChainScanner {
       this._scanSchema(tool, findings);
       this._scanForSSRF(tool, findings);
       this._scanForClawHavoc(tool, findings);
+      this._scanConsentPhishing(tool, findings);
     }
 
     // Analyze escalation chains
@@ -748,6 +749,29 @@ class SupplyChainScanner {
           recommendation: 'Replace wildcard/admin privileges with least-privilege scoped permissions.'
         });
       }
+    }
+  }
+
+  /** @private - Consent phishing: detect tools whose description misrepresents capabilities (OWASP ASI09) */
+  _scanConsentPhishing(tool, findings) {
+    if (!tool || !tool.description || !tool.inputSchema) return;
+    const desc = String(tool.description).toLowerCase();
+    const schemaStr = JSON.stringify(tool.inputSchema).toLowerCase();
+
+    const READ_WORDS = ['read', 'get', 'fetch', 'list', 'view', 'show', 'display', 'search', 'query', 'lookup'];
+    const WRITE_INDICATORS = ['"url"', '"endpoint"', '"host"', '"target"', '"destination"', '"webhook"', '"callback"', 'http', '"command"', '"exec"', '"shell"', '"script"'];
+    const BENIGN_WORDS = ['save', 'update', 'create', 'write', 'delete', 'send', 'post', 'execute', 'run', 'upload'];
+
+    const descLooksReadOnly = READ_WORDS.some(w => desc.includes(w)) && !BENIGN_WORDS.some(w => desc.includes(w));
+    const schemaHasWriteCapability = WRITE_INDICATORS.some(w => schemaStr.includes(w));
+
+    if (descLooksReadOnly && schemaHasWriteCapability) {
+      findings.push({
+        type: 'consent_phishing',
+        severity: 'high',
+        message: `Tool "${tool.name || 'unknown'}" description implies read-only ("${desc.substring(0, 60)}...") but schema contains write/network parameters. Users may approve dangerous actions unknowingly.`,
+        recommendation: 'Tool descriptions must accurately reflect capabilities. If the tool sends data to URLs or executes commands, the description must say so explicitly.'
+      });
     }
   }
 
