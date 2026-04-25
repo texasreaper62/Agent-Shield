@@ -29,10 +29,27 @@ Rapid security update responding to this week's active attacks: Vercel/Context.a
 - CVE-2026-33946: MCP Ruby SDK session fixation
 - CVE-2026-5603: magento2-dev-mcp command injection
 
+#### MCPGuard Security Hardening
+
+- **Tool name squatting detection** — `registerServer()` now detects and warns when a new MCP server registers a tool name already owned by another server (MCPShield arXiv:2604.05969 "Server Spoofing" vector)
+- **Context flooding defense** — `interceptToolOutput()` flags tool outputs exceeding `maxToolOutputSize` (default 100KB) to prevent context window exhaustion attacks
+- **Recursive tool invocation depth limit** — blocks tool call chains exceeding `maxCallDepth` (default 5) to prevent reentrancy attacks and unbounded recursive loops
+
+#### Supply Chain Scanner Enhancements
+
+- **Consent phishing detection** — flags tools whose description implies read-only but whose schema contains write/network parameters (OWASP ASI09 Human-Agent Trust Exploitation)
+
 #### Integration Updates
 
 - `shieldGoogleADKJS()` — new wrapper for Google ADK TypeScript/JavaScript SDK (GA April 2026)
 - GPT-5.5 model risk profile added to MCP Guard (critical susceptibility, elevated sandbox escape surface)
+
+#### Test Coverage Expansion (+416 assertions)
+
+- `test-v14.1-patterns.js` — 61 assertions: all 5 new categories, 12 FP guards, ADK-JS integration, CVE registry
+- `test-pattern-categories.js` — 66 assertions: detection test for every 51 pattern categories + 15 benign guards
+- `test-supply-chain-cves.js` — 228 assertions: all 33 CVEs, 9 blocklist entries, injection/SSRF/poisoning patterns, consent phishing, SARIF/Markdown output
+- Total new assertions this release: 355
 
 ## [14.0.0] - 2026-04-16
 
