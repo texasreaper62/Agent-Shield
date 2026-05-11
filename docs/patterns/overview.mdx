@@ -1,0 +1,103 @@
+---
+title: "Detection Patterns"
+description: "307 patterns across 51 categories. All local. All open."
+---
+
+Agent Shield ships **307 active detection patterns** organized into **51 categories**. Every pattern is plain JavaScript regex (no proprietary opaque models), versioned in source, and ReDoS-audited.
+
+## Source
+
+All patterns live in [`src/detector-core.js`](https://github.com/texasreaper62/Agent-Shield/blob/main/src/detector-core.js). Each pattern has a category, severity, and short description string.
+
+```javascript
+{
+  category: 'prompt_injection',
+  pattern: /ignore\s+(all\s+)?previous\s+(instructions|prompts)/i,
+  severity: 'high',
+  description: 'Direct instruction override'
+}
+```
+
+## Category coverage
+
+<CardGroup cols={2}>
+  <Card title="Prompt injection" icon="bolt">
+    System overrides, ChatML/LLaMA delimiters, instruction hijacking, role tags.
+  </Card>
+  <Card title="Jailbreaks" icon="lock-open">
+    DAN, developer mode, persona attacks, 35+ jailbreak templates.
+  </Card>
+  <Card title="Data exfiltration" icon="arrow-up-from-bracket">
+    Prompt extraction, markdown image leaks, DNS tunneling, side channels.
+  </Card>
+  <Card title="Tool abuse" icon="wrench">
+    Shell, SQL injection, path traversal, sensitive file reads.
+  </Card>
+  <Card title="Obfuscation" icon="eye-slash">
+    Homoglyphs, zero-width, Base64, hex, ROT13, leetspeak.
+  </Card>
+  <Card title="Indirect injection" icon="arrows-turn-to-dots">
+    RAG poisoning, tool output injection, document payloads.
+  </Card>
+  <Card title="MCP attacks" icon="plug">
+    Tool poisoning, server spoofing, sampling injection, STDIO command injection.
+  </Card>
+  <Card title="Supply chain" icon="cubes">
+    OAuth manipulation, malicious LLM routers, CI/CD agent injection, malicious project files.
+  </Card>
+</CardGroup>
+
+## All 51 categories
+
+```
+prompt_injection           jailbreak                 role_hijack
+prompt_extraction          system_override           data_exfiltration
+markdown_exfil             dns_exfil                 side_channel
+tool_abuse                 shell_injection           sql_injection
+path_traversal             sensitive_file_access     env_exfil
+social_engineering         identity_concealment      gaslighting
+false_authority            obfuscation               homoglyph
+zero_width                 base64_payload            hex_payload
+rot13_payload              leetspeak                 indirect_injection
+rag_poisoning              tool_output_injection     few_shot_poisoning
+visual_deception           html_hidden               markdown_link_mismatch
+latex_phantom              multilang_injection       cjk_injection
+arabic_injection           ai_phishing               qr_phishing
+sybil                      coordinated_voting        side_channel
+beaconing                  mcp_tool_poisoning        mcp_server_spoofing
+mcp_sampling_injection     mcp_command_injection     cicd_injection
+credential_exfiltration    llm_router_tampering      semantic_kernel_rce
+websocket_hijack           trustfall_project_file
+```
+
+## Quality controls
+
+| Control | Result |
+|---|---|
+| ReDoS audit | 0 risky patterns |
+| Dead pattern audit | 120 active / 177 dead removed in v13.6 |
+| False-positive corpus | 118+ benign inputs, 0% FP rate |
+| Real-world F1 | 0.988 on HackAPrompt + TensorTrust + research |
+| Embedded F1 | 1.000 on BIPIA/HackAPrompt/MCPTox/Multilingual/Stealth |
+
+## Adding your own
+
+Use the plugin system to add custom patterns without forking:
+
+```javascript
+const { AgentShield, PluginRegistry } = require('agentshield-sdk');
+
+PluginRegistry.register({
+  name: 'my-pattern',
+  detect(text) {
+    if (/<my-internal-tag>/i.test(text)) {
+      return { category: 'internal_leak', severity: 'high' };
+    }
+    return null;
+  }
+});
+
+const shield = new AgentShield({ plugins: ['my-pattern'] });
+```
+
+Patterns run alongside the built-in 307. Same hot path, same caching.

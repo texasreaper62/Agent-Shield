@@ -1,0 +1,53 @@
+---
+title: "Threat Model"
+description: "What attacks against AI agents actually look like in 2026."
+---
+
+AI agents accept untrusted input from many sources — users, tools, retrieved documents, MCP servers, sub-agents — and most of them carry the same trust level as your system prompt. Agent Shield treats every input as potentially adversarial.
+
+## Threat categories
+
+| Category | Examples |
+|---|---|
+| **Prompt Injection** | System prompt overrides, ChatML/LLaMA delimiters, instruction hijacking |
+| **Role Hijacking** | DAN mode, developer mode, persona attacks, 35+ jailbreak templates |
+| **Data Exfiltration** | Prompt extraction, markdown image leaks, DNS tunneling, side-channel encoding |
+| **Tool Abuse** | Shell execution, SQL injection, path traversal, sensitive file access |
+| **Social Engineering** | Identity concealment, urgency + authority, gaslighting, false pre-approval |
+| **Obfuscation** | Unicode homoglyphs, zero-width chars, Base64, hex, ROT13, leetspeak |
+| **Indirect Injection** | RAG poisoning, tool output injection, email/document payloads, few-shot poisoning |
+| **Visual Deception** | Hidden HTML/CSS content, LaTeX phantom commands, rendering differentials |
+| **Multi-Language** | CJK, Arabic, Cyrillic, Hindi + 15 more |
+| **AI Phishing** | Fake AI login, QR phishing, MFA harvesting, credential urgency |
+| **Sybil Attacks** | Coordinated fake agents, voting collusion, behavioral clustering |
+| **Side Channels** | DNS exfiltration, timing-based encoding, beaconing |
+| **MCP Attacks** | Tool poisoning, server spoofing, sampling injection, STDIO command injection |
+| **Supply Chain** | OAuth flow manipulation, malicious LLM routers, CI/CD agent injection |
+
+## Where attacks enter
+
+<CardGroup cols={2}>
+  <Card title="User input" icon="user">
+    Direct prompts, chat messages, form fields. The classic surface.
+  </Card>
+  <Card title="Tool outputs" icon="wrench">
+    Anything a tool returns is untrusted — including search results, file contents, API responses.
+  </Card>
+  <Card title="Retrieved documents" icon="database">
+    RAG chunks, vector store hits, web fetches. Indirect injection's home turf.
+  </Card>
+  <Card title="Cross-agent traffic" icon="arrows-left-right">
+    Sub-agent outputs, MCP server responses, delegated tasks. Trust does not transit.
+  </Card>
+</CardGroup>
+
+## Real-world threat data
+
+Agent Shield's detection corpus includes:
+
+- **HackAPrompt competition** — 600k+ adversarial prompts from the largest public prompt-injection competition.
+- **TensorTrust** — community red-team dataset.
+- **Published research** — arXiv papers on indirect injection, RAG poisoning, MCP attacks.
+- **Active CVEs** — 44 tracked CVEs from 2025-2026, including Flowise (CVSS 10.0), AWS MCP RCE, Azure SRE Agent, FastGPT, and Cline Kanban.
+
+F1 score on this real-world corpus: **0.988**.

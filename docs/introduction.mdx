@@ -1,0 +1,35 @@
+---
+title: "Introduction"
+description: "Security middleware for AI agents — zero-dependency, local-only, drop-in."
+---
+
+Agent Shield is a security SDK for AI agents. It scans inputs, outputs, tool calls, and retrieved context for prompt injection, data exfiltration, tool poisoning, confused-deputy attacks, and 40+ other AI-specific threats. All detection runs locally — no API keys, no cloud calls, no data leaves your environment.
+
+```bash
+npm install agentshield-sdk
+```
+
+## What you get
+
+<CardGroup cols={2}>
+  <Card title="307 detection patterns" icon="shield">
+    51 categories — prompt injection, jailbreaks, RAG poisoning, MCP attacks, visual deception, side channels.
+  </Card>
+  <Card title="F1 0.988 real-world" icon="chart-line">
+    On HackAPrompt, TensorTrust, and published security research. F1 1.000 on embedded benchmarks.
+  </Card>
+  <Card title="< 0.4ms latency" icon="bolt">
+    Local regex + 35-feature logistic regression + k-NN ensemble. 151x speedup with LRU cache.
+  </Card>
+  <Card title="Zero dependencies" icon="box">
+    Vanilla Node.js (>=16). Drops into any agent pipeline. Python, Go, Rust, and WASM SDKs available.
+  </Card>
+</CardGroup>
+
+## Where it fits
+
+Agent Shield sits between your agent and the outside world. It works with the Anthropic SDK, OpenAI SDK (including the new `@openai/agents` SDK), LangChain, MCP servers, Express, Next.js, Vercel AI SDK, and Cloudflare Workers — usually as a one-line wrapper.
+
+<Card title="Quickstart" icon="rocket" href="/quickstart">
+  Get a protected agent running in 3 lines.
+</Card>

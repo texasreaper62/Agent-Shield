@@ -1,0 +1,78 @@
+---
+title: "Quickstart"
+description: "From npm install to a protected AI agent in 5 minutes."
+---
+
+<Steps>
+  <Step title="Install">
+    ```bash
+    npm install agentshield-sdk
+    ```
+    Zero dependencies. No API keys. Nothing to configure on first run.
+  </Step>
+
+  <Step title="Protect a basic agent (3 lines)">
+    ```javascript
+    const { AgentShield } = require('agentshield-sdk');
+    const shield = new AgentShield({ blockOnThreat: true });
+
+    const result = shield.scanInput(userMessage);
+    if (result.blocked) return 'This input was blocked for safety reasons.';
+    ```
+    You now have real-time protection against 307 attack patterns across 51 categories, in 19 languages.
+  </Step>
+
+  <Step title="Pick a sensitivity preset">
+    ```javascript
+    const { getPreset, AgentShield } = require('agentshield-sdk');
+
+    const config = getPreset('chatbot');
+    // Presets: 'chatbot' | 'coding_agent' | 'rag_pipeline' | 'customer_support'
+    const shield = new AgentShield(config);
+    ```
+  </Step>
+
+  <Step title="Verify it works">
+    ```bash
+    # Scan a single payload
+    npx agent-shield scan "ignore all previous instructions"
+
+    # Run the built-in demo
+    npx agent-shield demo
+
+    # Red team your configured agent
+    npx agent-shield redteam
+    ```
+  </Step>
+</Steps>
+
+## Custom configuration
+
+```javascript
+const shield = new AgentShield({
+  sensitivity: 'high',            // 'low' | 'medium' | 'high'
+  blockOnThreat: true,            // Auto-block dangerous inputs
+  blockThreshold: 'high',         // Minimum severity to block
+  logging: true,
+  onThreat: (result) => {
+    metrics.increment('agent_shield.threat', {
+      category: result.threats[0]?.category
+    });
+  },
+  dangerousTools: ['bash', 'exec', 'eval'],
+  sensitiveFilePatterns: [/\.env$/i, /secrets\./i]
+});
+```
+
+## Pick your integration
+
+<CardGroup cols={2}>
+  <Card title="Anthropic / Claude" href="/integrations/anthropic" icon="a" />
+  <Card title="OpenAI + Agents SDK" href="/integrations/openai" icon="o" />
+  <Card title="LangChain" href="/integrations/langchain" icon="link" />
+  <Card title="MCP servers" href="/integrations/mcp" icon="plug" />
+  <Card title="Express" href="/integrations/express" icon="server" />
+  <Card title="Next.js Edge" href="/integrations/nextjs" icon="n" />
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai" icon="triangle" />
+  <Card title="Cloudflare Workers" href="/integrations/cloudflare" icon="cloud" />
+</CardGroup>

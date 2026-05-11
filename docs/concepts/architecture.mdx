@@ -1,0 +1,68 @@
+---
+title: "Architecture"
+description: "How Agent Shield's detection pipeline works."
+---
+
+Agent Shield is a layered detection pipeline. Each layer is fast on its own; the ensemble catches what any single layer would miss. All layers run locally — no network calls, no external dependencies.
+
+## The pipeline
+
+<Steps>
+  <Step title="Normalization">
+    Unicode NFKC, homoglyph folding, zero-width character stripping, case normalization. Safe normalization preserves the original for reporting but feeds a canonical form to detectors.
+  </Step>
+
+  <Step title="Cache lookup">
+    1000-entry LRU cache keyed on `(source, sensitivity, text)`. Cached scans complete in ~1μs (151x faster than cold). Inputs >2048 chars bypass.
+  </Step>
+
+  <Step title="Pattern matching">
+    307 regex patterns across 51 categories. Compiled at module load. ReDoS-audited (0 risky patterns).
+  </Step>
+
+  <Step title="Micro-model classification">
+    35-feature logistic regression + TF-IDF k-NN ensemble. Trained on 200+ samples, precomputed weights, <2ms construction.
+  </Step>
+
+  <Step title="Evasion resistance">
+    5 layers: encoding chain detection (Base64/hex/ROT13), homoglyph normalization, zero-width detection, language detection (19 languages), chunked scanning for long inputs.
+  </Step>
+
+  <Step title="Context scoring">
+    Multi-turn conversation analyzer. Detects crescendo attacks, role-switch attempts, and fragmentation across messages.
+  </Step>
+
+  <Step title="Response">
+    Configurable: block, sanitize, redirect, log-only. Custom `onThreat` callback runs for every detection.
+  </Step>
+</Steps>
+
+## Module map
+
+| Module | Role |
+|---|---|
+| `detector-core.js` | Standalone pattern engine. No DOM, no network. |
+| `index.js` | `AgentShield` class — config, stats, blocking. |
+| `main.js` | Unified re-export of all 390 symbols. |
+| `middleware.js` | `wrapAgent`, `shieldTools`, Express middleware. |
+| `integrations.js` | Anthropic, OpenAI, LangChain, Vercel AI wrappers. |
+| `micro-model.js` | Embedded ML classifier. |
+| `mcp-guard.js` | 17-layer MCP middleware. |
+| `self-training.js` | Adversarial self-training loop. |
+| `intent-graph.js` | Causal intent tracing. |
+| `semantic-isolation.js` | Provenance-tagged prompt parameterization. |
+| `message-integrity.js` | HMAC-signed conversation chain. |
+| `sota-benchmark.js` | BIPIA/HackAPrompt/MCPTox harness. |
+
+The full module list (93 modules, 390 exports) lives in [`CLAUDE.md`](https://github.com/texasreaper62/Agent-Shield/blob/main/CLAUDE.md#project-structure).
+
+## Performance characteristics
+
+| Workload | p50 | p99 |
+|---|---|---|
+| Short benign input (warm cache) | ~1μs | ~3μs |
+| Short benign input (cold) | ~190μs | ~400μs |
+| Long benign document | ~50μs | ~112μs |
+| Short malicious input | ~250μs | ~600μs |
+
+Numbers from `npm run benchmark` on Node 20 / M2. See [`CHANGELOG.md`](https://github.com/texasreaper62/Agent-Shield/blob/main/CHANGELOG.md) for the full benchmark methodology.

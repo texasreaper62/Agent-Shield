@@ -1,0 +1,102 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Agent Shield",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0B1F3A",
+    "light": "#3B6EB5",
+    "dark": "#0B1F3A",
+    "anchors": {
+      "from": "#0B1F3A",
+      "to": "#3B6EB5"
+    },
+    "background": {
+      "dark": "#06101F"
+    }
+  },
+  "theme": "venus",
+  "modeToggle": {
+    "default": "dark"
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/texasreaper62/Agent-Shield"
+    },
+    {
+      "name": "npm",
+      "url": "https://www.npmjs.com/package/agentshield-sdk"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Install",
+    "url": "https://www.npmjs.com/package/agentshield-sdk"
+  },
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/texasreaper62/Agent-Shield"
+    },
+    {
+      "name": "Changelog",
+      "icon": "list",
+      "url": "https://github.com/texasreaper62/Agent-Shield/blob/main/CHANGELOG.md"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "introduction",
+        "quickstart"
+      ]
+    },
+    {
+      "group": "Concepts",
+      "pages": [
+        "concepts/threat-model",
+        "concepts/architecture"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/anthropic",
+        "integrations/openai",
+        "integrations/langchain",
+        "integrations/mcp",
+        "integrations/express",
+        "integrations/cloudflare",
+        "integrations/nextjs",
+        "integrations/vercel-ai"
+      ]
+    },
+    {
+      "group": "Patterns",
+      "pages": [
+        "patterns/overview"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/agent-shield",
+        "api-reference/scan-text"
+      ]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        "examples/index"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/texasreaper62/Agent-Shield"
+  }
+}

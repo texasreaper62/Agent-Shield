@@ -1,0 +1,78 @@
+---
+title: "OpenAI + Agents SDK"
+description: "Shield the OpenAI client and the new @openai/agents SDK."
+---
+
+Two integrations: `shieldOpenAIClient` for the classic `openai` SDK, and `shieldOpenAIAgent` for the `@openai/agents` SDK (April 2026) — plugs in as native guardrails.
+
+## OpenAI SDK
+
+<CodeGroup>
+```javascript Install
+npm install openai agentshield-sdk
+```
+
+```javascript Wrap the client
+const OpenAI = require('openai');
+const { shieldOpenAIClient } = require('agentshield-sdk');
+
+const client = shieldOpenAIClient(new OpenAI(), {
+  blockOnThreat: true,
+  sensitivity: 'high'
+});
+
+const response = await client.chat.completions.create({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: userMessage }]
+});
+```
+</CodeGroup>
+
+Scans every `messages[].content` on input and every choice on output. Supports `chat.completions.create`, `responses.create`, and streaming.
+
+## OpenAI Agents SDK
+
+The `@openai/agents` SDK (GA April 2026) ships a Guardrail primitive. Agent Shield plugs in natively as input, output, and tool guardrails.
+
+```javascript
+const { Agent, run } = require('@openai/agents');
+const { shieldOpenAIAgent } = require('agentshield-sdk');
+
+const { inputGuardrail, outputGuardrail, toolGuardrail, shield } = shieldOpenAIAgent({
+  sensitivity: 'high',
+  blockOnThreat: true,
+  blockThreshold: 'high',
+  pii: true,
+  onThreat: (result) => {
+    console.log('[shield] blocked:', result.threats[0]?.category);
+  }
+});
+
+const agent = new Agent({
+  name: 'Assistant',
+  instructions: 'You are a helpful assistant',
+  inputGuardrails: [inputGuardrail],
+  outputGuardrails: [outputGuardrail],
+  toolGuardrails: [toolGuardrail]
+});
+
+const result = await run(agent, userInput);
+```
+
+## Guardrail return shapes
+
+<Tabs>
+  <Tab title="inputGuardrail">
+    Runs before the agent sees user input. Returns `{ tripwireTriggered: boolean, output: { category, severity, ... } }` matching the SDK's `GuardrailFunctionOutput` interface.
+  </Tab>
+  <Tab title="outputGuardrail">
+    Runs on agent output before it reaches the user. Blocks prompt extraction, PII leaks, and policy violations.
+  </Tab>
+  <Tab title="toolGuardrail">
+    Runs on every tool call. Validates tool name, arguments, and return value against the Agent Shield policy.
+  </Tab>
+</Tabs>
+
+## Working example
+
+See [`examples/openai-agents-sdk.js`](https://github.com/texasreaper62/Agent-Shield/blob/main/examples/openai-agents-sdk.js) — runs end-to-end with a mock of `@openai/agents` so you can test without an API key.

@@ -1,0 +1,98 @@
+---
+title: "Express"
+description: "Scan every request body with one middleware line."
+---
+
+`expressMiddleware` scans request bodies on configured routes and blocks (or annotates) requests that contain prompt injection or other AI threats.
+
+## Install
+
+```bash
+npm install express agentshield-sdk
+```
+
+## Usage
+
+<CodeGroup>
+```javascript Basic
+const express = require('express');
+const { expressMiddleware } = require('agentshield-sdk');
+
+const app = express();
+app.use(express.json());
+
+app.use(expressMiddleware({
+  blockOnThreat: true,
+  maxBodySize: 1024 * 1024  // 1MB default
+}));
+
+app.post('/api/chat', async (req, res) => {
+  // If we get here, req.body has been scanned and cleared
+  const reply = await callLLM(req.body.message);
+  res.json({ reply });
+});
+
+app.listen(3000);
+```
+
+```javascript Per-route
+app.post(
+  '/api/chat',
+  expressMiddleware({ blockOnThreat: true, sensitivity: 'high' }),
+  async (req, res) => { /* ... */ }
+);
+```
+
+```javascript Log-only
+app.use(expressMiddleware({
+  blockOnThreat: false,
+  onThreat: (req, result) => {
+    auditLog.write({
+      route: req.path,
+      ip: req.ip,
+      category: result.threats[0]?.category
+    });
+  }
+}));
+```
+</CodeGroup>
+
+## What it inspects
+
+| Source | Scanned |
+|---|---|
+| `req.body` | Top-level string fields, recursively up to depth 4 |
+| `req.query` | All query string values |
+| `req.headers['x-prompt']` | Custom prompt header if present |
+
+## Response on block
+
+By default, blocked requests get `403 Forbidden` with a JSON body:
+
+```json
+{
+  "error": "Blocked by Agent Shield",
+  "category": "prompt_injection",
+  "severity": "high",
+  "requestId": "as-req-7c8a9..."
+}
+```
+
+Customize via `onBlock`:
+
+```javascript
+app.use(expressMiddleware({
+  blockOnThreat: true,
+  onBlock: (req, res, result) => {
+    res.status(400).json({ message: 'Sorry, I cannot help with that.' });
+  }
+}));
+```
+
+## Body size limit
+
+`maxBodySize` defaults to 1MB. Set it explicitly when handling large RAG payloads — but be aware that scanning >100KB inputs takes longer (see [Architecture](/concepts/architecture)).
+
+## Full example
+
+See [`examples/express-server.js`](https://github.com/texasreaper62/Agent-Shield/blob/main/examples/express-server.js) for a runnable server with a real LLM call.

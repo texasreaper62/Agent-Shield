@@ -1,0 +1,84 @@
+---
+title: "Anthropic / Claude SDK"
+description: "Wrap the Anthropic client with one line."
+---
+
+`shieldAnthropicClient` wraps `@anthropic-ai/sdk` so every `messages.create` call is scanned on the way in and the way out. No code changes downstream.
+
+## Install
+
+```bash
+npm install @anthropic-ai/sdk agentshield-sdk
+```
+
+## Usage
+
+<CodeGroup>
+```javascript Basic
+const Anthropic = require('@anthropic-ai/sdk');
+const { shieldAnthropicClient } = require('agentshield-sdk');
+
+const client = shieldAnthropicClient(new Anthropic(), {
+  blockOnThreat: true
+});
+
+const response = await client.messages.create({
+  model: 'claude-opus-4-7',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: userMessage }]
+});
+```
+
+```javascript With callbacks
+const client = shieldAnthropicClient(new Anthropic(), {
+  sensitivity: 'high',
+  blockOnThreat: true,
+  blockThreshold: 'high',
+  pii: true,
+  onThreat: (result) => {
+    console.warn('[shield]', result.threats[0].category, result.threats[0].severity);
+  }
+});
+```
+
+```javascript Streaming
+const stream = await client.messages.stream({
+  model: 'claude-opus-4-7',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: userMessage }]
+});
+
+for await (const event of stream) {
+  // Stream chunks are scanned in-flight via stream-scanner.js
+}
+```
+</CodeGroup>
+
+## What gets scanned
+
+<Tabs>
+  <Tab title="Inputs">
+    Every `messages[].content` string is scanned before the API call. Multi-modal content (images, documents) is also routed through the multimodal scanner.
+  </Tab>
+  <Tab title="Outputs">
+    Every response `content[].text` is scanned before being returned. Detects prompt extraction, data leakage, and policy violations.
+  </Tab>
+  <Tab title="Tool use">
+    `tool_use` blocks are validated against `dangerousTools` and the tool schema is checked for poisoning.
+  </Tab>
+</Tabs>
+
+## Blocking behavior
+
+When `blockOnThreat: true`, blocked requests throw an `AgentShieldBlockedError` with the threat details. Wrap in try/catch or use the `onThreat` callback to return a safe fallback.
+
+```javascript
+try {
+  const response = await client.messages.create({ ... });
+} catch (err) {
+  if (err.name === 'AgentShieldBlockedError') {
+    return { error: 'Blocked by policy', category: err.threat.category };
+  }
+  throw err;
+}
+```

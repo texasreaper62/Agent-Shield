@@ -1,0 +1,39 @@
+# Agent Shield - local demo / dev compose file.
+#
+# Quick start:
+#   docker compose up demo            # one-shot live attack simulation
+#   docker compose up shield          # long-running HTTP sidecar on :3000
+#
+# Both services build from the repo-root Dockerfile.
+
+services:
+  # Long-running HTTP sidecar: POST /scan, GET /health, etc.
+  shield:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/texasreaper62/agent-shield:latest
+    container_name: agent-shield
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # One-shot: runs `npx agent-shield demo` (live attack simulation against the engine).
+  demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/texasreaper62/agent-shield:latest
+    container_name: agent-shield-demo
+    profiles: ["demo"]
+    entrypoint: ["node", "bin/agent-shield.js"]
+    command: ["demo"]

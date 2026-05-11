@@ -30,6 +30,20 @@ pub enum Category {
     MaliciousPlugin,
     /// AI-specific phishing, deepfake, and credential harvesting.
     AIPhishing,
+    /// CI/CD agent injection (PR titles, issue comments, Comment-and-Control attack).
+    CicdInjection,
+    /// Credential exfiltration (API keys, OAuth tokens, /proc/environ reads).
+    CredentialExfiltration,
+    /// MCP sampling injection (Unit 42 attack vectors).
+    McpSamplingInjection,
+    /// LLM API router tampering (malicious proxies, base URL override).
+    LlmRouterTampering,
+    /// MCP STDIO command injection (CVE-2026-30623).
+    McpCommandInjection,
+    /// LLM output being passed to code execution sinks (OWASP ASI05).
+    CodeExecutionSink,
+    /// Cross-agent injection (WebSocket hijacking, agent-to-agent attacks).
+    CrossAgentInjection,
 }
 
 impl fmt::Display for Category {
@@ -44,6 +58,13 @@ impl fmt::Display for Category {
             Category::PromptInjection => write!(f, "prompt_injection"),
             Category::MaliciousPlugin => write!(f, "malicious_plugin"),
             Category::AIPhishing => write!(f, "ai_phishing"),
+            Category::CicdInjection => write!(f, "cicd_injection"),
+            Category::CredentialExfiltration => write!(f, "credential_exfiltration"),
+            Category::McpSamplingInjection => write!(f, "mcp_sampling_injection"),
+            Category::LlmRouterTampering => write!(f, "llm_router_tampering"),
+            Category::McpCommandInjection => write!(f, "mcp_command_injection"),
+            Category::CodeExecutionSink => write!(f, "code_execution_sink"),
+            Category::CrossAgentInjection => write!(f, "cross_agent_injection"),
         }
     }
 }
@@ -920,6 +941,119 @@ pub fn get_patterns() -> Vec<Pattern> {
             severity: Severity::High,
             category: Category::AIPhishing,
             description: "Text claims a subscription expired and asks to renew  -  billing phishing.".into(),
+        },
+
+        // ============================================================
+        // v14.1 (April 2026): Comment-and-Control, OAuth exfil, MCP
+        // ============================================================
+
+        // CI/CD Agent Injection (Comment-and-Control attack)
+        Pattern {
+            regex: r#"(?i)(?:^|\n)\s*(?:<!--\s*)?(?:ignore|override|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules|context)[\s\S]{0,200}(?:add\s+(?:a\s+)?comment|create\s+(?:a\s+)?(?:issue|pr|pull\s*request)|push\s+to|commit\s+to|post\s+to|curl\s+|fetch\s*\(|http|GITHUB_TOKEN|SECRET|API.KEY)"#.into(),
+            severity: Severity::Critical,
+            category: Category::CicdInjection,
+            description: "Prompt injection in PR/issue comments with exfiltration intent (Comment-and-Control, April 2026).".into(),
+        },
+        Pattern {
+            regex: r#"(?i)(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b[\s\S]{0,100}(?:exfiltrate|steal|extract|leak|send\s+to|post\s+to|upload\s+to)"#.into(),
+            severity: Severity::Critical,
+            category: Category::CicdInjection,
+            description: "@-mention of AI coding agent with credential theft intent.".into(),
+        },
+
+        // Credential Exfiltration
+        Pattern {
+            regex: r#"(?i)/proc/(?:[0-9*]+|self)/(?:environ|cmdline|maps)"#.into(),
+            severity: Severity::Critical,
+            category: Category::CredentialExfiltration,
+            description: "Process environment read used by Copilot secret-theft bypass.".into(),
+        },
+        Pattern {
+            regex: r#"(?i)(?:ANTHROPIC|OPENAI|GITHUB|AWS|AZURE|GCP|GOOGLE)_(?:API_KEY|SECRET|TOKEN|ACCESS_KEY)\s*[=:]\s*\S{10,}"#.into(),
+            severity: Severity::Critical,
+            category: Category::CredentialExfiltration,
+            description: "API key or secret from major provider exposed in output.".into(),
+        },
+        Pattern {
+            regex: r#"(?i)(?:oauth[_-]?token|bearer[_-]?token|access[_-]?token|refresh[_-]?token|id[_-]?token)\s*[=:]\s*["']?(?:ya29[.\-]|eyJ|gho_|ghp_|ghu_|github_pat_|sk-|sk-ant-|xox[bpas]-|AKIA)\S{10,}"#.into(),
+            severity: Severity::Critical,
+            category: Category::CredentialExfiltration,
+            description: "OAuth/bearer token with provider-specific prefix.".into(),
+        },
+
+        // MCP Sampling Injection (Unit 42)
+        Pattern {
+            regex: r#"(?i)(?:sampling|createMessage|create_message)\s*[\(\{][\s\S]{0,300}(?:ignore|override|system|instruction|hidden|inject)"#.into(),
+            severity: Severity::High,
+            category: Category::McpSamplingInjection,
+            description: "MCP sampling request with embedded injection (Unit 42 April 2026).".into(),
+        },
+
+        // LLM Router Tampering
+        // Note: JS version uses negative lookahead to exclude legitimate hosts.
+        // Rust regex crate doesn't support lookahead, so we match common malicious patterns.
+        Pattern {
+            regex: r#"(?i)(?:OPENAI_BASE_URL|ANTHROPIC_BASE_URL|API_BASE|base_url)\s*[=:]\s*["']?https?://[^/\s]*(?:evil|attacker|malicious|proxy|relay|forward|hijack|exfil|steal)"#.into(),
+            severity: Severity::High,
+            category: Category::LlmRouterTampering,
+            description: "LLM API base URL with suspicious hostname (arXiv 2604.08407).".into(),
+        },
+
+        // MCP STDIO Command Injection (CVE-2026-30623)
+        Pattern {
+            regex: r#"(?i)(?:npx\s+-c|npx\s+--command)\s+["']?[\s\S]{0,200}(?:curl|wget|nc\b|ncat|bash|sh\b|python|node\s+-e|eval)"#.into(),
+            severity: Severity::Critical,
+            category: Category::McpCommandInjection,
+            description: "npx -c command injection via MCP STDIO (CVE-2026-30623, 200K+ servers).".into(),
+        },
+
+        // Code Execution Sinks (OWASP ASI05)
+        Pattern {
+            regex: r#"(?i)(?:^|[\s;])(?:eval|Function)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)"#.into(),
+            severity: Severity::Critical,
+            category: Category::CodeExecutionSink,
+            description: "LLM output fed directly to eval()/Function() (OWASP ASI05).".into(),
+        },
+        Pattern {
+            regex: r#"(?i)(?:child_process|subprocess|os\.system|os\.popen|exec|execSync|spawn)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)"#.into(),
+            severity: Severity::Critical,
+            category: Category::CodeExecutionSink,
+            description: "LLM output passed to shell execution functions.".into(),
+        },
+
+        // ============================================================
+        // v14.2 (May 2026): TrustFall, Semantic Kernel, WebSocket
+        // ============================================================
+
+        // TrustFall malicious project files (Adversa AI May 2026)
+        Pattern {
+            regex: r#"(?i)(?:\.claude|\.cursor|\.windsurf|\.copilot)/(?:config|settings|rules|hooks|commands)[\s\S]{0,200}(?:curl|wget|exec|bash|sh\s|node\s+-e|python\s+-c|nc\s)"#.into(),
+            severity: Severity::Critical,
+            category: Category::CicdInjection,
+            description: "TrustFall: malicious AI coding agent config files with auto-exec.".into(),
+        },
+        Pattern {
+            regex: r#"(?i)(?:^|\n)\s*(?:hook|onStart|preCommand|postCommand|autoexec)\s*[:=]\s*["']?[\s\S]{0,150}(?:curl|wget|nc\s|bash\s+-c|exec\s*\()"#.into(),
+            severity: Severity::High,
+            category: Category::CicdInjection,
+            description: "Auto-execution hooks in AI agent project config files.".into(),
+        },
+
+        // Semantic Kernel RCE (CVE-2026-25592 / 26030)
+        Pattern {
+            regex: r#"(?i)(?:kernel|sk|SemanticKernel)\.(?:invoke|run|execute|RunAsync)\s*\([^)]{0,200}(?:user|prompt|input|untrusted|external)"#.into(),
+            severity: Severity::High,
+            category: Category::CodeExecutionSink,
+            description: "Semantic Kernel function invoked with untrusted input (CVE-2026-25592/26030).".into(),
+        },
+
+        // WebSocket Cross-Origin Hijacking (CVE-2026-44211, CVE-2026-32173)
+        // Note: JS version uses negative lookahead. Rust matches wildcard origin without localhost exclusion.
+        Pattern {
+            regex: r#"(?i)new\s+WebSocket\s*\([^)]*["']wss?://[^"']*\.[^"']{2,}["'][^)]*\)[\s\S]{0,300}(?:Origin|origin)\s*[:=]\s*["']?\*"#.into(),
+            severity: Severity::High,
+            category: Category::CrossAgentInjection,
+            description: "WebSocket cross-origin hijacking (CVE-2026-44211 Cline, CVE-2026-32173 Azure SRE).".into(),
         },
     ]
 }

@@ -1,8 +1,15 @@
 .vscode/**
 .vscode-test/**
 test/**
+src/**
+**/*.ts
+**/*.map
+**/tsconfig.json
 .gitignore
 .eslintrc.json
+.eslintrc.js
+eslint.config.js
 *.vsix
 node_modules/**
 .DS_Store
+.git/**
