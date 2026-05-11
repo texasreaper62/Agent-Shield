@@ -125,7 +125,11 @@ class TestScanText(unittest.TestCase):
 
     def test_pattern_count(self):
         patterns = get_patterns()
-        self.assertEqual(len(patterns), 179)
+        # v14.x sync: parity with JS detector-core (51 categories).
+        # Exact count drifts slightly across releases; gate on lower bound.
+        self.assertGreaterEqual(len(patterns), 300)
+        categories = {p['category'] for p in patterns}
+        self.assertGreaterEqual(len(categories), 50)
 
 
 class TestGetPatterns(unittest.TestCase):

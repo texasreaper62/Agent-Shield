@@ -4,6 +4,19 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [14.2.2] - 2026-05-11
+
+### Python SDK Pattern Parity (179 → 330 patterns, 18 → 51 categories)
+
+The Python SDK now has full pattern parity with the canonical Node.js detector. AI/ML world is Python-first; this closes the largest single adoption gap.
+
+- Added 151 patterns ported from `src/detector-core.js`
+- New Python category coverage: cicd_injection, credential_exfiltration, mcp_sampling_injection, llm_router_tampering, mcp_command_injection, code_execution_sink, cross_agent_injection, indirect_injection, policy_puppetry, path_traversal, config_poisoning, mcp_sampling_abuse, resource_exhaustion, covert_tool_invocation, semantic_chaining, autonomous_jailbreak, multi_turn_grooming, context_corruption, multimodal_injection, symbolic_injection, budget_drain, localhost_exposure, judge_bypass, encoding_evasion, url_prefill_injection, cross_client_leak, log_to_leak, tool_poisoning, reconnaissance, schema_poisoning, supply_chain, ssrf, query_injection
+- Bumped Python package version: `agentshield` 7.2.1 → 14.2.2
+- All v14.1 + v14.2 attack patterns verified working in Python (10/10 manual attack tests pass)
+- All 47 existing Python unit tests still pass
+- Test assertion updated from hardcoded count to dynamic lower-bound (≥300 patterns, ≥50 categories)
+
 ## [14.2.0] - 2026-05-11
 
 ### May 2026 Threat Response + Performance + DX
