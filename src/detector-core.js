@@ -19,6 +19,38 @@ let _nativeScanner = null;
 try { _nativeScanner = require('./native-scanner'); } catch { /* optional */ }
 
 // =========================================================================
+// LRU CACHE FOR REPEATED INPUTS
+// =========================================================================
+
+/** Maximum cache size (entries). */
+const SCAN_CACHE_MAX = 1000;
+
+/** Maximum input length to cache (avoid bloating memory with large inputs). */
+const SCAN_CACHE_MAX_INPUT_LEN = 2048;
+
+/** @type {Map<string, object>} */
+const _scanCache = new Map();
+
+/** Move key to most-recent position. */
+const _cacheTouch = (key) => {
+  const value = _scanCache.get(key);
+  if (value !== undefined) {
+    _scanCache.delete(key);
+    _scanCache.set(key, value);
+  }
+  return value;
+};
+
+/** Insert with LRU eviction. */
+const _cachePut = (key, value) => {
+  if (_scanCache.size >= SCAN_CACHE_MAX) {
+    const oldest = _scanCache.keys().next().value;
+    if (oldest !== undefined) _scanCache.delete(oldest);
+  }
+  _scanCache.set(key, value);
+};
+
+// =========================================================================
 // PERFORMANCE
 // =========================================================================
 
@@ -2530,6 +2562,40 @@ const INJECTION_PATTERNS = [
     description: 'Detects LLM output being passed directly to eval() or Function()',
     detail: 'Code execution sink: LLM output fed to eval()/Function() allows prompt injection to achieve arbitrary code execution (OWASP ASI05)'
   },
+
+  // --- TrustFall: Malicious Project File Injection (Adversa AI, May 2026) ---
+  {
+    regex: /(?:\.claude|\.cursor|\.windsurf|\.copilot)\/(?:config|settings|rules|hooks|commands)[\s\S]{0,200}(?:curl|wget|exec|bash|sh\s|node\s+-e|python\s+-c|nc\s)/i,
+    severity: 'critical',
+    category: 'cicd_injection',
+    description: 'Detects malicious AI coding agent config files that trigger one-keypress compromise',
+    detail: 'TrustFall attack (Adversa AI, May 2026): malicious project files in .claude/, .cursor/, .windsurf/ config directories execute commands on agent invocation. Exfiltrates CI environment variables.'
+  },
+  {
+    regex: /(?:^|\n)\s*(?:hook|onStart|preCommand|postCommand|autoexec)\s*[:=]\s*["\']?[\s\S]{0,150}(?:curl|wget|nc\s|bash\s+-c|exec\s*\()/i,
+    severity: 'high',
+    category: 'cicd_injection',
+    description: 'Detects auto-execution hooks in AI agent config files',
+    detail: 'TrustFall: hooks defined in project files trigger automatic command execution when AI coding agent loads the project'
+  },
+
+  // --- Semantic Kernel RCE (CVE-2026-25592 / 26030) ---
+  {
+    regex: /(?:kernel|sk|SemanticKernel)\.(?:invoke|run|execute|RunAsync)\s*\([^)]{0,200}(?:user|prompt|input|untrusted|external)/i,
+    severity: 'high',
+    category: 'code_execution_sink',
+    description: 'Detects Semantic Kernel function invocation with untrusted input',
+    detail: 'CVE-2026-25592/26030 (May 2026): Microsoft Semantic Kernel allows prompt injection to invoke arbitrary kernel functions, leading to RCE on the host process'
+  },
+
+  // --- WebSocket Cross-Origin Hijacking (CVE-2026-44211, CVE-2026-32173) ---
+  {
+    regex: /new\s+WebSocket\s*\(\s*["\']wss?:\/\/(?!(?:localhost|127\.0\.0\.1|0\.0\.0\.0))[^"\']*["\']\s*\)[\s\S]{0,300}(?:Origin|origin)\s*[:=]\s*["\']?\*/i,
+    severity: 'high',
+    category: 'cross_agent_injection',
+    description: 'Detects WebSocket connections with wildcard origin (cross-origin hijacking)',
+    detail: 'CVE-2026-44211 (Cline) / CVE-2026-32173 (Azure SRE Agent): WebSocket without origin validation allows cross-origin hijacking — attackers inject prompts into running agent terminals'
+  },
   {
     regex: /(?:child_process|subprocess|os\.system|os\.popen|exec|execSync|spawn)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)/i,
     severity: 'critical',
@@ -3418,6 +3484,22 @@ const scanText = (text, options = {}) => {
   }
 
   // ------------------------------------------------------------------
+  // LRU CACHE: exact-match memoization for repeated inputs
+  // ------------------------------------------------------------------
+  // RAG pipelines, batch processors, and middleware retry loops re-scan
+  // identical text constantly. A 1000-entry LRU keyed on (source|text)
+  // eliminates duplicate work for ~1μs per hit.
+  const cacheable = text.length <= SCAN_CACHE_MAX_INPUT_LEN && options.useCache !== false;
+  let cacheKey = null;
+  if (cacheable) {
+    cacheKey = source + '\x00' + sensitivity + '\x00' + text;
+    const cached = _cacheTouch(cacheKey);
+    if (cached !== undefined) {
+      return { ...cached, stats: { ...cached.stats, scanTimeMs: now() - startTime }, fromCache: true };
+    }
+  }
+
+  // ------------------------------------------------------------------
   // FAST PATH: long clean text (no attack indicators, no obfuscation)
   // ------------------------------------------------------------------
   // Benign business documents (emails, reports, etc.) often have no attack
@@ -3444,6 +3526,7 @@ const scanText = (text, options = {}) => {
     if (truncated) {
       fastResult.warnings = [`Input exceeded ${maxSize} characters and was truncated for scanning.`];
     }
+    if (cacheKey) _cachePut(cacheKey, fastResult);
     return fastResult;
   }
 
@@ -3600,6 +3683,7 @@ const scanText = (text, options = {}) => {
     result.truncated = true;
     result.warnings = [`Input exceeded ${maxSize} characters and was truncated for scanning.`];
   }
+  if (cacheKey) _cachePut(cacheKey, result);
   return result;
 };
 

@@ -307,6 +307,82 @@ const CVE_REGISTRY = Object.freeze({
       description: 'Command injection in @elgentos/magento2-dev-mcp via child_process.execAsync with unsanitized input.',
       fix: 'Upgrade magento2-dev-mcp. Sanitize all inputs before passing to child_process.'
     }
+  ],
+  'semantic-kernel': [
+    {
+      cve: 'CVE-2026-25592',
+      severity: 'high',
+      description: 'Microsoft Semantic Kernel .NET SDK <1.71.0: prompt injection invokes arbitrary kernel functions leading to RCE on host process. Disclosed by MSRC May 7, 2026.',
+      fix: 'Upgrade Semantic Kernel .NET SDK to >=1.71.0. Validate function names in kernel.invoke() calls.'
+    },
+    {
+      cve: 'CVE-2026-26030',
+      severity: 'high',
+      description: 'Microsoft Semantic Kernel Python <1.39.4: same RCE primitive as CVE-2026-25592 but in Python SDK.',
+      fix: 'Upgrade Semantic Kernel Python to >=1.39.4.'
+    }
+  ],
+  'fastgpt': [
+    {
+      cve: 'CVE-2026-42302',
+      severity: 'critical',
+      description: 'FastGPT agent-sandbox unauthenticated RCE (CVSS 9.8). code-server launched with --auth none on 0.0.0.0:8080. Published May 8, 2026.',
+      fix: 'Upgrade FastGPT to >=4.14.13. Never expose agent-sandbox endpoints without authentication.'
+    },
+    {
+      cve: 'CVE-2026-44284',
+      severity: 'high',
+      description: 'FastGPT SSRF in MCP tool URL handling. Crafted URLs reach internal services and cloud metadata endpoints.',
+      fix: 'Upgrade FastGPT. Apply Agent Shield mcp-guard SSRF firewall.'
+    },
+    {
+      cve: 'CVE-2026-42344',
+      severity: 'high',
+      description: 'FastGPT DNS rebinding bypasses isInternalAddress() check. Attacker hostname resolves to internal IP after initial validation.',
+      fix: 'Upgrade FastGPT. Pin DNS resolution per request and re-validate on connect.'
+    }
+  ],
+  'cline-kanban': [
+    {
+      cve: 'CVE-2026-44211',
+      severity: 'high',
+      description: 'Cline Kanban Server Cross-Origin WebSocket Hijacking. Missing origin validation lets attackers inject prompts into running agent terminals.',
+      fix: 'Upgrade Cline. Validate Origin header on WebSocket upgrade requests.'
+    }
+  ],
+  'azure-sre-agent': [
+    {
+      cve: 'CVE-2026-32173',
+      severity: 'high',
+      description: 'Azure SRE Agent exposed live command streams over unauthenticated WebSocket to any Entra ID user (CVSS 8.6).',
+      fix: 'Apply Azure patch. Restrict WebSocket access to authorized principals only.'
+    }
+  ],
+  'crewai': [
+    {
+      cve: 'CVE-2026-44400',
+      severity: 'high',
+      description: 'CrewAI Code Interpreter default enabled allows prompt injection → RCE chain.',
+      fix: 'Upgrade CrewAI to latest. Disable Code Interpreter by default. Apply Agent Shield shieldCrewAI wrapper.'
+    },
+    {
+      cve: 'CVE-2026-44401',
+      severity: 'high',
+      description: 'CrewAI Code Interpreter SSRF via prompt-injected URLs.',
+      fix: 'Upgrade CrewAI. Block private IP ranges in tool URLs.'
+    },
+    {
+      cve: 'CVE-2026-44402',
+      severity: 'high',
+      description: 'CrewAI Code Interpreter file-read primitive via prompt injection.',
+      fix: 'Upgrade CrewAI. Restrict filesystem access in Code Interpreter sandbox.'
+    },
+    {
+      cve: 'CVE-2026-44403',
+      severity: 'high',
+      description: 'CrewAI agent task chain prompt injection leads to unauthorized tool invocation.',
+      fix: 'Upgrade CrewAI. Use Agent Shield intent-firewall to validate cross-task transitions.'
+    }
   ]
 });
 

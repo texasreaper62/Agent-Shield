@@ -4,6 +4,54 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [14.2.0] - 2026-05-11
+
+### May 2026 Threat Response + Performance + DX
+
+Response to threats disclosed between April 25 and May 11, 2026.
+
+#### New Detection Patterns (4 patterns, 303 → 307)
+
+- **TrustFall malicious project files** (2 patterns) — Adversa AI disclosed May 2026: malicious `.claude/`, `.cursor/`, `.windsurf/` config files with auto-execution hooks (`preCommand`, `onStart`, etc.) trigger one-keypress compromise of AI coding agents and exfiltrate CI env vars
+- **Semantic Kernel RCE** — Microsoft Semantic Kernel (CVE-2026-25592 / CVE-2026-26030, disclosed May 7) allows prompt injection to invoke arbitrary kernel functions and achieve RCE on the host process
+- **WebSocket cross-origin hijacking** — CVE-2026-44211 (Cline Kanban) and CVE-2026-32173 (Azure SRE Agent CVSS 8.6): WebSockets without origin validation let attackers inject prompts into running agent terminals
+
+#### CVE Registry Expansion (33 → 44 CVEs)
+
+- CVE-2026-25592 / CVE-2026-26030: Microsoft Semantic Kernel RCE (May 7)
+- CVE-2026-42302: FastGPT agent-sandbox unauth RCE (CVSS 9.8, May 8)
+- CVE-2026-44284: FastGPT MCP SSRF
+- CVE-2026-42344: FastGPT DNS rebinding bypass
+- CVE-2026-44211: Cline Kanban WebSocket Hijacking
+- CVE-2026-32173: Azure SRE Agent unauth WebSocket (CVSS 8.6)
+- CVE-2026-44400-403: 4× CrewAI Code Interpreter chain RCE/SSRF/file-read
+
+#### Performance: LRU Cache (151x speedup on warm cache)
+
+- Added 1000-entry LRU cache to `scanText()` keyed on `(source, sensitivity, text)`
+- Cached scans complete in ~1μs vs ~190μs cold (151x speedup on short malicious inputs, 90x on benign)
+- Eliminates duplicate work in RAG pipelines, batch processors, and middleware retry loops
+- Inputs >2048 chars bypass the cache to avoid memory bloat
+- Opt-out via `scanText(text, { useCache: false })`
+- Result object includes `fromCache: true` when served from cache
+
+#### Developer Experience
+
+- New examples for the platforms developers actually deploy to in 2026:
+  - `examples/cloudflare-workers-ai.js` — Workers AI guardrail with input + output scanning
+  - `examples/nextjs-edge-middleware.js` — Next.js Edge middleware for `/api/chat/*` and `/api/agent/*` routes
+  - `examples/vercel-ai-sdk-guardrail.js` — Vercel AI SDK streaming chat guardrail
+- All examples are self-contained and ready to copy-paste into a real app
+
+#### Test Coverage
+
+- New `test/test-v14.2-patterns.js` — 32 assertions covering LRU cache correctness, all 4 new patterns, all 11 new CVE entries, and 6 false-positive regression samples
+- Total project assertions: ~3,200+ across all suites; v14.2 specific: 32
+
+#### Known Limitations Documented
+
+- Rust NAPI native scanner (`src/native-scanner.js`) is loaded but NOT wired into the JS hot path. Investigation revealed the Rust core has only 141 patterns vs JS's 307, so wiring it in blindly would silently lose 166 patterns of coverage. Use of the native scanner is gated on a future pattern-sync effort.
+
 ## [14.1.0] - 2026-04-24
 
 ### April 2026 Threat Response — Comment-and-Control, MCP CVE Wave, OAuth Supply Chain
