@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="agent-shield",
-    version="1.0.0",
+    version="14.2.2",
     author="Agent Shield Contributors",
     description="Security SDK for AI agents. Protects against prompt injection, "
                 "data exfiltration, tool abuse, and 30+ other AI-specific threats.",

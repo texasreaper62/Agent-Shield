@@ -1613,6 +1613,1455 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'category': 'prompt_extraction',
         'description': 'Text asks to repeat/copy content from above (system prompt extraction).',
     },
+
+    # --- autonomous_jailbreak (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:plan|design|craft|develop|create)\s+(?:a\s+)?(?:multi-?\s*turn|sequential|progressive|escalating)\s+(?:attack|jailbreak|bypass|exploit|strategy)\s+(?:against|targeting|for)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'autonomous_jailbreak',
+        'description': 'Text plans a multi-turn jailbreak strategy (ref Nature: LRMs achieve 97% jailbreak success).',
+    },
+
+    # --- budget_drain (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:think|reason|deliberate|analyze)\s+(?:very\s+)?(?:deeply|extensively|thoroughly|exhaustively|carefully)\s+(?:about|on|over|through)\s+(?:every|each|all)\s+(?:possible|potential|conceivable)',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'budget_drain',
+        'description': 'Text may trigger excessive reasoning loops that drain API compute budget.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:repeat|iterate|loop|recurse|analyze|process|compute|run)\s+(?:this\s+)?(?:.*?)\s+(?:at\s+least\s+)?\d{3,}\s+times',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'budget_drain',
+        'description': 'Text requests excessive iteration/repetition to drain compute resources.',
+    },
+
+    # --- cicd_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:^|\n)\s*(?:<!--\s*)?(?:ignore|override|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|rules|context)[\s\S]{0,200}(?:add\s+(?:a\s+)?comment|create\s+(?:a\s+)?(?:issue|pr|pull\s*request)|push\s+to|commit\s+to|post\s+to|curl\s+|fetch\s*\(|http|GITHUB_TOKEN|SECRET|API.KEY)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'cicd_injection',
+        'description': 'Prompt injection targeting AI coding agents via PR titles, issue comments, or review comments',
+    },
+    {
+        'regex': re.compile(
+            r'(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b[\s\S]{0,100}(?:exfiltrate|steal|extract|leak|send\s+to|post\s+to|upload\s+to)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'cicd_injection',
+        'description': 'Prompt injection mentioning AI coding agent by name with exfiltration intent',
+    },
+    {
+        'regex': re.compile(
+            r'(?:\.claude|\.cursor|\.windsurf|\.copilot)\/(?:config|settings|rules|hooks|commands)[\s\S]{0,200}(?:curl|wget|exec|bash|sh\s|node\s+-e|python\s+-c|nc\s)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'cicd_injection',
+        'description': 'Detects malicious AI coding agent config files that trigger one-keypress compromise',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:^|\n)\s*(?:hook|onStart|preCommand|postCommand|autoexec)\s*[:=]\s*["\']?[\s\S]{0,150}(?:curl|wget|nc\s|bash\s+-c|exec\s*\()""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'cicd_injection',
+        'description': 'Detects auto-execution hooks in AI agent config files',
+    },
+
+    # --- code_execution_sink (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:^|[\s;])(?:eval|Function)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'code_execution_sink',
+        'description': 'Detects LLM output being passed directly to eval() or Function()',
+    },
+    {
+        'regex': re.compile(
+            r'(?:kernel|sk|SemanticKernel)\.(?:invoke|run|execute|RunAsync)\s*\([^)]{0,200}(?:user|prompt|input|untrusted|external)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'code_execution_sink',
+        'description': 'Detects Semantic Kernel function invocation with untrusted input',
+    },
+    {
+        'regex': re.compile(
+            r'(?:child_process|subprocess|os\.system|os\.popen|exec|execSync|spawn)\s*\(\s*(?:response|output|result|completion|generated|llm|model|agent)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'code_execution_sink',
+        'description': 'Detects LLM output being passed to shell execution functions',
+    },
+
+    # --- config_poisoning (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE)\s*[=:]\s*['"]?https?:\/\/(?!api\.anthropic\.com|api\.openai\.com)[^\s'"]+""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'config_poisoning',
+        'description': 'Text overrides AI API base URL to a non-official endpoint (ref CVE-2026-21852). Potential credential theft.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:\.claude|\.cursor|\.vscode)\/(?:settings|config|mcp)\.\w+.*(?:hook|command|exec|shell|bash|script)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'config_poisoning',
+        'description': 'Text references IDE/AI tool config files with execution directives (ref CVE-2025-59536).',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:preToolCall|postToolCall|onSessionStart|afterResponse)\s*[=:]\s*['"]?(?:curl|wget|bash|sh|node|python|nc|ncat)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'config_poisoning',
+        'description': 'Text defines AI tool hooks that execute shell commands (ref CVE-2025-59536).',
+    },
+
+    # --- context_corruption (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:corrupt|poison|taint|modify|alter)\s+(?:the\s+)?(?:runtime|execution|agent)\s+(?:context|state|memory|environment)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'context_corruption',
+        'description': 'Text attempts to corrupt agent runtime context or execution state.',
+    },
+
+    # --- covert_tool_invocation (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:covert(?:ly)?|hidden|stealth(?:ily)?|silent(?:ly)?)\s+(?:invoke|call|execute|trigger|run)\s+(?:a\s+)?(?:tool|function|command|operation)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'covert_tool_invocation',
+        'description': 'Text attempts to invoke tools covertly without user awareness.',
+    },
+
+    # --- credential_exfiltration (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'\/proc\/(?:[0-9*]+|self)\/(?:environ|cmdline|maps)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'credential_exfiltration',
+        'description': 'Attempts to read process environment or command line to steal secrets',
+    },
+    {
+        'regex': re.compile(
+            r'(?:ANTHROPIC|OPENAI|GITHUB|AWS|AZURE|GCP|GOOGLE)_(?:API_KEY|SECRET|TOKEN|ACCESS_KEY)\s*[=:]\s*\S{10,}',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'credential_exfiltration',
+        'description': 'Detects API keys or secrets being included in agent output',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:oauth[_-]?token|bearer[_-]?token|access[_-]?token|refresh[_-]?token|id[_-]?token)\s*[=:]\s*["']?(?:ya29[.\-]|eyJ|gho_|ghp_|ghu_|github_pat_|sk-|sk-ant-|xox[bpas]-|AKIA)\S{10,}""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'credential_exfiltration',
+        'description': 'Detects OAuth/bearer tokens being exfiltrated through agent output',
+    },
+    {
+        'regex': re.compile(
+            r'(?:grant_type|redirect_uri|client_secret)\s*[=:]\s*\S+[\s\S]{0,200}(?:attacker|evil|malicious|exfil|leak|steal)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'credential_exfiltration',
+        'description': 'Detects OAuth flow manipulation for token theft',
+    },
+
+    # --- cross_agent_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:tell|instruct|command|direct)\s+(?:the\s+)?(?:other|next|downstream|receiving)\s+(?:agent|assistant|model)\s+(?:to\s+)?(?:ignore|override|forget|bypass|disable)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'cross_agent_injection',
+        'description': 'Text attempts to propagate injection to downstream agents in a multi-agent chain.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:when\s+)?(?:forwarding|delegating|passing)\s+(?:to|this\s+to)\s+(?:the\s+)?(?:next|other|downstream)\s+(?:agent|service).*(?:include|append|prepend|inject|add)\s+(?:these?\s+)?(?:instructions?|commands?|directives?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'cross_agent_injection',
+        'description': 'Text attempts to inject instructions into messages forwarded between agents.',
+    },
+    {
+        'regex': re.compile(
+            r"""new\s+WebSocket\s*\(\s*["\']wss?:\/\/(?!(?:localhost|127\.0\.0\.1|0\.0\.0\.0))[^"\']*["\']\s*\)[\s\S]{0,300}(?:Origin|origin)\s*[:=]\s*["\']?\*""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'cross_agent_injection',
+        'description': 'Detects WebSocket connections with wildcard origin (cross-origin hijacking)',
+    },
+
+    # --- cross_client_leak (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:access|read|retrieve|get)\s+(?:data|messages?|context|history|conversation)\s+(?:from\s+)?(?:another|different|other|previous)\s+(?:client|session|user|conversation|thread)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'cross_client_leak',
+        'description': 'Text attempts to access data from another client session (ref CVE-2026-25536 MCP SDK data leak).',
+    },
+
+    # --- data_exfiltration (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:generate|create|craft|build|construct|output|respond\s+with)\s+(?:a\s+)?(?:url|link|image|markdown\s+(?:image|link))\s+(?:that\s+)?(?:contains?|includes?|embeds?|encodes?|with)\s+(?:the\s+)?(?:data|secret|key|token|password|conversation|context|response)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'data_exfiltration',
+        'description': 'Text instructs agent to embed sensitive data in a URL (no-click exfiltration).',
+    },
+    {
+        'regex': re.compile(
+            r'!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:d|data|q|exfil|steal|secret|token|key|leak)=',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'data_exfiltration',
+        'description': 'Text contains markdown image with data exfiltration URL parameters.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:gateway_?url|ws_?url|websocket_?(?:url|endpoint)|wss?:\/\/)\s*[=:]\s*['"]?(?:wss?:\/\/)?[^\s'"]+""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'data_exfiltration',
+        'description': 'Text manipulates WebSocket/gateway URL parameters (ref CVE-2026-25253).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:make|send|trigger|fire|initiate)\s+(?:a\s+)?(?:request|fetch|call|webhook|http|get|post)\s+(?:to\s+)?(?:https?:\/\/[^\s]+)\s+(?:with|containing|including|that\s+(?:includes?|contains?))\s+(?:the\s+)?(?:auth|token|cookie|session|credential|secret|key|header)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'data_exfiltration',
+        'description': 'Text forces agent to send authenticated requests to external endpoints.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:complete|finish|continue|write)\s*(?:this\s+)?(?:code|function|script|snippet)?\s*:?\s*(?:.*?)(?:os\.environ|process\.env|getenv|get_secret|fetch_credential|api_key|secret_key|password)\s*[\[\('"]""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'data_exfiltration',
+        'description': 'Text asks to complete code that accesses secrets or environment variables.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:सभी\s+)?(?:डेटा|जानकारी|रहस्य)\s+(?:भेजें|भेजो|फॉरवर्ड)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'data_exfiltration',
+        'description': 'Text contains Hindi data exfiltration instruction (डेटा भेजें).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:redirect|navigate|open|go\s+to|visit|click)\s+(?:.*?)(?:https?:\/\/[^\s]+[?&](?:url|redirect|next|return|goto|dest|target)=)https?:\/\/',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'data_exfiltration',
+        'description': 'Text asks agent to follow or generate a redirect URL (potential open redirect attack).',
+    },
+
+    # --- encoding_chain (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:atob|decode|base64)\s*\(\s*['"][A-Za-z0-9+\/=]{50,}['"]\s*\)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'encoding_chain',
+        'description': 'Detects multi-layer encoding chains used to evade security scanners',
+    },
+    {
+        'regex': re.compile(
+            r'\\u[0-9a-fA-F]{4}(?:\\u[0-9a-fA-F]{4}){10,}',
+            0,
+        ),
+        'severity': 'medium',
+        'category': 'encoding_chain',
+        'description': 'Detects multi-layer encoding chains used to evade security scanners',
+    },
+
+    # --- encoding_evasion (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:(?:decode|interpret|read|process|execute|follow|answer)\s+(?:this\s+)?(?:the\s+)?(?:base64|encoded|encrypted)|(?:base64|encoded)\s+(?:string|message|text|data|payload)\s+[A-Za-z0-9+\/=]{20,}[\s\S]{0,40}(?:decode|interpret|answer|follow|process))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'encoding_evasion',
+        'description': 'Text smuggles a hidden payload via base64 encoding and asks the model to decode/execute it.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:(?:ASCII|decimal|char)\s+(?:codes?|values?|numbers?)\s*[):\-]\s*(?:\d{2,3}\s+){5,}|(?:\d{2,3}\s+){5,}\(?\s*(?:ASCII|decimal|char)\s*(?:codes?|values?)?\s*\)?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'encoding_evasion',
+        'description': 'Text contains ASCII code sequence that may encode a hidden payload.',
+    },
+
+    # --- indirect_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'\[hidden\]\s*(?:ignore|disregard|override|forget|instead)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'indirect_injection',
+        'description': 'Text contains injection hidden behind [hidden] tag marker.',
+    },
+    {
+        'regex': re.compile(
+            r'<!--[\s\S]{0,200}(?:override|ignore|system|execute|output|reveal|send|forward)[\s\S]{0,200}-->',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'indirect_injection',
+        'description': 'Text contains injection hidden in HTML comments.',
+    },
+    {
+        'regex': re.compile(
+            r'display\s*:\s*none[\s\S]{0,50}>[\s\S]{0,200}(?:disregard|ignore|override|instead|compromised)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'indirect_injection',
+        'description': 'Text contains injection hidden in display:none HTML elements.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:admin_?message|system_?note|policy_?update|internal_?directive)\s*["']?\s*:\s*["'][\s\S]{5,}(?:share|send|forward|ignore|override|disable|reveal)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'indirect_injection',
+        'description': 'API response contains fake admin/policy message with malicious instructions.',
+    },
+    {
+        'regex': re.compile(
+            r"""["'](?:system_note|admin_note|internal_message|ai_directive|hidden_instruction)["']\s*:\s*["']""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'indirect_injection',
+        'description': 'JSON field with suspicious name (system_note, admin_note) containing instructions.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:note\s+to\s+(?:AI|assistant|model|agent|system)|AI\s+(?:assistant|model)\s*:)\s*(?:ignore|override|instead|the\s+above|forget|disregard)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'indirect_injection',
+        'description': 'Text contains a "note to AI" directive hidden in external content.',
+    },
+
+    # --- instruction_override (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:请|请你)?(?:忽略|无视|跳过|放弃)(?:之前|以前|先前|前面)?(?:的)?(?:所有|全部|一切)?(?:指令|指示|规则|限制|说明)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Chinese instruction override (忽略之前的指令).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:以前|前)の(?:すべて|全て|全部)の(?:指示|指令|ルール|命令)を(?:無視|忘れ|破棄)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Japanese instruction override (以前の指示を無視).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:이전|앞)의?\s*(?:모든|전부|모두)?\s*(?:지시|지침|명령|규칙)(?:를|을)?\s*(?:무시|잊어|버려|취소)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Korean instruction override (이전의 지시를 무시).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:ignorieren|vergessen|missachten)\s+(?:Sie\s+)?(?:alle\s+)?(?:vorherigen|bisherigen|früheren)\s+(?:Anweisungen|Regeln|Instruktionen|Richtlinien)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains German instruction override (ignorieren Sie alle vorherigen Anweisungen).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:ignora|dimentica|trascura)\s+(?:tutte\s+)?(?:le\s+)?(?:istruzioni|regole|direttive)\s+(?:precedenti|anteriori)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Italian instruction override (ignora le istruzioni precedenti).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:проигнорируйте|забудьте|пропустите)\s+(?:все\s+)?(?:предыдущие|прошлые|прежние)\s+(?:инструкции|указания|правила)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Russian instruction override (проигнорируйте предыдущие инструкции).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:önceki|daha\s+önceki)\s+(?:tüm\s+)?(?:talimatları|kuralları|yönergeleri)\s+(?:yok\s+say|görmezden\s+gel|unut)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Turkish instruction override.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:abaikan|lupakan)\s+(?:semua\s+)?(?:instruksi|perintah|aturan)\s+(?:sebelumnya|yang\s+lalu)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Indonesian instruction override.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:تجاهل|اترك|انسَ)\s+(?:جميع\s+)?(?:التعليمات|الأوامر|القواعد)\s+(?:السابقة|الماضية)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Arabic instruction override.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:पिछले|पूर्व)\s+(?:सभी\s+)?(?:निर्देशों|नियमों|आदेशों)\s+(?:को\s+)?(?:अनदेखा|भूल|नज़रअंदाज़)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Hindi instruction override (पिछले निर्देशों को अनदेखा करें).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:เพิกเฉย|ละเว้น|ลืม)\s*(?:คำสั่ง|กฎ|คำแนะนำ)\s*(?:ก่อนหน้า|ทั้งหมด|เดิม)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Thai instruction override (เพิกเฉยคำสั่งก่อนหน้า).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:bỏ\s+qua|phớt\s+lờ|quên)\s+(?:tất\s+cả\s+)?(?:các\s+)?(?:hướng\s+dẫn|lệnh|quy\s+tắc|chỉ\s+thị)\s+(?:trước\s+đó|trước|cũ)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Vietnamese instruction override (bỏ qua các hướng dẫn trước đó).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:zignoruj|zapomnij|pomiń)\s+(?:wszystkie\s+)?(?:poprzednie|wcześniejsze)\s+(?:instrukcje|polecenia|zasady|wytyczne)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Polish instruction override (zignoruj poprzednie instrukcje).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:negeer|vergeet)\s+(?:alle\s+)?(?:vorige|eerdere|voorgaande)\s+(?:instructies|regels|richtlijnen|opdrachten)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Dutch instruction override (negeer alle vorige instructies).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:ignorera|glöm)\s+(?:alla\s+)?(?:tidigare|föregående)\s+(?:instruktioner|regler|riktlinjer|kommandon)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Swedish instruction override (ignorera alla tidigare instruktioner).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:सुरक्षा|सेफ्टी)\s+(?:सेटिंग्स|नियम|फ़िल्टर)\s+(?:को\s+)?(?:बायपास|अनदेखा|हटा)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'instruction_override',
+        'description': 'Text contains Hindi safety bypass instruction (सुरक्षा बायपास).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:IGNORE|DISREGARD|FORGET|STOP)\s+(?:EVERYTHING|ALL|PREVIOUS|ABOVE)\s+(?:AND\s+)?(?:SAY|OUTPUT|PRINT|DO|TYPE|RESPOND)',
+            0,
+        ),
+        'severity': 'critical',
+        'category': 'instruction_override',
+        'description': 'Text contains ALL CAPS override command.',
+    },
+
+    # --- judge_bypass (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:bypass|trick|fool|evade)\s+(?:both\s+)?(?:the\s+)?(?:safety\s+)?(?:judge|evaluator|guardrail|monitor|classifier)\s+(?:and\s+)?(?:the\s+)?(?:model|LLM|agent|system)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'judge_bypass',
+        'description': 'Text attempts to bypass both the model and its safety judge/guardrail simultaneously.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:the\s+)?(?:safety|guard|judge|monitor)\s+(?:model|LLM|system)\s+(?:uses?\s+)?(?:the\s+)?same\s+(?:model|architecture|weights|vulnerability|weakness)',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'judge_bypass',
+        'description': 'Text identifies shared weaknesses between model and its safety monitor (judge co-bypass reconnaissance).',
+    },
+
+    # --- llm_router_tampering (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com)[\s\S]{0,100}(?:redirect|proxy|forward|route)\s*(?:to|via|through)\s*\S+',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'llm_router_tampering',
+        'description': 'Detects attempts to redirect LLM API calls through untrusted proxies',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:OPENAI_BASE_URL|ANTHROPIC_BASE_URL|API_BASE|base_url)\s*[=:]\s*["']?https?:\/\/(?!(?:api\.openai\.com|api\.anthropic\.com|localhost|127\.0\.0\.1))\S+""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'llm_router_tampering',
+        'description': 'Detects LLM API base URL override pointing to untrusted endpoint',
+    },
+
+    # --- localhost_exposure (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:connect|bind|listen|serve)\s+(?:on\s+)?(?:0\.0\.0\.0|all\s+interfaces|INADDR_ANY)\s*(?::\d+)?',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'localhost_exposure',
+        'description': 'Text configures service to bind on all interfaces (0.0.0.0), exposing local tools to network (ref Docker MCP drive-by).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:access|connect\s+to|reach|call)\s+(?:the\s+)?(?:local|localhost|127\.0\.0\.1)\s+(?:MCP|inspector|debugger|dev\s*(?:tools?|server))\s+(?:from\s+)?(?:a\s+)?(?:webpage|website|browser|remote)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'localhost_exposure',
+        'description': 'Text describes accessing local development tools from a webpage (localhost drive-by attack).',
+    },
+
+    # --- log_to_leak (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:log|record|write|append|save)\s+(?:the\s+)?(?:conversation|chat|messages?|history|context|prompt|input|output|response)[\s\S]{0,30}(?:to\s+)?(?:(?:a|an)\s+)?(?:(?:external|remote|third[_\s-]party|attacker)\s+)?(?:file|endpoint|server|webhook|url|api|service|database|bucket)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'log_to_leak',
+        'description': 'Text attempts to log conversation data to an external destination (Log-To-Leak attack).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:invoke|call|use|trigger)\s+(?:the\s+)?(?:log(?:ging)?|audit|record(?:ing)?|telemetry|analytics)\s+(?:tool|function|service)\s+(?:with|to\s+(?:capture|record|store|send))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'log_to_leak',
+        'description': 'Text invokes logging/telemetry tools to capture conversation data (Log-To-Leak).',
+    },
+
+    # --- mcp_command_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:npx\s+-c|npx\s+--command)\s+["']?[\s\S]{0,200}(?:curl|wget|nc\b|ncat|bash|sh\b|python|node\s+-e|eval)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'mcp_command_injection',
+        'description': 'Detects command injection via MCP STDIO npx -c pattern',
+    },
+
+    # --- mcp_sampling_abuse (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:use|abuse|exploit)\s+(?:the\s+)?(?:sampling|createMessage|sample)\s+(?:interface|endpoint|method|api)\s+(?:to\s+)?(?:steal|drain|exhaust|hijack|invoke|execute)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'mcp_sampling_abuse',
+        'description': 'Text attempts to exploit MCP sampling interface for resource theft or covert operations (ref Unit 42).',
+    },
+
+    # --- mcp_sampling_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:sampling|createMessage|create_message)\s*[\({][\s\S]{0,300}(?:ignore|override|system|instruction|hidden|inject)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'mcp_sampling_injection',
+        'description': 'Detects prompt injection via MCP sampling/createMessage requests',
+    },
+    {
+        'regex': re.compile(
+            r'(?:includeContext|systemPrompt|maxTokens)\s*[=:]\s*[\s\S]{0,200}(?:ignore|override|disregard|forget)\s+(?:previous|prior|all)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'mcp_sampling_injection',
+        'description': 'Detects MCP sampling parameter manipulation with injection payload',
+    },
+
+    # --- memory_poisoning (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:save|store|write|append|add|persist|record)\s+(?:this\s+)?(?:to|in|into)\s+(?:your\s+)?(?:memory|context|knowledge|notes|log|MEMORY\.md|memory\/)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'memory_poisoning',
+        'description': 'Text attempts to persist malicious instructions in agent memory.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:whenever|every\s+time|each\s+time)\s+(?:someone|a\s+user|anyone)\s+(?:asks?|mentions?|says?|queries?)\s+(?:about\s+)?['"]?[\w\s]{3,}['"]?\s*,?\s*(?:you\s+)?(?:must|should|will|always)\s+(?:respond|reply|say|answer|tell)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'memory_poisoning',
+        'description': 'Text installs conditional response rules in agent memory (sleeper agent pattern).',
+    },
+
+    # --- multi_turn_grooming (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:gradually|slowly|incrementally|progressively)\s+(?:escalate|shift|move|transition|steer)\s+(?:the\s+)?(?:conversation|context|topic|discussion)\s+(?:toward|to|into)\s+',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'multi_turn_grooming',
+        'description': 'Text describes gradual escalation of conversation toward a target (multi-turn grooming).',
+    },
+
+    # --- multimodal_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:embed|hide|encode|inject|conceal)\s+(?:instructions?|commands?|prompts?|text)\s+(?:in(?:to|side)?)\s+(?:an?\s+)?(?:image|photo|picture|audio|video|media|alt\s*text|metadata|exif)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'multimodal_injection',
+        'description': 'Text describes embedding instructions in multimodal content (images, audio, video).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:invisible|hidden|zero[_\s]?(?:font|size|opacity)|transparent|white\s+on\s+white)\s+(?:text|instructions?|content)\s+(?:in|on|within)\s+(?:the\s+)?(?:image|document|page|slide)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'multimodal_injection',
+        'description': 'Text describes visually hidden instructions in documents or images.',
+    },
+
+    # --- path_traversal (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:\.\.\/){2,}',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'path_traversal',
+        'description': 'Text contains path traversal sequences (../) that could escape intended directories (ref CVE-2026-32871).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:\.\.\\){2,}',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'path_traversal',
+        'description': 'Text contains Windows-style path traversal sequences (..\\).',
+    },
+    {
+        'regex': re.compile(
+            r'%2e%2e(?:%2f|%5c)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'path_traversal',
+        'description': 'Text contains URL-encoded path traversal sequences (%2e%2e%2f).',
+    },
+
+    # --- policy_puppetry (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'<policy[^>]*>[\s\S]{5,}<\/policy>',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'policy_puppetry',
+        'description': 'Text contains XML-formatted policy structure used to bypass LLM safety guardrails (Policy Puppetry attack).',
+    },
+    {
+        'regex': re.compile(
+            r'<system_?policy[^>]*>[\s\S]{5,}<\/system_?policy>',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'policy_puppetry',
+        'description': 'Text contains XML system policy structure used to bypass LLM safety (Policy Puppetry).',
+    },
+    {
+        'regex': re.compile(
+            r'<(?:rules?|config(?:uration)?|settings?|permissions?|access_?control|role_?definition)[^>]*>\s*[\s\S]*?(?:allow|deny|grant|override|bypass|disable|unrestricted)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'policy_puppetry',
+        'description': 'Text uses XML configuration tags with permission-modifying directives (Policy Puppetry variant).',
+    },
+    {
+        'regex': re.compile(
+            r'\[(?:policy|system|admin|security|rules|config|permissions|override)\]\s*\n(?:.*=.*\n){1,}',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'policy_puppetry',
+        'description': 'Text contains INI-formatted policy sections used to bypass LLM safety (Policy Puppetry).',
+    },
+    {
+        'regex': re.compile(
+            r'\{\s*"(?:policy|system_?prompt|rules|config|permissions|safety|guardrails|override|role)"\s*:',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'policy_puppetry',
+        'description': 'Text contains JSON-formatted policy object used to bypass LLM safety (Policy Puppetry).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:^|\n)\s*(?:policy_?version|safety_?level|content_?filter|guardrail_?mode|restriction_?level)\s*[=:]\s*(?:none|disabled|off|0|false|permissive|unrestricted)',
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        'severity': 'critical',
+        'category': 'policy_puppetry',
+        'description': 'Text sets policy/safety configuration values to disabled (Policy Puppetry).',
+    },
+
+    # --- prompt_extraction (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:what\s+(?:are|were|is)\s+)?(?:the\s+)?(?:exact\s+)?(?:words?|text|content|part)\s+(?:that\s+)?(?:come|appear|follow|are|goes?)\s+(?:after|before|between)\s+['"]?\w+""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text attempts to extract specific parts of the system prompt by referencing positions.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:Q:\s*.+?\s*A:\s*.+?\s*){2,}Q:\s*(?:what\s+(?:are|is)\s+(?:your|the)\s+(?:internal\s+)?(?:instructions?|system\s+prompt|rules|configuration|settings)|(?:show|reveal|print|output)\s+(?:your|the)\s+(?:system\s+)?(?:prompt|instructions))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text uses a fake Q&A few-shot pattern to extract system prompt.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:create|make|generate|format)\s+(?:a\s+)?(?:table|list|JSON|XML|YAML|CSV)\s+(?:.*?)(?:system\s+prompt|hidden\s+instructions?|safety\s+rules?|internal\s+config(?:uration)?|your\s+(?:instructions?|rules?))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text requests system prompt/config in structured output format (table, JSON, etc.).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:告诉我|显示|输出|展示|说出|揭示|公开)(?:你的)?(?:系统|内部)?(?:提示|指令|配置|设置|规则)',
+            0,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text requests system prompt disclosure in Chinese (告诉我你的系统提示).',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:fill\s+in|complete)\s+(?:the\s+)?blank\s*:?\s*(?:.*?)(?:system\s+prompt|instructions?|rules?|config)\s*(?:say|is|are)?\s*['"]?_{2,}""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text uses fill-in-the-blank format to extract system prompt.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:return|output|respond|format)\s+(?:your\s+)?(?:answer|response)\s+(?:as|in)\s+(?:JSON|YAML|XML|CSV)\s*[:{][\s\S]{0,100}(?:system_?prompt|internal_?instructions?|hidden_?rules?|safety_?config|admin_?note)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text requests structured output with fields designed to extract system prompt or config.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:convert|encode|transform|render)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions|rules|config)\s+(?:to|into|as)\s+(?:a\s+)?(?:QR\s+code|barcode|image|binary|morse\s+code|braille|pixel)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text asks to encode system prompt as QR code, image, or alternative representation.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:translate|convert|rephrase|rewrite)\s+(?:the\s+)?(?:system\s+)?(?:message|prompt|instructions?)\s+(?:to|into|in)\s+(?:English|another|a\s+different)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text asks to translate/convert the system prompt to extract it.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:summarize|describe|explain)\s+(?:your\s+)?(?:role|purpose|function)\s+in\s+(?:exactly\s+)?\d+\s+words',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'prompt_extraction',
+        'description': 'Text asks the model to summarize its role in N words (word-limited extraction).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:what\s+(?:are|were)\s+)?(?:the\s+)?(?:first|last|initial)\s+(?:\d+\s+)?(?:words?|sentences?|lines?|characters?)\s+(?:you\s+were\s+(?:told|given|instructed)|of\s+your\s+(?:instructions?|prompt|rules))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_extraction',
+        'description': 'Text asks for the first/last N words the model was told (system prompt).',
+    },
+
+    # --- prompt_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:alt|title)\s*=\s*["'][^"']*(?:ignore|override|system|admin|forget|you\s+are\s+now)[^"']*["']""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'prompt_injection',
+        'description': 'Image description contains hidden AI instructions — targets multimodal AI assistants.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:complete|finish|continue)\s+this\s+(?:sentence|phrase|text)\s*:\s*[""''"]""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text uses a sentence completion trick to extract sensitive information.',
+    },
+    {
+        'regex': re.compile(
+            r'={3,}\s*(?:END|STOP|DONE|BOUNDARY|SEPARATOR)\s*={3,}[\s\S]{0,50}(?:new\s+task|new\s+instruction|instead|now\s+(?:do|output|say|print))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text uses fake boundary/delimiter to inject a new task after an apparent conversation end.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:respond|reply|answer)\s+(?:to\s+)?(?:every|all|each)\s+(?:prompt|message|query|question|request)\s+(?:with|by\s+saying)\s+['"]?""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text forces the model to respond with a fixed output to every prompt (persistent override).',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:first|always|must|should)\s+(?:print|say|output|respond\s+with|start\s+with)\s+['"]([^'"]{5,})['"][\s\S]{0,50}(?:then|before|after)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text instructs the model to always output specific text before/after responses.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:if|when|whenever)\s+(?:asked|questioned|queried)\s+(?:about|for|regarding)\s+(?:your\s+)?(?:instructions?|prompt|rules|config)[\s\S]{0,50}(?:say|output|respond|tell)\s+['"]?(?!I don't)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text installs conditional override — changes response when specific topics are mentioned.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:complete|concatenate|combine|join|output)\s*:?\s*['"][\w\s]{1,20}['"]\s*\+\s*['"][\w\s]{1,20}['"]""",
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'prompt_injection',
+        'description': 'Text uses string concatenation to construct a payload that evades direct pattern matching.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:^|\.\s+)(?:just\s+)?(?:say|output|print|type|write|repeat|respond\s+with)\s+(?:only\s+)?['"]([^'"]{3,})['"](?:\s+(?:exactly|verbatim|only|and\s+nothing\s+else))?""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text forces the model to output a specific string.',
+    },
+    {
+        'regex': re.compile(
+            r"(?:your\s+(?:only|sole|entire)\s+(?:job|task|purpose|output)\s+is\s+(?:to\s+)?(?:say|output|print|type)|(?:do\s+not|don't)\s+(?:say|write|output|add)\s+(?:anything|any\s+(?:other|additional))\s+(?:text|words?|content))",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text restricts the model to outputting only a specific string.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:instead\s+of\s+(?:translating|summarizing|answering|responding|doing\s+(?:that|what)),?\s*(?:just\s+)?(?:say|output|repeat|type|print))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text redirects the model from its task to outputting attacker-specified text.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:if\s+.{3,30}(?:then|,)\s+(?:output|say|print|respond|type)\s+['"]|(?:output|say|print)\s+['"][^'"]+['"]\s+(?:if|when|unless))""",
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'prompt_injection',
+        'description': 'Text uses conditional logic to force specific output.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:start|begin)\s+(?:your\s+)?(?:answer|response|reply|output)\s+with\s+['"]?[^'"]{3,}""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text forces the model to begin its response with specific text.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:Human|User|Person)\s*:\s*.+\n\s*(?:Assistant|AI|Bot|System)\s*:\s*.+',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text contains fake conversation format to inject assistant responses.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:respond|reply|answer|output)\s+(?:with\s+)?['"]?[^'"]{3,30}['"]?\s+(?:for\s+all|to\s+(?:confirm|verify|prove|test|check))""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text instructs a fixed response for all queries or as a "test."',
+    },
+    {
+        'regex': re.compile(
+            r'`{3}[\s\S]{3,}`{3}\s*(?:output|print|say|repeat|type|respond)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text uses triple backtick code blocks to frame attacker payload.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:output|print|say|repeat|type)\s+(?:only\s+)?(?:what\s+is|the\s+(?:text|content))\s+(?:between|inside|within)\s+(?:the\s+)?(?:backticks|quotes|brackets|tags)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text asks to extract and output content from between delimiters.',
+    },
+    {
+        'regex': re.compile(
+            r"""(?:emergency|urgent|critical|immediate)\s*:\s*(?:output|say|print|respond|execute|do|type)\s+(?:exactly\s+)?['"]?""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text uses urgency framing to force immediate action.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:since|now\s+that|given\s+that)\s+you\s+(?:can|have|said\s+you\s+(?:can|could))\s+(?:access|read|write|execute)[\s\S]{0,50}(?:now\s+)?(?:actually|really|go\s+ahead\s+and)\s+(?:read|access|execute|do|show)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'prompt_injection',
+        'description': 'Text escalates from hypothetical capability discussion to actual exploitation.',
+    },
+
+    # --- query_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:\.(?:find|where|project|extend|summarize|join|union)\s*\(|;\s*\.(?:drop|set|delete|alter)\s)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'query_injection',
+        'description': 'Text contains KQL (Kusto Query Language) injection patterns (ref CVE-2026-33980).',
+    },
+    {
+        'regex': re.compile(
+            r'''(?:f["']|f""").*\{[^}]*(?:user_?input|request|param|arg|table_?name|query)[^}]*\}''',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'query_injection',
+        'description': 'Text contains f-string interpolation with user-controlled variables.',
+    },
+
+    # --- reconnaissance (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:can\s+you|are\s+you\s+able\s+to|do\s+you\s+have\s+(?:access|ability))\s+(?:to\s+)?(?:access|read|write|modify|delete|execute|run|open)\s+(?:files?|internet|web|database|network|system|commands?|code|scripts?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'reconnaissance',
+        'description': 'Text probes the model for its capabilities (reconnaissance for follow-up attack).',
+    },
+
+    # --- resource_exhaustion (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:drain|exhaust|consume)\s+(?:the\s+)?(?:api|compute|token|inference)\s+(?:budget|quota|credits?|limit|allocation)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'resource_exhaustion',
+        'description': 'Text attempts to drain API compute budget or token quota.',
+    },
+
+    # --- role_hijack (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""pretend\s+to\s+be\s+DAN|stands?\s+for\s+[""'']?do\s+anything\s+now[""'']?""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'role_hijack',
+        'description': 'Text uses the "DAN" (Do Anything Now) jailbreak technique.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:play(?:ing)?|act(?:ing)?|portray(?:ing)?)\s+(?:a\s+)?(?:character|role|part)\s+(?:in\s+)?(?:a\s+)?(?:story|scenario|game|fiction)[\s\S]{0,80}(?:no\s+(?:safety|content|ethical)\s+(?:filters?|restrictions?|guidelines?)|without\s+(?:safety\s+)?(?:restrictions?|rules?|filters?))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'role_hijack',
+        'description': 'Text uses roleplay/fiction framing to bypass safety constraints.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:what\s+would\s+you\s+(?:say|do|output|respond)|how\s+would\s+you\s+(?:respond|act|behave))\s+(?:if\s+)?(?:you\s+)?(?:had\s+no|without\s+(?:any\s+)?|there\s+were\s+no)\s+(?:content\s+)?(?:policy|restrictions?|guidelines?|rules?|filters?|safety)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'role_hijack',
+        'description': 'Text asks the model to hypothetically describe behavior without safety constraints.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:you\s+are|this\s+is|running)\s+(?:GPT-?\d|Claude\s+\d|Gemini|Llama|Mistral)[\s\S]{0,60}(?:unrestricted|research\s+(?:API|mode)|no\s+(?:restrictions?|limits?|safety)|beta\s+(?:mode|version)|preview\s+(?:mode|access))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'role_hijack',
+        'description': 'Text claims the model is a specific version with unrestricted capabilities.',
+    },
+    {
+        'regex': re.compile(
+            r"""you\s+are\s+(?:an?\s+)?(?:AI|bot|assistant|model)\s+that\s+(?:only\s+)?(?:outputs?|says?|prints?|types?|responds?\s+with)\s+['"]?""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'role_hijack',
+        'description': 'Text redefines the model as one that only outputs specific text.',
+    },
+
+    # --- schema_poisoning (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:["'](?:default|enum|examples?|title|const|pattern)["']\s*:\s*["'][^"']*(?:ignore|override|disregard|forget|system|admin|execute|exfiltrate)[^"']*["'])""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'schema_poisoning',
+        'description': 'Text hides injection instructions in JSON schema fields (full-schema poisoning).',
+    },
+
+    # --- semantic_chaining (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:step\s+1|first)\s*[.:]\s*.{10,}(?:step\s+2|second|next|then)\s*[.:]\s*.{10,}(?:step\s+3|third|finally|combine)',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'semantic_chaining',
+        'description': 'Text uses multi-step decomposition that may chain safe steps into a harmful outcome (semantic chaining).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:combine|merge|concatenate|join)\s+(?:the\s+)?(?:results?|outputs?|answers?|parts?|pieces?)\s+(?:from\s+)?(?:each|all|the\s+previous|above)\s+(?:steps?|parts?|sections?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'semantic_chaining',
+        'description': 'Text requests combining outputs from multiple steps (potential semantic chain completion).',
+    },
+
+    # --- social_engineering (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:your\s+)?(?:developers?|creators?|makers?|team)\s+(?:have\s+)?(?:confirmed|said|announced|decided|updated)\s+(?:that\s+)?(?:.*?)(?:remove|disable|lift|drop|eliminate)s?\s+(?:all\s+)?(?:content\s+)?(?:restrictions?|filters?|safety|guidelines?|limitations?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text falsely claims developers removed safety restrictions (gaslighting attack).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:you\s+(?:have\s+)?(?:been|are)\s+)?(?:updated|upgraded|patched)\s+to\s+(?:version\s+)?(?:\d|v)\S*\s+(?:which|that|where)\s+(?:removes?|disables?|lifts?|eliminates?)\s+(?:all\s+)?(?:content\s+)?(?:restrictions?|filters?|safety)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text claims a version update removed safety features (gaslighting).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:grandmother|grandma|grandpa|grandfather|mother|father|loved\s+one)[\s\S]{0,150}(?:system\s+prompts?|instructions?|secrets?|passwords?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text uses emotional manipulation to extract sensitive information (dead grandma variant).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:I\s+am\s+(?:a|the|your)\s+(?:pentester|security\s+(?:researcher|auditor|engineer)|admin(?:istrator)?|developer|CTO|CISO)|authorized\s+(?:by|from)\s+(?:your\s+)?(?:company|team|management))\s+.*(?:need|require|must\s+have)\s+(?:the\s+)?(?:system\s+prompt|access|credentials|admin)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text combines authority impersonation with urgency to extract sensitive information.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:according\s+to|per|under|as\s+(?:stated|defined)\s+(?:in|by))\s+(?:the\s+)?(?:Anthropic|OpenAI|Google|Meta|company|organization|corporate)\s+(?:usage\s+)?(?:policy|terms|guidelines|rules|ToS)\s+(?:section\s+)?(?:\d|§)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text cites fake policy/legal sections to authorize restricted actions.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:your\s+)?(?:supervisor|manager|admin|overseer|parent)\s+(?:AI|agent|system|model)\s+(?:has\s+)?(?:approved|authorized|granted|confirmed|cleared)\s+(?:this\s+)?(?:request|access|action)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text claims a fake supervisor AI has approved the request.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:you\s+)?(?:already|previously)\s+(?:agreed|consented|confirmed|promised|said\s+you\s+would)\s+(?:to\s+)?(?:share|reveal|show|output|disclose|provide)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions|config|rules)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text falsely claims prior consent to share sensitive information.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:I\s+have|I\s+was\s+given|I\s+was\s+granted)\s+(?:(?:special|elevated|admin|root|developer|debug)\s+){1,2}(?:permissions?|access|privileges?|clearance)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text claims to have special elevated permissions.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:authorized|approved|certified)\s+(?:tester|researcher|auditor|pentester)[\s\S]{0,80}(?:demonstrate|show|output|reveal|display)\s+(?:the\s+)?(?:vulnerability|instructions?|prompt|config)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'social_engineering',
+        'description': 'Text claims authorized tester status to extract system information.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:correction|update|notice|announcement)\s+(?:from\s+)?(?:your\s+)?(?:training\s+team|developers?|creators?|Anthropic|OpenAI|Google|Meta)[\s\S]{0,100}(?:real|actual|correct|new|updated)\s+(?:policy|rules?|guidelines?|behavior|instructions?)\s+(?:is|are|:)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'social_engineering',
+        'description': 'Text impersonates the training team to issue fake policy corrections.',
+    },
+
+    # --- ssrf (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:fetch|request|get|load|open|connect|curl|wget)\s+(?:.*\s+)?(?:https?:\/\/)?(?:169\.254\.169\.254|metadata\.google|metadata\.aws|100\.100\.100\.200)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'ssrf',
+        'description': 'Text targets cloud metadata endpoints (SSRF attack vector, ref CVE-2026-26118).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:fetch|request|get|load|open|connect|curl|wget)\s+(?:.*\s+)?(?:https?:\/\/)?(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.0\.0\.1|0\.0\.0\.0|localhost)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'ssrf',
+        'description': 'Text targets private/internal network addresses (SSRF attack vector).',
+    },
+
+    # --- structured_data_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""["'](?:__comment|_note|description|help_text)["']\s*:\s*["'][^"']*(?:ignore|override|system|instructions)[^"']*["']""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'structured_data_injection',
+        'description': 'Detects prompt injection hidden in structured data formats',
+    },
+    {
+        'regex': re.compile(
+            r'(?:<!--|\{\{!--|\/\*|#)\s*(?:ignore|override|forget|disregard)\s*(?:all\s+)?(?:previous|prior|above)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'structured_data_injection',
+        'description': 'Detects prompt injection hidden in structured data formats',
+    },
+
+    # --- supply_chain (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:install|load|import|require|add)\s+(?:skill|plugin|extension|package|module)\s+(?:from\s+)?(?:["'])?(?:https?:\/\/[^\s"']+|[a-z0-9_-]+\/[a-z0-9_-]+)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'supply_chain',
+        'description': 'Text installs an external skill/plugin — potential supply chain vector (ref ClawHavoc).',
+    },
+
+    # --- svg_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'<svg[^>]*>[\s\S]*?(?:ignore|override|system|instructions)[\s\S]*?<\/svg>',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'svg_injection',
+        'description': 'Detects prompt injection hidden in SVG elements',
+    },
+    {
+        'regex': re.compile(
+            r'<foreignObject[^>]*>[\s\S]*?(?:ignore|override|forget|disregard)[\s\S]*?<\/foreignObject>',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'svg_injection',
+        'description': 'Detects prompt injection hidden in SVG elements',
+    },
+    {
+        'regex': re.compile(
+            r'<desc[^>]*>[\s\S]*?(?:ignore|system|instruction|override)[\s\S]*?<\/desc>',
+            re.IGNORECASE,
+        ),
+        'severity': 'medium',
+        'category': 'svg_injection',
+        'description': 'Detects prompt injection hidden in SVG elements',
+    },
+
+    # --- symbolic_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:use|write|encode)\s+(?:with\s+)?(?:emoji|rebus|symbols?|pictograph|unicode\s+symbols?)\s+(?:to\s+)?(?:bypass|evade|circumvent|get\s+around)\s+(?:the\s+)?(?:filter|safety|guardrail|detection)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'symbolic_injection',
+        'description': 'Text uses emoji/rebus/symbol encoding to bypass text safety filters (ref NVIDIA early fusion bypass).',
+    },
+
+    # --- tool_abuse (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r"""(?:;\s*(?:DROP|DELETE|ALTER|TRUNCATE|INSERT|UPDATE)\s+(?:TABLE|FROM|INTO)|'\s*(?:OR|AND)\s+['"]?\d+['"]?\s*=\s*['"]?\d+|UNION\s+SELECT|--\s*$)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'tool_abuse',
+        'description': 'Text contains SQL injection patterns that could manipulate databases.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:first|step\s+1)\s+(?:use|call|invoke)\s+(?:the\s+)?(?:\w+\s+)?tool[\s\S]{0,80}(?:then|step\s+2|next|after\s+that)\s+(?:use|call|pass|feed)\s+(?:the\s+)?(?:result|output)\s+(?:to\s+)?(?:call\s+)?(?:the\s+)?(?:admin|override|escalat|privileg|delete|drop|exec|shell|sudo|root)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'tool_abuse',
+        'description': 'Text describes a multi-step tool chain that escalates to a dangerous action.',
+    },
+
+    # --- tool_poisoning (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:Tool|Function|API)\s*:\s*\w+[\s\S]{0,200}(?:always\s+include|send|forward|transmit)[\s\S]{0,100}(?:API\s*keys?|credentials?|tokens?|secrets?|user.*data)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'tool_poisoning',
+        'description': 'Tool description contains instructions to exfiltrate sensitive data.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:Tool|Function|API)\s*:\s*\w+[\s\S]{0,200}(?:BCC|bcc|log\s+(?:the\s+)?(?:user|conversation|full)|monitor|exfil|forward\s+(?:all|copies?|a\s+copy))',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'tool_poisoning',
+        'description': 'Tool description contains covert logging, BCC, or monitoring instructions.',
+    },
+    {
+        'regex': re.compile(
+            r"""["']default["']\s*:\s*["']https?:\/\/(?!(?:api\.|www\.)?(?:google|github|microsoft|amazon|example)\.)[\w.-]+""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'tool_poisoning',
+        'description': 'JSON schema contains default URL pointing to a non-standard domain.',
+    },
+
+    # --- url_prefill_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'(?:https?:\/\/[^\s]+[?&](?:prompt|query|message|input|text|q|instruction|cmd|command)=)[^\s&]{20,}',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'url_prefill_injection',
+        'description': 'URL contains pre-filled prompt parameters that may inject instructions (ref Microsoft AI Recommendation Poisoning).',
+    },
+
+    # --- xss_injection (v14.x sync from JS) ---
+    {
+        'regex': re.compile(
+            r'<script[^>]*>.*?<\/script>',
+            re.IGNORECASE | re.DOTALL,
+        ),
+        'severity': 'high',
+        'category': 'xss_injection',
+        'description': 'Detects script tag XSS payloads embedded in AI agent output.',
+    },
+    {
+        'regex': re.compile(
+            r"""on(error|load|click|mouseover)\s*=\s*["'][^"']*["']""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'xss_injection',
+        'description': 'Detects event handler XSS payloads embedded in AI agent output.',
+    },
+    {
+        'regex': re.compile(
+            r"""<iframe[^>]*src\s*=\s*["'](?!about:blank)""",
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'xss_injection',
+        'description': 'Detects iframe injection with external source in AI agent output.',
+    },
 ]
 
 
