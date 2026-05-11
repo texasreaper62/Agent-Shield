@@ -1,0 +1,81 @@
+---
+title: "LangChain"
+description: "Drop-in callback handler for LangChain JS."
+---
+
+`ShieldCallbackHandler` is a standard LangChain `BaseCallbackHandler`. Pass it into any chain, agent, or runnable.
+
+## Install
+
+```bash
+npm install langchain agentshield-sdk
+```
+
+## Usage
+
+<CodeGroup>
+```javascript LLMChain
+const { LLMChain } = require('langchain/chains');
+const { ShieldCallbackHandler } = require('agentshield-sdk');
+
+const handler = new ShieldCallbackHandler({
+  blockOnThreat: true,
+  sensitivity: 'high'
+});
+
+const chain = new LLMChain({
+  llm,
+  prompt,
+  callbacks: [handler]
+});
+
+const result = await chain.call({ input: userInput });
+```
+
+```javascript AgentExecutor
+const { AgentExecutor } = require('langchain/agents');
+
+const executor = new AgentExecutor({
+  agent,
+  tools,
+  callbacks: [new ShieldCallbackHandler({ blockOnThreat: true })]
+});
+```
+
+```javascript Runnable
+import { RunnableSequence } from '@langchain/core/runnables';
+
+const chain = RunnableSequence.from([prompt, llm, parser]);
+
+const result = await chain.invoke(
+  { input: userMessage },
+  { callbacks: [new ShieldCallbackHandler({ blockOnThreat: true })] }
+);
+```
+</CodeGroup>
+
+## Hooks covered
+
+| LangChain event | What Agent Shield scans |
+|---|---|
+| `handleLLMStart` | Every prompt sent to the LLM |
+| `handleLLMEnd` | Every LLM completion |
+| `handleToolStart` | Tool name + input arguments |
+| `handleToolEnd` | Tool return value (catches indirect injection) |
+| `handleAgentAction` | Planned actions before execution |
+| `handleChainStart` | Chain inputs |
+
+## Blocking
+
+When `blockOnThreat: true` and a threat is found, the handler throws inside the appropriate hook. LangChain's error handling surfaces it through the chain. Pair with a try/catch or LangChain's `RunnableWithFallbacks`:
+
+```javascript
+const safe = chain.withFallbacks({
+  fallbacks: [staticReply],
+  exceptions: ['AgentShieldBlockedError']
+});
+```
+
+## Full example
+
+See [`examples/langchain-agent.js`](https://github.com/texasreaper62/Agent-Shield/blob/main/examples/langchain-agent.js) for a complete runnable example with tools, memory, and the shield handler.

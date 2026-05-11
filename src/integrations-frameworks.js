@@ -366,8 +366,98 @@ function shieldMSAgentFramework(options = {}) {
   return { agentMiddleware, shield };
 }
 
+// =========================================================================
+// Google ADK JavaScript (adk-js) Integration
+// =========================================================================
+
+/**
+ * Creates Agent Shield middleware for the Google ADK JavaScript/TypeScript SDK.
+ *
+ * Google ADK for JS (GA April 2026) uses a callback-based agent lifecycle.
+ * This wrapper returns a plugin object compatible with ADK-JS's plugin API
+ * that scans tool inputs, tool outputs, and generated content.
+ *
+ * Usage:
+ *   const { shieldGoogleADKJS } = require('agentshield-sdk/src/integrations-frameworks');
+ *   const plugin = shieldGoogleADKJS({ blockOnThreat: true });
+ *
+ *   // Register with ADK-JS agent:
+ *   const agent = new Agent({ plugins: [plugin] });
+ *
+ * @param {object} [options]
+ * @param {string} [options.sensitivity='high'] - Detection sensitivity level.
+ * @param {boolean} [options.blockOnThreat=true] - Whether to throw on threat detection.
+ * @param {string} [options.blockThreshold='high'] - Minimum severity that triggers a block.
+ * @param {function} [options.onThreat] - Callback when a threat is detected.
+ * @returns {{ name: string, beforeToolCall: function, afterToolCall: function, beforeModelCall: function, afterModelCall: function, shield: AgentShield }}
+ */
+function shieldGoogleADKJS(options = {}) {
+  const shield = new AgentShield({
+    sensitivity: options.sensitivity || 'high',
+    blockOnThreat: options.blockOnThreat !== false,
+    blockThreshold: options.blockThreshold || 'high'
+  });
+  const onThreat = options.onThreat || null;
+
+  function _scan(text, phase, meta) {
+    if (!text) return;
+    const result = shield.scanInput(text);
+    if (result.threats && result.threats.length > 0) {
+      if (onThreat) {
+        try { onThreat({ phase, ...meta, threats: result.threats }); }
+        catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+      }
+      if (result.blocked) {
+        throw new ShieldBlockError(`Google ADK-JS ${phase} blocked by Agent Shield`, result.threats);
+      }
+    }
+  }
+
+  return {
+    name: 'AgentShieldPlugin',
+
+    beforeToolCall(context) {
+      const text = context.args != null
+        ? (typeof context.args === 'string' ? context.args : JSON.stringify(context.args))
+        : null;
+      _scan(text, 'before_tool_call', { toolName: context.toolName || 'unknown' });
+    },
+
+    afterToolCall(context) {
+      const text = context.result != null
+        ? (typeof context.result === 'string' ? context.result : JSON.stringify(context.result))
+        : null;
+      _scan(text, 'after_tool_call', { toolName: context.toolName || 'unknown' });
+    },
+
+    beforeModelCall(context) {
+      const text = context.prompt || context.input;
+      if (text) _scan(typeof text === 'string' ? text : JSON.stringify(text), 'before_model_call', {});
+    },
+
+    afterModelCall(context) {
+      const text = context.response || context.output;
+      if (!text) return;
+      const outputText = typeof text === 'string' ? text : JSON.stringify(text);
+      const result = shield.scanOutput(outputText);
+      if (result.threats && result.threats.length > 0) {
+        if (onThreat) {
+          try { onThreat({ phase: 'after_model_call', threats: result.threats }); }
+          catch (e) { console.error('[Agent Shield] onThreat callback error:', e.message); }
+        }
+        if (result.blocked) {
+          throw new ShieldBlockError('Google ADK-JS model output blocked by Agent Shield', result.threats);
+        }
+      }
+    },
+
+    shield
+  };
+}
+
 module.exports = {
   shieldCrewAI,
   shieldGoogleADK,
+  shieldGoogleADKJS,
   shieldMSAgentFramework
 };

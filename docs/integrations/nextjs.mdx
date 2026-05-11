@@ -1,0 +1,104 @@
+---
+title: "Next.js (Edge Middleware)"
+description: "Scan every chat/agent API request via Next.js middleware."
+---
+
+Drop Agent Shield into a Next.js Edge Middleware to scan request bodies before they hit your `/api/chat` or `/api/agent` routes. Works on Pages Router, App Router, and Vercel Edge Runtime.
+
+## Setup
+
+```bash
+npm install agentshield-sdk
+```
+
+Save as `middleware.js` (or `middleware.ts`) at the project root:
+
+```javascript
+import { NextResponse } from 'next/server';
+import { AgentShield } from 'agentshield-sdk';
+
+const shield = new AgentShield({
+  sensitivity: 'high',
+  blockOnThreat: true,
+  blockThreshold: 'high'
+});
+
+export const config = {
+  matcher: ['/api/chat/:path*', '/api/agent/:path*']
+};
+
+export async function middleware(request) {
+  const body = await request.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return NextResponse.next();
+  }
+
+  // Pull user message from common shapes
+  const userMessage =
+    parsed?.message ??
+    parsed?.prompt ??
+    parsed?.messages?.findLast((m) => m.role === 'user')?.content ??
+    '';
+
+  if (!userMessage) return NextResponse.next();
+
+  const scan = shield.scanInput(String(userMessage));
+  if (scan.blocked) {
+    return NextResponse.json({
+      error: 'Blocked by Agent Shield',
+      category: scan.threats[0]?.category
+    }, { status: 400 });
+  }
+
+  // Reconstruct the body for the downstream handler
+  return NextResponse.next({
+    request: { body }
+  });
+}
+```
+
+## Why middleware
+
+<CardGroup cols={2}>
+  <Card title="Single source of truth" icon="diagram-project">
+    One scanner protects every chat/agent route.
+  </Card>
+  <Card title="Edge runtime" icon="bolt">
+    Runs before your route handler, before any model call.
+  </Card>
+  <Card title="Zero handler changes" icon="hand">
+    Your `/api/chat/route.ts` stays unchanged.
+  </Card>
+  <Card title="Vercel-native" icon="triangle">
+    Deploys to Vercel Edge with no special config.
+  </Card>
+</CardGroup>
+
+## Route handler (App Router)
+
+For full input + output scanning, also wrap the model call in your route:
+
+```javascript
+// app/api/chat/route.ts
+import { AgentShield } from 'agentshield-sdk';
+
+const shield = new AgentShield({ blockOnThreat: true });
+
+export async function POST(req) {
+  const { messages } = await req.json();
+
+  const reply = await callModel(messages);
+
+  const outputScan = shield.scanOutput(reply);
+  if (outputScan.blocked) {
+    return Response.json({ error: 'Response blocked' }, { status: 502 });
+  }
+
+  return Response.json({ reply });
+}
+```
+
+Full example: [`examples/nextjs-edge-middleware.js`](https://github.com/texasreaper62/Agent-Shield/blob/main/examples/nextjs-edge-middleware.js).

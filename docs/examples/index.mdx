@@ -1,0 +1,86 @@
+---
+title: "Examples"
+description: "Runnable examples covering every supported framework."
+---
+
+All examples live in [`examples/`](https://github.com/texasreaper62/Agent-Shield/tree/main/examples) in the repo. Each is self-contained and copy-paste runnable.
+
+## Quick starts
+
+<CardGroup cols={2}>
+  <Card title="quick-start.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/quick-start.js" icon="rocket">
+    Smallest possible example — construct, scan, report.
+  </Card>
+  <Card title="claude-3-lines.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/claude-3-lines.js" icon="a">
+    Protect a Claude SDK agent in literally 3 lines.
+  </Card>
+  <Card title="protect-agent.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/protect-agent.js" icon="shield">
+    Generic agent-wrapping with `wrapAgent`.
+  </Card>
+  <Card title="agent-shield.json" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/agent-shield.json" icon="file-code">
+    Reference config file with all common options.
+  </Card>
+</CardGroup>
+
+## Framework integrations
+
+<CardGroup cols={2}>
+  <Card title="anthropic-agent.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/anthropic-agent.js" icon="a">
+    Anthropic SDK with `shieldAnthropicClient`.
+  </Card>
+  <Card title="openai-agent.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/openai-agent.js" icon="o">
+    Classic OpenAI SDK with `shieldOpenAIClient`.
+  </Card>
+  <Card title="openai-agents-sdk.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/openai-agents-sdk.js" icon="o">
+    `@openai/agents` SDK (April 2026) with input/output/tool guardrails.
+  </Card>
+  <Card title="langchain-agent.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/langchain-agent.js" icon="link">
+    LangChain `ShieldCallbackHandler` on an agent executor.
+  </Card>
+  <Card title="express-server.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/express-server.js" icon="server">
+    Express middleware on a chat API.
+  </Card>
+  <Card title="cloudflare-workers-ai.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/cloudflare-workers-ai.js" icon="cloud">
+    Workers AI guardrail with input + output scanning.
+  </Card>
+  <Card title="nextjs-edge-middleware.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/nextjs-edge-middleware.js" icon="n">
+    Next.js Edge middleware on `/api/chat/*` routes.
+  </Card>
+  <Card title="vercel-ai-sdk-guardrail.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/vercel-ai-sdk-guardrail.js" icon="triangle">
+    Vercel AI SDK streaming chat with input scanning.
+  </Card>
+</CardGroup>
+
+## MCP
+
+<CardGroup cols={2}>
+  <Card title="mcp-sdk-quickstart.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/mcp-sdk-quickstart.js" icon="plug">
+    `shieldMCPServer` wrap of an MCP SDK server.
+  </Card>
+  <Card title="mcp-security-demo.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/mcp-security-demo.js" icon="lock">
+    Full MCP security runtime — auth, scan, behavior, audit.
+  </Card>
+  <Card title="mcp-attack-demo.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/mcp-attack-demo.js" icon="bug">
+    Red-team payloads against a hardened MCP server.
+  </Card>
+</CardGroup>
+
+## Advanced
+
+<CardGroup cols={2}>
+  <Card title="multi-agent.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/multi-agent.js" icon="users">
+    Multi-agent system with herd immunity and trust boundaries.
+  </Card>
+  <Card title="compliance-audit.js" href="https://github.com/texasreaper62/Agent-Shield/blob/main/examples/compliance-audit.js" icon="clipboard-check">
+    Generate OWASP LLM Top 10, NIST AI RMF, and EU AI Act reports.
+  </Card>
+</CardGroup>
+
+## Running locally
+
+```bash
+git clone https://github.com/texasreaper62/Agent-Shield
+cd Agent-Shield
+npm install
+node examples/quick-start.js
+```

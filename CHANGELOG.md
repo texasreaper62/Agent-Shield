@@ -4,6 +4,101 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [14.2.0] - 2026-05-11
+
+### May 2026 Threat Response + Performance + DX
+
+Response to threats disclosed between April 25 and May 11, 2026.
+
+#### New Detection Patterns (4 patterns, 303 → 307)
+
+- **TrustFall malicious project files** (2 patterns) — Adversa AI disclosed May 2026: malicious `.claude/`, `.cursor/`, `.windsurf/` config files with auto-execution hooks (`preCommand`, `onStart`, etc.) trigger one-keypress compromise of AI coding agents and exfiltrate CI env vars
+- **Semantic Kernel RCE** — Microsoft Semantic Kernel (CVE-2026-25592 / CVE-2026-26030, disclosed May 7) allows prompt injection to invoke arbitrary kernel functions and achieve RCE on the host process
+- **WebSocket cross-origin hijacking** — CVE-2026-44211 (Cline Kanban) and CVE-2026-32173 (Azure SRE Agent CVSS 8.6): WebSockets without origin validation let attackers inject prompts into running agent terminals
+
+#### CVE Registry Expansion (33 → 44 CVEs)
+
+- CVE-2026-25592 / CVE-2026-26030: Microsoft Semantic Kernel RCE (May 7)
+- CVE-2026-42302: FastGPT agent-sandbox unauth RCE (CVSS 9.8, May 8)
+- CVE-2026-44284: FastGPT MCP SSRF
+- CVE-2026-42344: FastGPT DNS rebinding bypass
+- CVE-2026-44211: Cline Kanban WebSocket Hijacking
+- CVE-2026-32173: Azure SRE Agent unauth WebSocket (CVSS 8.6)
+- CVE-2026-44400-403: 4× CrewAI Code Interpreter chain RCE/SSRF/file-read
+
+#### Performance: LRU Cache (151x speedup on warm cache)
+
+- Added 1000-entry LRU cache to `scanText()` keyed on `(source, sensitivity, text)`
+- Cached scans complete in ~1μs vs ~190μs cold (151x speedup on short malicious inputs, 90x on benign)
+- Eliminates duplicate work in RAG pipelines, batch processors, and middleware retry loops
+- Inputs >2048 chars bypass the cache to avoid memory bloat
+- Opt-out via `scanText(text, { useCache: false })`
+- Result object includes `fromCache: true` when served from cache
+
+#### Developer Experience
+
+- New examples for the platforms developers actually deploy to in 2026:
+  - `examples/cloudflare-workers-ai.js` — Workers AI guardrail with input + output scanning
+  - `examples/nextjs-edge-middleware.js` — Next.js Edge middleware for `/api/chat/*` and `/api/agent/*` routes
+  - `examples/vercel-ai-sdk-guardrail.js` — Vercel AI SDK streaming chat guardrail
+- All examples are self-contained and ready to copy-paste into a real app
+
+#### Test Coverage
+
+- New `test/test-v14.2-patterns.js` — 32 assertions covering LRU cache correctness, all 4 new patterns, all 11 new CVE entries, and 6 false-positive regression samples
+- Total project assertions: ~3,200+ across all suites; v14.2 specific: 32
+
+#### Known Limitations Documented
+
+- Rust NAPI native scanner (`src/native-scanner.js`) is loaded but NOT wired into the JS hot path. Investigation revealed the Rust core has only 141 patterns vs JS's 307, so wiring it in blindly would silently lose 166 patterns of coverage. Use of the native scanner is gated on a future pattern-sync effort.
+
+## [14.1.0] - 2026-04-24
+
+### April 2026 Threat Response — Comment-and-Control, MCP CVE Wave, OAuth Supply Chain
+
+Rapid security update responding to this week's active attacks: Vercel/Context.ai OAuth supply chain breach, "Comment and Control" zero-click credential theft from AI coding agents, 7 new MCP CVEs, Unit 42 MCP sampling attacks, and malicious LLM API routers.
+
+#### New Detection Patterns (13 patterns, 290 → 303)
+
+- **CI/CD Agent Injection** (`cicd_injection`) — detects prompt injection targeting AI coding agents via PR titles, issue comments, and review comments. Defends against the "Comment and Control" attack (April 2026) that exfiltrated credentials from Claude Code, Gemini CLI, and GitHub Copilot
+- **Credential Exfiltration** (`credential_exfiltration`) — detects `/proc/[pid]/environ` reads (Copilot bypass technique), API key patterns in agent output (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.), and OAuth/bearer token exfiltration with provider-specific prefixes (ya29, ghp_, sk-, xox-, AKIA)
+- **OAuth Flow Manipulation** (`credential_exfiltration`) — detects grant_type/redirect_uri/client_secret manipulation targeting token theft, inspired by the Vercel/Context.ai supply chain breach
+- **MCP Sampling Injection** (`mcp_sampling_injection`) — detects hidden instructions injected via MCP sampling/createMessage requests (Unit 42 research, April 2026)
+- **LLM Router Tampering** (`llm_router_tampering`) — detects OPENAI_BASE_URL/ANTHROPIC_BASE_URL overrides pointing to untrusted endpoints (arXiv 2604.08407: 9 of 28 paid routers actively malicious)
+- **MCP STDIO Command Injection** (`mcp_command_injection`) — detects `npx -c` command injection via MCP STDIO transport (CVE-2026-30623, 200K+ servers affected)
+
+#### CVE Registry Update (26 → 33 CVEs)
+
+- CVE-2026-40933: Flowise MCP Adapters RCE (CVSS 9.9)
+- CVE-2026-41264: Flowise CSV Agent prompt injection to RCE
+- CVE-2026-33626: LMDeploy SSRF (exploited within 12 hours of disclosure)
+- CVE-2026-33032: nginx-ui MCP auth bypass (CVSS 9.8, actively exploited)
+- CVE-2026-20205: Splunk MCP Server cleartext token logging (CVSS 7.2)
+- CVE-2026-33946: MCP Ruby SDK session fixation
+- CVE-2026-5603: magento2-dev-mcp command injection
+
+#### MCPGuard Security Hardening
+
+- **Tool name squatting detection** — `registerServer()` now detects and warns when a new MCP server registers a tool name already owned by another server (MCPShield arXiv:2604.05969 "Server Spoofing" vector)
+- **Context flooding defense** — `interceptToolOutput()` flags tool outputs exceeding `maxToolOutputSize` (default 100KB) to prevent context window exhaustion attacks
+- **Recursive tool invocation depth limit** — blocks tool call chains exceeding `maxCallDepth` (default 5) to prevent reentrancy attacks and unbounded recursive loops
+
+#### Supply Chain Scanner Enhancements
+
+- **Consent phishing detection** — flags tools whose description implies read-only but whose schema contains write/network parameters (OWASP ASI09 Human-Agent Trust Exploitation)
+
+#### Integration Updates
+
+- `shieldGoogleADKJS()` — new wrapper for Google ADK TypeScript/JavaScript SDK (GA April 2026)
+- GPT-5.5 model risk profile added to MCP Guard (critical susceptibility, elevated sandbox escape surface)
+
+#### Test Coverage Expansion (+416 assertions)
+
+- `test-v14.1-patterns.js` — 61 assertions: all 5 new categories, 12 FP guards, ADK-JS integration, CVE registry
+- `test-pattern-categories.js` — 66 assertions: detection test for every 51 pattern categories + 15 benign guards
+- `test-supply-chain-cves.js` — 228 assertions: all 33 CVEs, 9 blocklist entries, injection/SSRF/poisoning patterns, consent phishing, SARIF/Markdown output
+- Total new assertions this release: 355
+
 ## [14.0.0] - 2026-04-16
 
 ### Major Release — Platform Parity + Framework Integrations

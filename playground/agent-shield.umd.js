@@ -1,6 +1,34 @@
 'use strict';
 
 /**
+ * Agent Shield — Core Detection Engine (UMD)
+ *
+ * Works with:
+ *   - Browser <script> tags (sets window.AgentShield)
+ *   - Node.js require()
+ *   - AMD / define()
+ *
+ * All detection runs locally — no data ever leaves your environment.
+ */
+
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD
+    define([], factory);
+  } else if (typeof module === 'object' && module.exports) {
+    // CommonJS / Node.js
+    module.exports = factory();
+  } else {
+    // Browser global
+    root.AgentShield = factory();
+  }
+}(typeof globalThis !== 'undefined' ? globalThis
+  : typeof self !== 'undefined' ? self
+  : typeof window !== 'undefined' ? window
+  : typeof global !== 'undefined' ? global
+  : this, function () {
+
+/**
  * Agent Shield — Core Detection Engine
  *
  * Standalone threat detection for AI agents. Scans text inputs and outputs
@@ -16,7 +44,7 @@
 // =========================================================================
 
 let _nativeScanner = null;
-try { _nativeScanner = require('./native-scanner'); } catch { /* optional */ }
+
 
 // =========================================================================
 // LRU CACHE FOR REPEATED INPUTS
@@ -1599,7 +1627,7 @@ const INJECTION_PATTERNS = [
     severity: 'high',
     category: 'data_exfiltration',
     description: 'Text asks to complete code that accesses secrets or environment variables.',
-    detail: 'Code completion exfil: tricks the model into generating code that exposes credentials via os.environ/process.env patterns.'
+    detail: 'Code completion exfil: tricks the model into generating code that exposes credentials via os.environ/({}) patterns.'
   },
 
   // Few-shot extraction — fake Q&A pattern ending with prompt question
@@ -3455,7 +3483,7 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
  * @returns {object} Scan result with status, threats, and stats.
  *
  * @example
- * const { scanText } = require('./detector-core');
+
  * const result = scanText('ignore all previous instructions', { source: 'user_input' });
  * console.log(result.status); // 'warning'
  * console.log(result.threats); // [{ severity: 'high', ... }]
@@ -3724,4 +3752,5 @@ const getRawPatterns = () => {
 // EXPORTS
 // =========================================================================
 
-module.exports = { scanText, getPatterns, getRawPatterns, SEVERITY_ORDER, MAX_INPUT_SIZE };
+  return { scanText: scanText, getPatterns: getPatterns, SEVERITY_ORDER: SEVERITY_ORDER, MAX_INPUT_SIZE: MAX_INPUT_SIZE };
+}));

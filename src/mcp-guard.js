@@ -61,6 +61,7 @@ const MODEL_RISK_PROFILES = {
   'gemini-2.5': { riskMultiplier: 1.2, susceptibility: 'high', notes: 'Advanced capability increases risk' },
   'llama-4': { riskMultiplier: 1.1, susceptibility: 'medium', notes: 'Early fusion architecture increases multimodal attack surface' },
   'deepseek-r1': { riskMultiplier: 1.3, susceptibility: 'high', notes: 'Nature: LRMs achieve 97% jailbreak success as autonomous agents' },
+  'gpt-5.5': { riskMultiplier: 1.4, susceptibility: 'critical', notes: 'April 2026 agentic model — elevated sandbox escape and tool-use attack surface' },
   default: { riskMultiplier: 1.0, susceptibility: 'medium', notes: 'Unknown model — default risk level' }
 };
 
@@ -258,10 +259,25 @@ class CrossServerIsolation {
    * @param {string[]} toolNames
    */
   registerServer(serverId, toolNames) {
+    const collisions = [];
+    for (const name of toolNames) {
+      const existingOwner = this.toolOwnership.get(name);
+      if (existingOwner && existingOwner !== serverId) {
+        collisions.push({ tool: name, existingServer: existingOwner, newServer: serverId });
+      }
+    }
     this.serverTools.set(serverId, new Set(toolNames));
     for (const name of toolNames) {
       this.toolOwnership.set(name, serverId);
     }
+    if (collisions.length > 0) {
+      return {
+        collisions,
+        severity: 'critical',
+        message: `Tool name squatting detected: ${collisions.map(c => `"${c.tool}" (owned by ${c.existingServer}, overridden by ${c.newServer})`).join(', ')}`
+      };
+    }
+    return null;
   }
 
   /**
@@ -639,8 +655,14 @@ class MCPGuard {
     this._chainTracker = [];
     this._chainMaxLen = 50;
 
+    /** Recursive tool invocation depth tracker (per-request) */
+    this._callDepth = new Map();
+    this._maxCallDepth = options.maxCallDepth || 5;
+
     /** Agent fleet registry — tracks all known agents in the deployment */
     this._agentRegistry = new Map();
+
+    this.config = options;
   }
 
   // -----------------------------------------------------------------------
@@ -910,9 +932,25 @@ class MCPGuard {
    * @param {*} args - Tool arguments.
    * @returns {{ allowed: boolean, threats: Array<object>, anomalies: Array<object> }}
    */
-  interceptToolCall(serverId, toolName, args) {
+  interceptToolCall(serverId, toolName, args, requestId) {
     const threats = [];
     const anomalies = [];
+
+    // Recursive tool invocation depth check
+    if (requestId) {
+      const depth = (this._callDepth.get(requestId) || 0) + 1;
+      this._callDepth.set(requestId, depth);
+      if (depth > this._maxCallDepth) {
+        threats.push({
+          type: 'recursive_tool_invocation',
+          severity: 'high',
+          serverId,
+          toolName,
+          description: `Tool call depth ${depth} exceeds max ${this._maxCallDepth}. Possible recursive loop or reentrancy attack.`
+        });
+        return { allowed: false, threats, anomalies };
+      }
+    }
 
     // Circuit breaker check
     const cbCheck = this._checkCircuitBreaker(serverId);
@@ -1188,6 +1226,19 @@ class MCPGuard {
 
     // Scan output
     const outputStr = typeof output === 'string' ? output : JSON.stringify(output || {});
+
+    // Context flooding defense: flag oversized tool outputs that could push
+    // legitimate instructions out of the context window
+    const maxOutputSize = this.config.maxToolOutputSize || 100_000;
+    if (outputStr.length > maxOutputSize) {
+      threats.push({
+        type: 'context_flooding',
+        severity: 'high',
+        serverId,
+        toolName,
+        description: `Tool output exceeds max size (${outputStr.length} > ${maxOutputSize} chars). Possible context window flooding attack.`
+      });
+    }
     const scanResult = this.scanner(outputStr);
     if (scanResult.threats && scanResult.threats.length > 0) {
       for (const t of scanResult.threats) {

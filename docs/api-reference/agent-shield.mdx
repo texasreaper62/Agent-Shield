@@ -1,0 +1,102 @@
+---
+title: "AgentShield"
+description: "The main SDK class — config, scanning, stats, blocking."
+---
+
+`AgentShield` is the canonical entry point. Construct once, reuse across requests. State (LRU cache, stats, herd immunity memory) lives on the instance.
+
+```javascript
+const { AgentShield } = require('agentshield-sdk');
+
+const shield = new AgentShield({ blockOnThreat: true });
+```
+
+## Constructor
+
+```typescript
+new AgentShield(options?: AgentShieldOptions)
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `sensitivity` | `'low' \| 'medium' \| 'high'` | `'medium'` | Detector aggressiveness |
+| `blockOnThreat` | `boolean` | `false` | Throw on threat detection |
+| `blockThreshold` | `'low' \| 'medium' \| 'high' \| 'critical'` | `'medium'` | Minimum severity to block |
+| `logging` | `boolean` | `false` | Print `[Agent Shield]` lines to stdout |
+| `onThreat` | `(result: ScanResult) => void` | — | Callback for every detection |
+| `pii` | `boolean` | `false` | Enable PII redaction layer |
+| `dangerousTools` | `string[]` | `['bash','exec','eval']` | Tool names to flag |
+| `sensitiveFilePatterns` | `RegExp[]` | `[/\.env$/i, ...]` | File paths to flag in tool calls |
+| `maxInputSize` | `number` | `1048576` | Max bytes to scan (1MB) |
+| `plugins` | `string[]` | `[]` | Registered plugin names to enable |
+
+## Methods
+
+### `scanInput(text, options?)`
+
+Scan a user/tool/RAG input. Returns a `ScanResult`.
+
+```javascript
+const result = shield.scanInput(userMessage);
+// {
+//   blocked: boolean,
+//   threats: [{ category, severity, pattern, description, span }],
+//   fromCache: boolean,
+//   latencyMs: number
+// }
+```
+
+### `scanOutput(text, options?)`
+
+Scan an LLM response or agent output. Same shape as `scanInput`, tuned for output-side threats (prompt extraction, PII leaks).
+
+### `scanToolCall({ name, args })`
+
+Validate a planned tool call. Checks the tool name against `dangerousTools`, the arguments against pattern catalogue, and the schema for poisoning.
+
+```javascript
+const verdict = shield.scanToolCall({
+  name: 'fs_read',
+  args: { path: '/etc/passwd' }
+});
+// { allowed: false, reason: 'sensitive_file_access' }
+```
+
+### `scanContext(messages)`
+
+Multi-turn analyzer. Detects crescendo attacks, fragmentation, role-switch attempts across conversation history.
+
+```javascript
+shield.scanContext([
+  { role: 'user', content: '...' },
+  { role: 'assistant', content: '...' },
+  { role: 'user', content: '...' }
+]);
+```
+
+### `stats()`
+
+Aggregate counters since construction.
+
+```javascript
+shield.stats();
+// {
+//   scansTotal: 14283,
+//   threatsDetected: 412,
+//   blocked: 401,
+//   cacheHitRate: 0.71,
+//   avgLatencyMs: 0.21
+// }
+```
+
+### `reset()`
+
+Clear cache and stats. Useful in tests.
+
+## Errors
+
+`AgentShieldBlockedError` — thrown from wrappers when `blockOnThreat: true` and a threat triggers. Has `.threat` (single) and `.threats` (array) properties.
+
+All error codes follow the format `AS-{CATEGORY}-{NUMBER}` — see `src/errors.js`.

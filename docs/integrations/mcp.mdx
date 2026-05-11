@@ -1,0 +1,83 @@
+---
+title: "MCP Servers"
+description: "Drop-in security for Model Context Protocol servers."
+---
+
+Two surfaces: `shieldMCPServer` for a quick wrap of `@modelcontextprotocol/sdk` servers, and `MCPGuard` — a full 17-layer middleware for production MCP fleets.
+
+## shieldMCPServer (3 lines)
+
+```bash
+npm install @modelcontextprotocol/sdk agentshield-sdk
+```
+
+```javascript
+const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+const { shieldMCPServer } = require('agentshield-sdk/mcp');
+
+const server = shieldMCPServer(new Server({ name: 'my-server', version: '1.0' }), {
+  blockOnThreat: true,
+  onThreat: (event) => console.log('blocked:', event.toolName)
+});
+```
+
+All `tools/call`, `prompts/get`, `resources/read`, and `sampling/createMessage` handlers are wrapped. Tool inputs, outputs, and prompts are scanned. Audit trail is created automatically.
+
+## MCPGuard (production)
+
+`MCPGuard` is a unified middleware covering attestation, SSRF/path-traversal/config-poisoning firewalls, OAuth, rate limiting, circuit breaker, behavioral baselines, the micro-model classifier, intent graph, drift monitor, OWASP Agentic scanner, and attack surface mapper.
+
+```javascript
+const { MCPGuard } = require('agentshield-sdk/guard');
+
+// Preset = minimal | standard | recommended | strict | paranoid
+const guard = MCPGuard.fromPreset('recommended');
+
+guard.registerServer('my-server', toolDefinitions, oauthToken);
+
+const result = guard.interceptToolCall('my-server', 'search', { query: input });
+// { allowed: true, threats: [], anomalies: [] }
+```
+
+<Tabs>
+  <Tab title="Presets">
+    | Preset | Use case |
+    |---|---|
+    | `minimal` | Local dev, log-only |
+    | `standard` | Default production |
+    | `recommended` | Default + drift monitor + intent graph |
+    | `strict` | Block on medium+, full ML stack |
+    | `paranoid` | Block on low+, all layers, audit everything |
+  </Tab>
+  <Tab title="Hooks">
+    ```javascript
+    guard.interceptToolCall(server, tool, args);
+    guard.interceptToolOutput(server, tool, result);
+    guard.interceptSampling(server, request);
+    guard.interceptPrompt(server, prompt);
+    ```
+  </Tab>
+</Tabs>
+
+## Supply chain scanning
+
+```javascript
+const { SupplyChainScanner } = require('agentshield-sdk/scanner');
+
+const scanner = new SupplyChainScanner();
+const report = scanner.scanServer({ name: 'server', tools: toolDefinitions });
+
+if (report.criticalCount > 0) process.exit(1);
+
+console.log(report.toSARIF());     // CI/CD integration
+console.log(report.toMarkdown());  // PR comments
+```
+
+Covers 44 tracked CVEs, schema poisoning, full-schema poisoning, SSRF, ClawHavoc, and consent phishing (tool description mismatch).
+
+## Audit CLI
+
+```bash
+npx agentshield-audit https://my-mcp-server.example.com --mode full
+# Runs 617+ real attack payloads, grades A+ through F
+```

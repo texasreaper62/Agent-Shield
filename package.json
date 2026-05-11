@@ -1,6 +1,6 @@
 {
   "name": "agentshield-sdk",
-  "version": "14.0.0",
+  "version": "14.2.0",
   "description": "SOTA AI agent security SDK. F1 1.000 on BIPIA/HackAPrompt/MCPTox/Multilingual benchmarks. 400+ exports, 100+ modules. Zero dependencies, runs locally.",
   "main": "src/main.js",
   "types": "types/index.d.ts",

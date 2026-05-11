@@ -1,14 +1,83 @@
-node_modules
+# VCS
 .git
+.gitignore
+.gitattributes
 .github
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+.npm
+.nvmrc
+
+# Tests & coverage
 test
 tests
-examples
-docs
-dashboard
-playground
-*.md
-!README.md
-.env*
 coverage
 .nyc_output
+*.test.js
+*.spec.js
+
+# Dev tooling
+.eslintrc*
+eslint.config.js
+.prettierrc*
+commitlint.config.js
+.husky
+
+# Docs / examples (kept out of image to keep it lean)
+docs
+examples
+playground
+dashboard
+dashboard-live
+research
+instructions
+ROADMAP.md
+CONTRIBUTING.md
+CONTRIBUTORS.md
+SECURITY.md
+PRIVACY.md
+GETTING_STARTED.md
+CHANGELOG.md
+*.md
+!README.md
+
+# Local secrets / env
+.env
+.env.*
+*.pem
+*.key
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist
+build
+*.vsix
+*.tgz
+
+# Sub-projects we don't ship in the container
+python-sdk
+go-sdk
+rust-core
+wasm
+vscode
+vscode-extension
+terraform
+terraform-provider
+otel-collector
+benchmark
+benchmark-registry
+github-app
+k8s
+packages
+datasets
+dataset
+patterns
+scripts

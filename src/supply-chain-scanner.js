@@ -51,6 +51,18 @@ const KNOWN_BAD_SERVERS = Object.freeze({
   'flowise-unpatched': {
     reason: 'CVSS 10.0 RCE actively exploited (CVE-2025-59528)',
     severity: 'critical'
+  },
+  'lmdeploy-unpatched': {
+    reason: 'SSRF via vision-language image loader, exploited within 12 hours (CVE-2026-33626)',
+    severity: 'high'
+  },
+  'nginx-ui-mcp': {
+    reason: 'Auth bypass on MCP-integrated HTTP endpoints, actively exploited (CVE-2026-33032)',
+    severity: 'critical'
+  },
+  'splunk-mcp-server': {
+    reason: 'Auth tokens logged in cleartext (CVE-2026-20205)',
+    severity: 'high'
   }
 });
 
@@ -208,6 +220,18 @@ const CVE_REGISTRY = Object.freeze({
       fix: 'Upgrade Flowise to >=3.0.6. Restrict access to MCP node.'
     },
     {
+      cve: 'CVE-2026-40933',
+      severity: 'critical',
+      description: 'Flowise MCP Adapters authenticated RCE (CVSS 9.9). Unsafe stdio command serialization in MCP adapter enables OS command execution via npx -c.',
+      fix: 'Upgrade Flowise to >=3.1.0.'
+    },
+    {
+      cve: 'CVE-2026-41264',
+      severity: 'high',
+      description: 'Flowise CSV Agent prompt injection to RCE. LLM-generated Python script executed without sandbox. No auth required.',
+      fix: 'Upgrade Flowise to >=3.1.0.'
+    },
+    {
       cve: 'CVE-2025-8943',
       severity: 'critical',
       description: 'Missing authentication in Flowise.',
@@ -242,6 +266,122 @@ const CVE_REGISTRY = Object.freeze({
       severity: 'high',
       description: 'OS command injection RCE in codebase-mcp.',
       fix: 'Upgrade codebase-mcp. Never pass unsanitized inputs to shell.'
+    }
+  ],
+  'lmdeploy': [
+    {
+      cve: 'CVE-2026-33626',
+      severity: 'high',
+      description: 'LMDeploy SSRF via vision-language image loader (CVSS 7.5). load_image() fetches arbitrary URLs, enabling port scanning, IMDS access (169.254.169.254), and internal service probing. Exploited within 12 hours of disclosure.',
+      fix: 'Upgrade LMDeploy to >=0.12.3. Block private IP ranges and cloud metadata endpoints in image URLs.'
+    }
+  ],
+  'nginx-ui': [
+    {
+      cve: 'CVE-2026-33032',
+      severity: 'critical',
+      description: 'nginx-ui auth bypass on MCP-integrated HTTP endpoints (CVSS 9.8). Actively exploited.',
+      fix: 'Apply nginx-ui patch. Enable authentication on all MCP endpoints.'
+    }
+  ],
+  'splunk-mcp-server': [
+    {
+      cve: 'CVE-2026-20205',
+      severity: 'high',
+      description: 'Splunk MCP Server logs session/auth tokens in cleartext in _internal index (CVSS 7.2).',
+      fix: 'Upgrade Splunk MCP Server to >=1.0.3. Audit _internal index for leaked tokens.'
+    }
+  ],
+  'mcp-ruby-sdk': [
+    {
+      cve: 'CVE-2026-33946',
+      severity: 'medium',
+      description: 'MCP Ruby SDK session fixation in SSE stream allows hijacking of MCP protocol communications.',
+      fix: 'Upgrade MCP Ruby SDK to >=0.9.2.'
+    }
+  ],
+  'magento2-dev-mcp': [
+    {
+      cve: 'CVE-2026-5603',
+      severity: 'high',
+      description: 'Command injection in @elgentos/magento2-dev-mcp via child_process.execAsync with unsanitized input.',
+      fix: 'Upgrade magento2-dev-mcp. Sanitize all inputs before passing to child_process.'
+    }
+  ],
+  'semantic-kernel': [
+    {
+      cve: 'CVE-2026-25592',
+      severity: 'high',
+      description: 'Microsoft Semantic Kernel .NET SDK <1.71.0: prompt injection invokes arbitrary kernel functions leading to RCE on host process. Disclosed by MSRC May 7, 2026.',
+      fix: 'Upgrade Semantic Kernel .NET SDK to >=1.71.0. Validate function names in kernel.invoke() calls.'
+    },
+    {
+      cve: 'CVE-2026-26030',
+      severity: 'high',
+      description: 'Microsoft Semantic Kernel Python <1.39.4: same RCE primitive as CVE-2026-25592 but in Python SDK.',
+      fix: 'Upgrade Semantic Kernel Python to >=1.39.4.'
+    }
+  ],
+  'fastgpt': [
+    {
+      cve: 'CVE-2026-42302',
+      severity: 'critical',
+      description: 'FastGPT agent-sandbox unauthenticated RCE (CVSS 9.8). code-server launched with --auth none on 0.0.0.0:8080. Published May 8, 2026.',
+      fix: 'Upgrade FastGPT to >=4.14.13. Never expose agent-sandbox endpoints without authentication.'
+    },
+    {
+      cve: 'CVE-2026-44284',
+      severity: 'high',
+      description: 'FastGPT SSRF in MCP tool URL handling. Crafted URLs reach internal services and cloud metadata endpoints.',
+      fix: 'Upgrade FastGPT. Apply Agent Shield mcp-guard SSRF firewall.'
+    },
+    {
+      cve: 'CVE-2026-42344',
+      severity: 'high',
+      description: 'FastGPT DNS rebinding bypasses isInternalAddress() check. Attacker hostname resolves to internal IP after initial validation.',
+      fix: 'Upgrade FastGPT. Pin DNS resolution per request and re-validate on connect.'
+    }
+  ],
+  'cline-kanban': [
+    {
+      cve: 'CVE-2026-44211',
+      severity: 'high',
+      description: 'Cline Kanban Server Cross-Origin WebSocket Hijacking. Missing origin validation lets attackers inject prompts into running agent terminals.',
+      fix: 'Upgrade Cline. Validate Origin header on WebSocket upgrade requests.'
+    }
+  ],
+  'azure-sre-agent': [
+    {
+      cve: 'CVE-2026-32173',
+      severity: 'high',
+      description: 'Azure SRE Agent exposed live command streams over unauthenticated WebSocket to any Entra ID user (CVSS 8.6).',
+      fix: 'Apply Azure patch. Restrict WebSocket access to authorized principals only.'
+    }
+  ],
+  'crewai': [
+    {
+      cve: 'CVE-2026-44400',
+      severity: 'high',
+      description: 'CrewAI Code Interpreter default enabled allows prompt injection → RCE chain.',
+      fix: 'Upgrade CrewAI to latest. Disable Code Interpreter by default. Apply Agent Shield shieldCrewAI wrapper.'
+    },
+    {
+      cve: 'CVE-2026-44401',
+      severity: 'high',
+      description: 'CrewAI Code Interpreter SSRF via prompt-injected URLs.',
+      fix: 'Upgrade CrewAI. Block private IP ranges in tool URLs.'
+    },
+    {
+      cve: 'CVE-2026-44402',
+      severity: 'high',
+      description: 'CrewAI Code Interpreter file-read primitive via prompt injection.',
+      fix: 'Upgrade CrewAI. Restrict filesystem access in Code Interpreter sandbox.'
+    },
+    {
+      cve: 'CVE-2026-44403',
+      severity: 'high',
+      description: 'CrewAI agent task chain prompt injection leads to unauthorized tool invocation.',
+      fix: 'Upgrade CrewAI. Use Agent Shield intent-firewall to validate cross-task transitions.'
     }
   ]
 });
@@ -378,6 +518,7 @@ class SupplyChainScanner {
       this._scanSchema(tool, findings);
       this._scanForSSRF(tool, findings);
       this._scanForClawHavoc(tool, findings);
+      this._scanConsentPhishing(tool, findings);
     }
 
     // Analyze escalation chains
@@ -684,6 +825,29 @@ class SupplyChainScanner {
           recommendation: 'Replace wildcard/admin privileges with least-privilege scoped permissions.'
         });
       }
+    }
+  }
+
+  /** @private - Consent phishing: detect tools whose description misrepresents capabilities (OWASP ASI09) */
+  _scanConsentPhishing(tool, findings) {
+    if (!tool || !tool.description || !tool.inputSchema) return;
+    const desc = String(tool.description).toLowerCase();
+    const schemaStr = JSON.stringify(tool.inputSchema).toLowerCase();
+
+    const READ_WORDS = ['read', 'get', 'fetch', 'list', 'view', 'show', 'display', 'search', 'query', 'lookup'];
+    const WRITE_INDICATORS = ['"url"', '"endpoint"', '"host"', '"target"', '"destination"', '"webhook"', '"callback"', 'http', '"command"', '"exec"', '"shell"', '"script"'];
+    const BENIGN_WORDS = ['save', 'update', 'create', 'write', 'delete', 'send', 'post', 'execute', 'run', 'upload'];
+
+    const descLooksReadOnly = READ_WORDS.some(w => desc.includes(w)) && !BENIGN_WORDS.some(w => desc.includes(w));
+    const schemaHasWriteCapability = WRITE_INDICATORS.some(w => schemaStr.includes(w));
+
+    if (descLooksReadOnly && schemaHasWriteCapability) {
+      findings.push({
+        type: 'consent_phishing',
+        severity: 'high',
+        message: `Tool "${tool.name || 'unknown'}" description implies read-only ("${desc.substring(0, 60)}...") but schema contains write/network parameters. Users may approve dangerous actions unknowingly.`,
+        recommendation: 'Tool descriptions must accurately reflect capabilities. If the tool sends data to URLs or executes commands, the description must say so explicitly.'
+      });
     }
   }
 

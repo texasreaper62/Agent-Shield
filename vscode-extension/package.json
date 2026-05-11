@@ -1,10 +1,11 @@
 {
   "name": "agent-shield-vscode",
   "displayName": "Agent Shield",
-  "description": "Scan AI prompts and agent code for injection vulnerabilities",
-  "version": "1.0.0",
-  "publisher": "agent-shield",
+  "description": "Scan AI prompts and agent code for prompt injection, role hijacking, data exfiltration, and 40+ other AI-specific threats. Local detection, zero data leaves your machine.",
+  "version": "14.2.0",
+  "publisher": "texasreaper62",
   "license": "MIT",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -12,6 +13,10 @@
     "Security",
     "Linters"
   ],
+  "homepage": "https://github.com/texasreaper62/Agent-Shield#readme",
+  "bugs": {
+    "url": "https://github.com/texasreaper62/Agent-Shield/issues"
+  },
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
@@ -83,7 +88,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agent-shield/agent-shield"
+    "url": "https://github.com/texasreaper62/Agent-Shield.git"
   },
   "keywords": [
     "security",

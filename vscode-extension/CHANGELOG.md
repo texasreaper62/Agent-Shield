@@ -1,5 +1,12 @@
 # Changelog
 
+## 14.2.0 — 2026-05-11
+
+### Added
+- Version aligned with `agentshield-sdk` 14.2.0.
+- Publisher set to `texasreaper62` for VS Code Marketplace publishing.
+- Repository, homepage, and bug-tracker links point at `texasreaper62/Agent-Shield`.
+
 ## 1.0.0 — 2026-03-20
 
 ### Added

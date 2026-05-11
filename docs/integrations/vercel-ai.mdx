@@ -1,0 +1,96 @@
+---
+title: "Vercel AI SDK"
+description: "Guard streaming chat endpoints built with the Vercel AI SDK."
+---
+
+Wraps Vercel AI SDK streaming chat endpoints with input + output scanning. Drops into `app/api/chat/route.ts` with no changes to your frontend.
+
+## Install
+
+```bash
+npm install agentshield-sdk ai @ai-sdk/anthropic
+```
+
+## Route handler
+
+```javascript
+// app/api/chat/route.ts (or .js)
+import { streamText } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+import { AgentShield } from 'agentshield-sdk';
+
+const shield = new AgentShield({
+  sensitivity: 'high',
+  blockOnThreat: true,
+  blockThreshold: 'high',
+  onThreat: (result) => {
+    console.log('[shield] blocked:', result.threats[0]?.category);
+  }
+});
+
+export async function POST(req) {
+  const { messages } = await req.json();
+
+  // Scan every user message (catches injection anywhere in chat history)
+  for (const msg of messages) {
+    if (msg.role !== 'user') continue;
+    const content = typeof msg.content === 'string'
+      ? msg.content
+      : JSON.stringify(msg.content);
+    const scan = shield.scanInput(content);
+    if (scan.blocked) {
+      return Response.json({
+        error: 'Message blocked by Agent Shield',
+        category: scan.threats[0]?.category
+      }, { status: 400 });
+    }
+  }
+
+  const result = streamText({
+    model: anthropic('claude-opus-4-7'),
+    messages
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+## Streaming output scanning
+
+For inline output scanning during a stream, use Agent Shield's `StreamScanner`:
+
+```javascript
+import { streamText } from 'ai';
+import { StreamScanner } from 'agentshield-sdk';
+
+const scanner = new StreamScanner({ blockOnThreat: true });
+
+const result = streamText({
+  model: anthropic('claude-opus-4-7'),
+  messages,
+  onChunk({ chunk }) {
+    const verdict = scanner.feed(chunk.textDelta);
+    if (verdict.blocked) {
+      throw new Error('Output blocked: ' + verdict.threats[0]?.category);
+    }
+  }
+});
+```
+
+`StreamScanner` uses a sliding window so threats split across token boundaries are still detected.
+
+## Tabs
+
+<Tabs>
+  <Tab title="Chat history scan">
+    Every `user` message scanned each turn. Catches injection injected via prior turns or RAG.
+  </Tab>
+  <Tab title="Streaming output">
+    Token-level scanning with sliding window. Stops generation on first detection.
+  </Tab>
+  <Tab title="Tool guardrail">
+    Pair with `shieldOpenAIAgent` if using OpenAI tools via the Vercel SDK.
+  </Tab>
+</Tabs>
+
+Full example: [`examples/vercel-ai-sdk-guardrail.js`](https://github.com/texasreaper62/Agent-Shield/blob/main/examples/vercel-ai-sdk-guardrail.js).
