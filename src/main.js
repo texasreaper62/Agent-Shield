@@ -422,6 +422,7 @@ const {
   SYSTEM_PROMPT: SHIELD_AGENT_SYSTEM_PROMPT,
 } = safeRequire('./shield-agent', 'shield-agent');
 const { ShieldActions } = safeRequire('./shield-actions', 'shield-actions');
+const { IncidentReplay, INCIDENT_KINDS } = safeRequire('./incident-replay', 'incident-replay');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1185,6 +1186,10 @@ const _exports = {
   SHIELD_AGENT_VERDICTS,
   DEFAULT_TRIAGE_POLICY,
   SHIELD_AGENT_SYSTEM_PROMPT,
+
+  // Incident replay (H1 — autonomous triage)
+  IncidentReplay,
+  INCIDENT_KINDS,
 };
 
 // Filter out undefined exports (from modules that failed to load)
