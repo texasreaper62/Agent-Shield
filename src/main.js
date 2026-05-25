@@ -423,6 +423,7 @@ const {
 } = safeRequire('./shield-agent', 'shield-agent');
 const { ShieldActions } = safeRequire('./shield-actions', 'shield-actions');
 const { IncidentReplay, INCIDENT_KINDS } = safeRequire('./incident-replay', 'incident-replay');
+const { CrossSDKDifferential, NodeAdapter: CrossSDKNodeAdapter, PythonAdapter: CrossSDKPythonAdapter } = safeRequire('./cross-sdk-differential', 'cross-sdk-differential');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1190,6 +1191,11 @@ const _exports = {
   // Incident replay (H1 — autonomous triage)
   IncidentReplay,
   INCIDENT_KINDS,
+
+  // Cross-SDK differential auditor (H1 — catches port drift)
+  CrossSDKDifferential,
+  CrossSDKNodeAdapter,
+  CrossSDKPythonAdapter,
 };
 
 // Filter out undefined exports (from modules that failed to load)
