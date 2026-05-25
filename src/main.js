@@ -433,6 +433,8 @@ const { ShadowModeReporter } = safeRequire('./shadow-mode-reporter', 'shadow-mod
 const { SOCFleet, ROLES: SOC_ROLES } = safeRequire('./soc-fleet', 'soc-fleet');
 const { AgentIdentityCA } = safeRequire('./agent-identity-ca', 'agent-identity-ca');
 const { shieldOpenAICompatible, shieldHermes, shieldMessageBus, presets: ossPresets } = safeRequire('./integrations-oss', 'integrations-oss');
+const { Dream, DreamMemory, DreamScheduler, DreamArtifactLoader, ConsolidateIncidentsDream, RetuneThresholdsDream, EvolveAttacksDream, HuntNovelPatternsDream, ShadowDiffReplayDream, AuditDriftDream, AnalyzeCustomerReposDream, DraftSOCPatchesDream, DEFAULT_DREAM_FACTORY } = safeRequire('./dreams', 'dreams');
+const { NEW_2026_PATTERNS, A2ASmugglingDetector, MCPSchemaPin, detectZwcBinaryPayload, scanA2A } = safeRequire('./a2a-guard', 'a2a-guard');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1229,6 +1231,28 @@ const _exports = {
   shieldHermes,
   shieldMessageBus,
   ossPresets,
+
+  // Dreaming subsystem (background self-improvement)
+  Dream,
+  DreamMemory,
+  DreamScheduler,
+  DreamArtifactLoader,
+  ConsolidateIncidentsDream,
+  RetuneThresholdsDream,
+  EvolveAttacksDream,
+  HuntNovelPatternsDream,
+  ShadowDiffReplayDream,
+  AuditDriftDream,
+  AnalyzeCustomerReposDream,
+  DraftSOCPatchesDream,
+  DEFAULT_DREAM_FACTORY,
+
+  // 2026 threat coverage (A2A, MCP STDIO, sleeper triggers, reasoning leak, etc.)
+  NEW_2026_PATTERNS,
+  A2ASmugglingDetector,
+  MCPSchemaPin,
+  detectZwcBinaryPayload,
+  scanA2A,
 };
 
 // Filter out undefined exports (from modules that failed to load)
