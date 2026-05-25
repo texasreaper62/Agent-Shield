@@ -430,6 +430,8 @@ const { ComplianceNarrator, FRAMEWORKS: NARRATOR_FRAMEWORKS } = safeRequire('./c
 const { CustomerLearning } = safeRequire('./customer-learning', 'customer-learning');
 const { ThreatHunter, LocalCorpusSource: ThreatHunterLocalSource, HTTPSourceFn: ThreatHunterHTTPSource } = safeRequire('./threat-hunter', 'threat-hunter');
 const { ShadowModeReporter } = safeRequire('./shadow-mode-reporter', 'shadow-mode-reporter');
+const { SOCFleet, ROLES: SOC_ROLES } = safeRequire('./soc-fleet', 'soc-fleet');
+const { AgentIdentityCA } = safeRequire('./agent-identity-ca', 'agent-identity-ca');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1215,6 +1217,11 @@ const _exports = {
   ThreatHunterLocalSource,
   ThreatHunterHTTPSource,
   ShadowModeReporter,
+
+  // H3 — security fleet + agent identity CA
+  SOCFleet,
+  SOC_ROLES,
+  AgentIdentityCA,
 };
 
 // Filter out undefined exports (from modules that failed to load)
