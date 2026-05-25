@@ -413,6 +413,16 @@ const { RenderDifferentialAnalyzer, VisualHasher } = safeRequire('./render-diffe
 // v13.3 — Sybil Detector
 const { SybilDetector, AgentIdentityVerifier } = safeRequire('./sybil-detector', 'sybil-detector');
 
+// ShieldAgent (H1 — active defender layer)
+const {
+  ShieldAgent,
+  ACTIONS: SHIELD_AGENT_ACTIONS,
+  VERDICTS: SHIELD_AGENT_VERDICTS,
+  DEFAULT_TRIAGE_POLICY,
+  SYSTEM_PROMPT: SHIELD_AGENT_SYSTEM_PROMPT,
+} = safeRequire('./shield-agent', 'shield-agent');
+const { ShieldActions } = safeRequire('./shield-actions', 'shield-actions');
+
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
   // Core
@@ -1167,6 +1177,14 @@ const _exports = {
   // Sybil Detector
   SybilDetector,
   AgentIdentityVerifier,
+
+  // ShieldAgent (H1 — active defender)
+  ShieldAgent,
+  ShieldActions,
+  SHIELD_AGENT_ACTIONS,
+  SHIELD_AGENT_VERDICTS,
+  DEFAULT_TRIAGE_POLICY,
+  SHIELD_AGENT_SYSTEM_PROMPT,
 };
 
 // Filter out undefined exports (from modules that failed to load)

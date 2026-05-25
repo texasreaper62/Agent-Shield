@@ -24,6 +24,8 @@ const { PIIRedactor } = require('./pii');
 const { CanaryTokens } = require('./canary');
 const { ShieldScoreCalculator } = require('./shield-score');
 const { ThreatEncyclopedia, THREAT_ENCYCLOPEDIA } = require('./threat-encyclopedia');
+const { ShieldAgent } = require('./shield-agent');
+const { ShieldActions } = require('./shield-actions');
 const fs = require('fs');
 const path = require('path');
 
@@ -137,6 +139,62 @@ const MCP_TOOLS = [
       },
       required: ['query']
     }
+  },
+  // -------- ShieldAgent tools (H1: active defender) --------
+  {
+    name: 'investigate',
+    description: 'Adjudicate a piece of content. Runs the deterministic detector first; if the result is ambiguous and an LLM judge is wired in, the judge produces a structured verdict. Returns {verdict, confidence, action, reason, rewritten, indicators}.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The content to adjudicate.' },
+        provenance: { type: 'string', enum: ['SYSTEM', 'USER', 'TOOL_OUTPUT', 'RAG_CHUNK', 'UNTRUSTED'], description: 'Trust level of the source.' },
+        source: { type: 'string', description: 'Human-readable label (e.g. "github-pr-comment-#42").' },
+        system_prompt: { type: 'string', description: "Optional: the host agent's system prompt, so the judge knows what the agent is supposed to do." }
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'safe_rewrite',
+    description: 'Ask the configured LLM judge to produce a sanitized rewrite of a prompt that preserves legitimate intent and strips injection. Returns null if no judge is configured or no salvageable intent.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        source: { type: 'string' }
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'explain_threat',
+    description: 'Generate a human-readable explanation and remediation advice for a Shield scan result. Useful for SOC triage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The flagged text (will be re-scanned to assemble the explanation).' },
+        source: { type: 'string' }
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'execute_verdict',
+    description: 'Apply a verdict (from investigate) to original content. Returns {proceed, payload, info}: proceed=false means do not process; payload is either the rewritten/sanitized content or a blocked-response string.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        verdict: { type: 'object', description: 'A verdict object returned by investigate.' },
+        original_text: { type: 'string' }
+      },
+      required: ['verdict', 'original_text']
+    }
+  },
+  {
+    name: 'agent_stats',
+    description: 'Return aggregate statistics for the ShieldAgent triage loop since startup (investigations, judge invocations, action breakdown).',
+    inputSchema: { type: 'object', properties: {} }
   }
 ];
 
@@ -160,6 +218,19 @@ class MCPToolHandler {
       sensitivity: options.sensitivity || 'high'
     });
     this.encyclopedia = new ThreatEncyclopedia();
+    // ShieldAgent + Actions. Judge is optional — passed via options.judge or
+    // left null (agent will still triage using detector-only fast paths).
+    this.shieldAgent = new ShieldAgent({
+      shield: this.shield,
+      judge: options.judge || null,
+      triagePolicy: options.triagePolicy,
+      budgetMs: options.judgeBudgetMs,
+    });
+    this.shieldActions = new ShieldActions({
+      quarantineSink: options.quarantineSink || null,
+      escalateSink: options.escalateSink || null,
+      blockedResponse: options.blockedResponse,
+    });
   }
 
   /**
@@ -340,6 +411,69 @@ class MCPToolHandler {
     // Fall back to search
     const results = this.encyclopedia.search(query);
     return { results, count: results.length };
+  }
+
+  // -------- ShieldAgent tool handlers --------
+
+  /**
+   * @param {object} params - { text, provenance?, source?, system_prompt? }
+   * @returns {Promise<object>} Verdict entry.
+   */
+  async investigate(params) {
+    if (!params || typeof params.text !== 'string') {
+      throw new Error('Missing required parameter: text');
+    }
+    return await this.shieldAgent.investigate(params.text, {
+      provenance: params.provenance,
+      source: params.source,
+      systemPrompt: params.system_prompt,
+    });
+  }
+
+  /**
+   * @param {object} params - { text, source? }
+   * @returns {Promise<object|null>}
+   */
+  async safeRewrite(params) {
+    if (!params || typeof params.text !== 'string') {
+      throw new Error('Missing required parameter: text');
+    }
+    const result = await this.shieldAgent.safeRewrite(params.text, { source: params.source });
+    return result || { rewritten: null, reason: 'No judge configured or no salvageable intent.' };
+  }
+
+  /**
+   * @param {object} params - { text, source? }
+   * @returns {Promise<object>} { explanation, remediation }
+   */
+  async explainThreat(params) {
+    if (!params || typeof params.text !== 'string') {
+      throw new Error('Missing required parameter: text');
+    }
+    const scan = this.shield.scan(params.text);
+    return await this.shieldAgent.explainThreat(scan, { source: params.source });
+  }
+
+  /**
+   * @param {object} params - { verdict, original_text }
+   * @returns {Promise<object>} { proceed, payload, info }
+   */
+  async executeVerdict(params) {
+    if (!params || !params.verdict || typeof params.original_text !== 'string') {
+      throw new Error('Missing required parameters: verdict, original_text');
+    }
+    return await this.shieldActions.execute(params.verdict, params.original_text);
+  }
+
+  /**
+   * @returns {object} Combined ShieldAgent + ShieldActions stats.
+   */
+  agentStats() {
+    return {
+      agent: this.shieldAgent.getStats(),
+      actions: this.shieldActions.getStats(),
+      history_size: this.shieldAgent.history.length,
+    };
   }
 }
 
@@ -594,6 +728,21 @@ class MCPServer {
           break;
         case 'get_threats':
           result = this.handler.getThreats(toolArgs);
+          break;
+        case 'investigate':
+          result = await this.handler.investigate(toolArgs);
+          break;
+        case 'safe_rewrite':
+          result = await this.handler.safeRewrite(toolArgs);
+          break;
+        case 'explain_threat':
+          result = await this.handler.explainThreat(toolArgs);
+          break;
+        case 'execute_verdict':
+          result = await this.handler.executeVerdict(toolArgs);
+          break;
+        case 'agent_stats':
+          result = this.handler.agentStats();
           break;
         default:
           return {
