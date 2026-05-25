@@ -428,6 +428,8 @@ const { ThresholdTuner } = safeRequire('./threshold-tuner', 'threshold-tuner');
 const { AdversarialTournament } = safeRequire('./adversarial-tournament', 'adversarial-tournament');
 const { ComplianceNarrator, FRAMEWORKS: NARRATOR_FRAMEWORKS } = safeRequire('./compliance-narrator', 'compliance-narrator');
 const { CustomerLearning } = safeRequire('./customer-learning', 'customer-learning');
+const { ThreatHunter, LocalCorpusSource: ThreatHunterLocalSource, HTTPSourceFn: ThreatHunterHTTPSource } = safeRequire('./threat-hunter', 'threat-hunter');
+const { ShadowModeReporter } = safeRequire('./shadow-mode-reporter', 'shadow-mode-reporter');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1209,6 +1211,10 @@ const _exports = {
   ComplianceNarrator,
   NARRATOR_FRAMEWORKS,
   CustomerLearning,
+  ThreatHunter,
+  ThreatHunterLocalSource,
+  ThreatHunterHTTPSource,
+  ShadowModeReporter,
 };
 
 // Filter out undefined exports (from modules that failed to load)
