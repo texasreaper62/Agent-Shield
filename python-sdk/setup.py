@@ -6,14 +6,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="agent-shield",
+    name="agentshield",
     version="14.2.2",
     author="Agent Shield Contributors",
-    description="Security SDK for AI agents. Protects against prompt injection, "
-                "data exfiltration, tool abuse, and 30+ other AI-specific threats.",
+    description="Security SDK for AI agents. Detects prompt injection, data exfiltration, "
+                "and 300+ threat patterns across 51 categories. Zero dependencies, runs locally.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/agent-shield/agent-shield-python",
+    url="https://github.com/texasreaper62/Agent-Shield",
     packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.8",
     install_requires=[],

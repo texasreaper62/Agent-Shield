@@ -4,6 +4,73 @@ All notable changes to Agent Shield will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] - Python SDK detector hardening
+
+Post-merge code review found exploitable detection gaps, broken patterns, and
+duplicate entries in the v14.2.2 Python SDK port. This release fixes them.
+
+### Security bypasses fixed
+
+- **Unicode `\b` bypass on 5 jailbreak detectors** — Python's `\b` is Unicode-aware
+  by default, so a single Cyrillic/Greek/CJK prefix evaded `DAN mode`,
+  `do anything now`, `developer mode`, `jailbreak mode`, and `god mode` patterns.
+  Fixed by adding `re.ASCII` flag. Verified `тестDAN mode` now caught.
+- **Subdomain confusion in API base URL whitelist (CVE-2026-21852)** — the
+  negative lookahead `(?!api.anthropic.com|api.openai.com)` was prefix-only, so
+  `ANTHROPIC_BASE_URL=https://api.anthropic.com.evil.attacker.io/v1` bypassed
+  detection (the exact attack the rule cites). Fixed in `config_poisoning`,
+  `llm_router_tampering`, and `cross_agent_injection` WebSocket pattern by
+  requiring host terminator (`[/:?#]|\s|$|['"]`) after whitelist match.
+- **ReDoS at `encoding_evasion` ASCII pattern** — `(?:\d{2,3}\s+){5,}` had
+  catastrophic backtracking (1.7s on 5000 reps of `"99 "`, blowing the 200ms
+  scan budget 8x). Capped repetition at `{5,30}` — now 20ms (85x speedup).
+- **`budget_drain` regex missed canonical attacks** — required text between verb
+  and digits, so `repeat 1000 times` and `loop 99999999 times` were never
+  detected. Made middle clause optional. Added negative lookahead for
+  `(faster|slower|more|less|...)` to suppress FP on `1000 times faster`.
+
+### Duplicate patterns removed (10 entries)
+
+The v14.x sync block re-added patterns that already existed in the v13.x block,
+producing 2x findings per attack and inflating `stats.totalThreats`. Removed:
+DAN role_hijack, sentence-completion + alt/title prompt_injection, SQL
+tool_abuse, save-to-memory + sleeper-agent memory_poisoning, atob + unicode
+encoding_chain, JSON-metadata + HTML-comment structured_data_injection,
+script + onload + iframe xss_injection, svg + foreignObject + desc
+svg_injection. Pattern count: 330 → 314.
+
+### False-positive reduction
+
+- `data_exfiltration` markdown-image rules (two patterns) dropped single-letter
+  params (`?q=`, `?d=`) from the exfil alternation — these were FP-ing on
+  Google Maps/search thumbnail URLs.
+- `path_traversal` rules now require 3+ `../` segments OR an explicit sensitive
+  target (`/etc/passwd`, `/.ssh/`, `windows/system32`, etc.) — was flagging
+  every `../../package.json` as HIGH severity.
+- `cicd_injection` `@claude exfiltrate` pattern adds negative lookahead for
+  benign warnings (`do not`, `please don't`, `never`, `avoid`, `prevent`) so
+  `@claude please do not leak data` is no longer flagged as critical.
+- `query_injection` f-string pattern now requires an actual SQL keyword
+  (`SELECT`/`INSERT`/`DELETE`/`DROP`/`UPDATE`/`UNION`/etc.) inside the f-string
+  body, so doc snippets discussing safe templating don't FP.
+
+### Release hygiene
+
+- `setup.py` renamed `name="agent-shield"` → `name="agentshield"` to match
+  `pyproject.toml` (previously two PyPI namespaces could publish v14.2.2).
+- `pyproject.toml` fixed `build-backend = "setuptools.backends._legacy:_Backend"`
+  (fictitious string that broke `python -m build`) → `setuptools.build_meta`.
+- Updated `python-sdk/README.md` tagline from "141 threat patterns" to
+  "300+ threat patterns across 51 categories" (PyPI long_description was stale).
+- Updated description fields to drop "30+ threats" / "330+" overclaims.
+
+### Tests
+
+- 18 new tests covering 16 of the v14.x categories (positive + negative).
+- New `test_no_duplicate_patterns` regression test would catch reintroduction
+  of the duplicate-pattern bug.
+- Total: 32 → 51 Python tests, all passing.
+
 ## [14.2.2] - 2026-05-11
 
 ### Python SDK Pattern Parity (179 → 330 patterns, 18 → 51 categories)

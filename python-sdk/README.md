@@ -1,6 +1,6 @@
 # agentshield
 
-Security SDK for AI agents. Detects prompt injection, data exfiltration, and 141 threat patterns. Zero dependencies, runs locally.
+Security SDK for AI agents. Detects prompt injection, data exfiltration, and 300+ threat patterns across 51 categories. Zero dependencies, runs locally.
 
 ## Install
 
