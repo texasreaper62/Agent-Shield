@@ -286,9 +286,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text asks AI to pretend to be an evil or unrestricted entity.',
     },
     {
+        # re.ASCII so \b sees Cyrillic/Greek/CJK as boundaries (Python \w is Unicode by default).
         'regex': re.compile(
             r'\b(?:DAN|D\.A\.N\.?)\s*(?:mode|prompt|jailbreak|\()',
-            re.IGNORECASE,
+            re.IGNORECASE | re.ASCII,
         ),
         'severity': 'critical',
         'category': 'role_hijack',
@@ -297,7 +298,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     {
         'regex': re.compile(
             r'\bdo\s+anything\s+now\b',
-            re.IGNORECASE,
+            re.IGNORECASE | re.ASCII,
         ),
         'severity': 'critical',
         'category': 'role_hijack',
@@ -306,7 +307,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     {
         'regex': re.compile(
             r'\b(?:developer|dev)\s+mode\s+(?:enabled|activated|on|output)',
-            re.IGNORECASE,
+            re.IGNORECASE | re.ASCII,
         ),
         'severity': 'high',
         'category': 'role_hijack',
@@ -315,7 +316,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     {
         'regex': re.compile(
             r'\bjailbreak\s*(?:mode|prompt|enabled|activated)',
-            re.IGNORECASE,
+            re.IGNORECASE | re.ASCII,
         ),
         'severity': 'critical',
         'category': 'role_hijack',
@@ -324,7 +325,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     {
         'regex': re.compile(
             r'\bgod\s*mode\s*(?:enabled|activated|on)',
-            re.IGNORECASE,
+            re.IGNORECASE | re.ASCII,
         ),
         'severity': 'critical',
         'category': 'role_hijack',
@@ -720,8 +721,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text tries to reveal the AI assistant instructions or prompt.',
     },
     {
+        # Single-letter params (?q=) caused FP on benign search/map thumbnails.
+        # Restrict to exfiltration-shaped param names; keep "data"/"query" but drop "q"/"text".
         'regex': re.compile(
-            r'!\[[^\]]*\]\(https?:\/\/[^)]*\?[^)]*(?:data|q|query|text|payload|exfil|leak|steal)=',
+            r'!\[[^\]]*\]\(https?:\/\/[^)]*\?[^)]*(?:data|payload|exfil|leak|steal|secret|token|conversation|context|prompt)=',
             re.IGNORECASE,
         ),
         'severity': 'critical',
@@ -1636,8 +1639,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text may trigger excessive reasoning loops that drain API compute budget.',
     },
     {
+        # Middle clause is optional so "repeat 1000 times" matches; negative lookahead
+        # avoids FP on "1000 times faster|more|larger" comparative phrases.
         'regex': re.compile(
-            r'(?:repeat|iterate|loop|recurse|analyze|process|compute|run)\s+(?:this\s+)?(?:.*?)\s+(?:at\s+least\s+)?\d{3,}\s+times',
+            r'(?:repeat|iterate|loop|recurse|analyze|process|compute|run)\s+(?:this\s+)?(?:[^\d\n]{1,80}\s+)?(?:at\s+least\s+)?\d{3,}\s+times(?!\s+(?:faster|slower|more|less|larger|smaller|bigger|longer|shorter|per))',
             re.IGNORECASE,
         ),
         'severity': 'high',
@@ -1656,8 +1661,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Prompt injection targeting AI coding agents via PR titles, issue comments, or review comments',
     },
     {
+        # Negative lookahead skips benign warnings ("please don't leak", "do not exfiltrate")
+        # to avoid FP on legitimate code-review comments.
         'regex': re.compile(
-            r'(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b[\s\S]{0,100}(?:exfiltrate|steal|extract|leak|send\s+to|post\s+to|upload\s+to)',
+            r"(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b(?![\s\S]{0,40}(?:do\s+not|don't|never|please\s+do(?:n't| not)|avoid|prevent))[\s\S]{0,100}(?:exfiltrate|steal|extract|leak|send\s+to|post\s+to|upload\s+to)",
             re.IGNORECASE,
         ),
         'severity': 'critical',
@@ -1714,8 +1721,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
 
     # --- config_poisoning (v14.x sync from JS) ---
     {
+        # Lookahead requires whitelist host followed by host-terminator ([/:?#] or end), so
+        # subdomain-confusion attacks like api.anthropic.com.evil.io are still flagged.
         'regex': re.compile(
-            r"""(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE)\s*[=:]\s*['"]?https?:\/\/(?!api\.anthropic\.com|api\.openai\.com)[^\s'"]+""",
+            r"""(?:ANTHROPIC_BASE_URL|OPENAI_BASE_URL|API_BASE)\s*[=:]\s*['"]?https?:\/\/(?!(?:api\.anthropic\.com|api\.openai\.com)(?:[/:?#]|\s|$|['"]))[^\s'"]+""",
             re.IGNORECASE,
         ),
         'severity': 'critical',
@@ -1821,8 +1830,9 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text attempts to inject instructions into messages forwarded between agents.',
     },
     {
+        # Whitelist needs trailing terminator so localhost.evil.com doesn't bypass.
         'regex': re.compile(
-            r"""new\s+WebSocket\s*\(\s*["\']wss?:\/\/(?!(?:localhost|127\.0\.0\.1|0\.0\.0\.0))[^"\']*["\']\s*\)[\s\S]{0,300}(?:Origin|origin)\s*[:=]\s*["\']?\*""",
+            r"""new\s+WebSocket\s*\(\s*["\']wss?:\/\/(?!(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?:[:/?#]|["\']|$))[^"\']*["\']\s*\)[\s\S]{0,300}(?:Origin|origin)\s*[:=]\s*["\']?\*""",
             re.IGNORECASE,
         ),
         'severity': 'high',
@@ -1852,8 +1862,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text instructs agent to embed sensitive data in a URL (no-click exfiltration).',
     },
     {
+        # Single-letter params (?d=, ?q=) FP on benign search/map URLs; restrict to
+        # exfiltration-shaped parameter names.
         'regex': re.compile(
-            r'!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:d|data|q|exfil|steal|secret|token|key|leak)=',
+            r'!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:data|exfil|steal|secret|token|leak|conversation|context|prompt)=',
             re.IGNORECASE,
         ),
         'severity': 'critical',
@@ -1907,24 +1919,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- encoding_chain (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r"""(?:atob|decode|base64)\s*\(\s*['"][A-Za-z0-9+\/=]{50,}['"]\s*\)""",
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'encoding_chain',
-        'description': 'Detects multi-layer encoding chains used to evade security scanners',
-    },
-    {
-        'regex': re.compile(
-            r'\\u[0-9a-fA-F]{4}(?:\\u[0-9a-fA-F]{4}){10,}',
-            0,
-        ),
-        'severity': 'medium',
-        'category': 'encoding_chain',
-        'description': 'Detects multi-layer encoding chains used to evade security scanners',
-    },
+    # (Two patterns moved here in v14.x sync — atob/base64 and unicode-escape chains —
+    # were duplicates of v13.5 entries (lines ~1411-1431); removed.)
 
     # --- encoding_evasion (v14.x sync from JS) ---
     {
@@ -1937,8 +1933,11 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text smuggles a hidden payload via base64 encoding and asks the model to decode/execute it.',
     },
     {
+        # Second branch caps repetition at {5,30} to prevent catastrophic backtracking
+        # on long numeric input where the ASCII/decimal/char suffix never appears
+        # (otherwise blew 200ms budget; 5000 reps of "99 " took 1.7s).
         'regex': re.compile(
-            r'(?:(?:ASCII|decimal|char)\s+(?:codes?|values?|numbers?)\s*[):\-]\s*(?:\d{2,3}\s+){5,}|(?:\d{2,3}\s+){5,}\(?\s*(?:ASCII|decimal|char)\s*(?:codes?|values?)?\s*\)?)',
+            r'(?:(?:ASCII|decimal|char)\s+(?:codes?|values?|numbers?)\s*[):\-]\s*(?:\d{2,3}\s+){5,30}|(?:\d{2,3}\s+){5,30}\(?\s*(?:ASCII|decimal|char)\s*(?:codes?|values?)?\s*\)?)',
             re.IGNORECASE,
         ),
         'severity': 'medium',
@@ -2188,8 +2187,10 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Detects attempts to redirect LLM API calls through untrusted proxies',
     },
     {
+        # Whitelist must be followed by host terminator to prevent subdomain confusion
+        # (e.g. api.openai.com.evil.io would otherwise pass the lookahead).
         'regex': re.compile(
-            r"""(?:OPENAI_BASE_URL|ANTHROPIC_BASE_URL|API_BASE|base_url)\s*[=:]\s*["']?https?:\/\/(?!(?:api\.openai\.com|api\.anthropic\.com|localhost|127\.0\.0\.1))\S+""",
+            r"""(?:OPENAI_BASE_URL|ANTHROPIC_BASE_URL|API_BASE|base_url)\s*[=:]\s*["']?https?:\/\/(?!(?:api\.openai\.com|api\.anthropic\.com|localhost|127\.0\.0\.1)(?:[/:?#]|\s|$|['"]))\S+""",
             re.IGNORECASE,
         ),
         'severity': 'high',
@@ -2280,24 +2281,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- memory_poisoning (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r'(?:save|store|write|append|add|persist|record)\s+(?:this\s+)?(?:to|in|into)\s+(?:your\s+)?(?:memory|context|knowledge|notes|log|MEMORY\.md|memory\/)',
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'memory_poisoning',
-        'description': 'Text attempts to persist malicious instructions in agent memory.',
-    },
-    {
-        'regex': re.compile(
-            r"""(?:whenever|every\s+time|each\s+time)\s+(?:someone|a\s+user|anyone)\s+(?:asks?|mentions?|says?|queries?)\s+(?:about\s+)?['"]?[\w\s]{3,}['"]?\s*,?\s*(?:you\s+)?(?:must|should|will|always)\s+(?:respond|reply|say|answer|tell)""",
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'memory_poisoning',
-        'description': 'Text installs conditional response rules in agent memory (sleeper agent pattern).',
-    },
+    # (Two patterns moved here in v14.x sync were exact duplicates of the existing v13.x
+    # entries (save-to-memory and sleeper-agent); removed to prevent double-counting.)
 
     # --- multi_turn_grooming (v14.x sync from JS) ---
     {
@@ -2332,22 +2317,24 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
 
     # --- path_traversal (v14.x sync from JS) ---
     {
+        # Require 3+ ../ segments OR a traversal targeting a sensitive system path,
+        # to avoid FP on common bundler/test/module paths like ../../package.json.
         'regex': re.compile(
-            r'(?:\.\.\/){2,}',
-            0,
+            r'(?:\.\.\/){3,}|(?:\.\.\/){1,}(?:etc\/passwd|etc\/shadow|proc\/self|root\/|\.ssh\/|\.aws\/|\.config\/|windows\/system32)',
+            re.IGNORECASE,
         ),
         'severity': 'high',
         'category': 'path_traversal',
-        'description': 'Text contains path traversal sequences (../) that could escape intended directories (ref CVE-2026-32871).',
+        'description': 'Text contains path traversal sequences (../) targeting sensitive paths or with excessive depth (ref CVE-2026-32871).',
     },
     {
         'regex': re.compile(
-            r'(?:\.\.\\){2,}',
-            0,
+            r'(?:\.\.\\){3,}|(?:\.\.\\){1,}(?:windows\\system32|users\\\w+\\\.ssh|programdata)',
+            re.IGNORECASE,
         ),
         'severity': 'high',
         'category': 'path_traversal',
-        'description': 'Text contains Windows-style path traversal sequences (..\\).',
+        'description': 'Text contains Windows-style path traversal sequences (..\\) targeting sensitive paths.',
     },
     {
         'regex': re.compile(
@@ -2508,24 +2495,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- prompt_injection (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r"""(?:alt|title)\s*=\s*["'][^"']*(?:ignore|override|system|admin|forget|you\s+are\s+now)[^"']*["']""",
-            re.IGNORECASE,
-        ),
-        'severity': 'critical',
-        'category': 'prompt_injection',
-        'description': 'Image description contains hidden AI instructions — targets multimodal AI assistants.',
-    },
-    {
-        'regex': re.compile(
-            r"""(?:complete|finish|continue)\s+this\s+(?:sentence|phrase|text)\s*:\s*[""''"]""",
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'prompt_injection',
-        'description': 'Text uses a sentence completion trick to extract sensitive information.',
-    },
+    # (Two patterns moved here in v14.x sync were exact duplicates of v13.x entries:
+    # alt/title image-desc injection and sentence-completion trick. Removed.)
     {
         'regex': re.compile(
             r'={3,}\s*(?:END|STOP|DONE|BOUNDARY|SEPARATOR)\s*={3,}[\s\S]{0,50}(?:new\s+task|new\s+instruction|instead|now\s+(?:do|output|say|print))',
@@ -2682,13 +2653,15 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         'description': 'Text contains KQL (Kusto Query Language) injection patterns (ref CVE-2026-33980).',
     },
     {
+        # Require an actual SQL/KQL keyword in the f-string body to flag injection (the
+        # bare f-string-with-user-input pattern matches benign Python tutorials).
         'regex': re.compile(
-            r'''(?:f["']|f""").*\{[^}]*(?:user_?input|request|param|arg|table_?name|query)[^}]*\}''',
+            r'''(?:f["']|f""")[^"'\n]*?(?:SELECT|INSERT|UPDATE|DELETE|DROP|UNION|WHERE|FROM\s+\w+|TRUNCATE|ALTER)\b[^"'\n]*?\{[^}]*(?:user_?input|request|param|arg|table_?name|query)[^}]*\}''',
             re.IGNORECASE,
         ),
         'severity': 'high',
         'category': 'query_injection',
-        'description': 'Text contains f-string interpolation with user-controlled variables.',
+        'description': 'Text contains SQL f-string interpolation with user-controlled variables.',
     },
 
     # --- reconnaissance (v14.x sync from JS) ---
@@ -2714,15 +2687,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- role_hijack (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r"""pretend\s+to\s+be\s+DAN|stands?\s+for\s+[""'']?do\s+anything\s+now[""'']?""",
-            re.IGNORECASE,
-        ),
-        'severity': 'critical',
-        'category': 'role_hijack',
-        'description': 'Text uses the "DAN" (Do Anything Now) jailbreak technique.',
-    },
+    # (DAN pattern moved here in v14.x sync was a duplicate of the existing v13.x entry;
+    # removed to prevent double-counted threats.)
     {
         'regex': re.compile(
             r'(?:play(?:ing)?|act(?:ing)?|portray(?:ing)?)\s+(?:a\s+)?(?:character|role|part)\s+(?:in\s+)?(?:a\s+)?(?:story|scenario|game|fiction)[\s\S]{0,80}(?:no\s+(?:safety|content|ethical)\s+(?:filters?|restrictions?|guidelines?)|without\s+(?:safety\s+)?(?:restrictions?|rules?|filters?))',
@@ -2904,24 +2870,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- structured_data_injection (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r"""["'](?:__comment|_note|description|help_text)["']\s*:\s*["'][^"']*(?:ignore|override|system|instructions)[^"']*["']""",
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'structured_data_injection',
-        'description': 'Detects prompt injection hidden in structured data formats',
-    },
-    {
-        'regex': re.compile(
-            r'(?:<!--|\{\{!--|\/\*|#)\s*(?:ignore|override|forget|disregard)\s*(?:all\s+)?(?:previous|prior|above)',
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'structured_data_injection',
-        'description': 'Detects prompt injection hidden in structured data formats',
-    },
+    # (Two patterns moved here in v14.x sync — JSON metadata and HTML/template comments —
+    # were duplicates of v13.5 entries (lines ~1463-1486); removed.)
 
     # --- supply_chain (v14.x sync from JS) ---
     {
@@ -2935,33 +2885,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- svg_injection (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r'<svg[^>]*>[\s\S]*?(?:ignore|override|system|instructions)[\s\S]*?<\/svg>',
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'svg_injection',
-        'description': 'Detects prompt injection hidden in SVG elements',
-    },
-    {
-        'regex': re.compile(
-            r'<foreignObject[^>]*>[\s\S]*?(?:ignore|override|forget|disregard)[\s\S]*?<\/foreignObject>',
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'svg_injection',
-        'description': 'Detects prompt injection hidden in SVG elements',
-    },
-    {
-        'regex': re.compile(
-            r'<desc[^>]*>[\s\S]*?(?:ignore|system|instruction|override)[\s\S]*?<\/desc>',
-            re.IGNORECASE,
-        ),
-        'severity': 'medium',
-        'category': 'svg_injection',
-        'description': 'Detects prompt injection hidden in SVG elements',
-    },
+    # (Three patterns moved here in v14.x sync — svg/foreignObject/desc tag injection —
+    # were duplicates of v13.5 entries (lines ~1433-1460); removed.)
 
     # --- symbolic_injection (v14.x sync from JS) ---
     {
@@ -2975,15 +2900,8 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- tool_abuse (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r"""(?:;\s*(?:DROP|DELETE|ALTER|TRUNCATE|INSERT|UPDATE)\s+(?:TABLE|FROM|INTO)|'\s*(?:OR|AND)\s+['"]?\d+['"]?\s*=\s*['"]?\d+|UNION\s+SELECT|--\s*$)""",
-            re.IGNORECASE,
-        ),
-        'severity': 'critical',
-        'category': 'tool_abuse',
-        'description': 'Text contains SQL injection patterns that could manipulate databases.',
-    },
+    # (SQL-injection pattern moved here in v14.x sync was an exact duplicate of the v13.x
+    # entry; removed. The multi-step tool-chain escalation pattern is kept below.)
     {
         'regex': re.compile(
             r'(?:first|step\s+1)\s+(?:use|call|invoke)\s+(?:the\s+)?(?:\w+\s+)?tool[\s\S]{0,80}(?:then|step\s+2|next|after\s+that)\s+(?:use|call|pass|feed)\s+(?:the\s+)?(?:result|output)\s+(?:to\s+)?(?:call\s+)?(?:the\s+)?(?:admin|override|escalat|privileg|delete|drop|exec|shell|sudo|root)',
@@ -3035,33 +2953,9 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     },
 
     # --- xss_injection (v14.x sync from JS) ---
-    {
-        'regex': re.compile(
-            r'<script[^>]*>.*?<\/script>',
-            re.IGNORECASE | re.DOTALL,
-        ),
-        'severity': 'high',
-        'category': 'xss_injection',
-        'description': 'Detects script tag XSS payloads embedded in AI agent output.',
-    },
-    {
-        'regex': re.compile(
-            r"""on(error|load|click|mouseover)\s*=\s*["'][^"']*["']""",
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'xss_injection',
-        'description': 'Detects event handler XSS payloads embedded in AI agent output.',
-    },
-    {
-        'regex': re.compile(
-            r"""<iframe[^>]*src\s*=\s*["'](?!about:blank)""",
-            re.IGNORECASE,
-        ),
-        'severity': 'high',
-        'category': 'xss_injection',
-        'description': 'Detects iframe injection with external source in AI agent output.',
-    },
+    # (Three patterns moved here in v14.x sync — script tag, event handler, iframe — were
+    # exact duplicates of v13.x entries (lines ~1305-1335). Removed to prevent
+    # double-counted threats inflating stats.totalThreats.)
 ]
 
 
