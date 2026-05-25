@@ -424,6 +424,10 @@ const {
 const { ShieldActions } = safeRequire('./shield-actions', 'shield-actions');
 const { IncidentReplay, INCIDENT_KINDS } = safeRequire('./incident-replay', 'incident-replay');
 const { CrossSDKDifferential, NodeAdapter: CrossSDKNodeAdapter, PythonAdapter: CrossSDKPythonAdapter } = safeRequire('./cross-sdk-differential', 'cross-sdk-differential');
+const { ThresholdTuner } = safeRequire('./threshold-tuner', 'threshold-tuner');
+const { AdversarialTournament } = safeRequire('./adversarial-tournament', 'adversarial-tournament');
+const { ComplianceNarrator, FRAMEWORKS: NARRATOR_FRAMEWORKS } = safeRequire('./compliance-narrator', 'compliance-narrator');
+const { CustomerLearning } = safeRequire('./customer-learning', 'customer-learning');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1196,6 +1200,15 @@ const _exports = {
   CrossSDKDifferential,
   CrossSDKNodeAdapter,
   CrossSDKPythonAdapter,
+
+  // Self-tuning thresholds (H1 — auto-optimize per category)
+  ThresholdTuner,
+
+  // H2 — self-improving organism
+  AdversarialTournament,
+  ComplianceNarrator,
+  NARRATOR_FRAMEWORKS,
+  CustomerLearning,
 };
 
 // Filter out undefined exports (from modules that failed to load)
