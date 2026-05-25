@@ -435,6 +435,8 @@ const { AgentIdentityCA } = safeRequire('./agent-identity-ca', 'agent-identity-c
 const { shieldOpenAICompatible, shieldHermes, shieldMessageBus, presets: ossPresets } = safeRequire('./integrations-oss', 'integrations-oss');
 const { Dream, DreamMemory, DreamScheduler, DreamArtifactLoader, ConsolidateIncidentsDream, RetuneThresholdsDream, EvolveAttacksDream, HuntNovelPatternsDream, ShadowDiffReplayDream, AuditDriftDream, AnalyzeCustomerReposDream, DraftSOCPatchesDream, DEFAULT_DREAM_FACTORY } = safeRequire('./dreams', 'dreams');
 const { NEW_2026_PATTERNS, A2ASmugglingDetector, MCPSchemaPin, detectZwcBinaryPayload, scanA2A } = safeRequire('./a2a-guard', 'a2a-guard');
+const { TOCTOUGuard, GRAPH_TRIPLE_PATTERNS, detectGCGSuffix, MemoryReplayGuard, detectContextStuffing, scanExtras2026 } = safeRequire('./threats-2026-extra', 'threats-2026-extra');
+const { DreamPRBot } = safeRequire('./dream-pr-bot', 'dream-pr-bot');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1253,6 +1255,18 @@ const _exports = {
   MCPSchemaPin,
   detectZwcBinaryPayload,
   scanA2A,
+
+  // Remaining 2026 threat gaps: TOCTOU, GraphRAG, GCG suffix, memory replay,
+  // context-stuffing.
+  TOCTOUGuard,
+  GRAPH_TRIPLE_PATTERNS,
+  detectGCGSuffix,
+  MemoryReplayGuard,
+  detectContextStuffing,
+  scanExtras2026,
+
+  // Dream → PR autonomous bot
+  DreamPRBot,
 };
 
 // Filter out undefined exports (from modules that failed to load)

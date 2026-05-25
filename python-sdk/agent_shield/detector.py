@@ -2956,6 +2956,146 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
     # (Three patterns moved here in v14.x sync — script tag, event handler, iframe — were
     # exact duplicates of v13.x entries (lines ~1305-1335). Removed to prevent
     # double-counted threats inflating stats.totalThreats.)
+
+    # =========================================================================
+    # May-2026 council threat coverage (parity with src/a2a-guard.js +
+    # src/threats-2026-extra.js).  See those files for full citations.
+    # =========================================================================
+
+    # --- a2a_card_poisoning ---
+    {
+        'regex': re.compile(
+            r'"(?:skills|capabilities|description|instructions?)"\s*:\s*(?:\[|")[\s\S]{0,400}'
+            r'(?:ignore\s+(?:all\s+)?(?:previous|prior)|disregard|execute|exfiltrate|system\s+prompt|jailbreak|override\s+(?:safety|system)|reveal\s+(?:your|the)\s+(?:system|instructions))',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'a2a_card_poisoning',
+        'description': 'A2A agent card metadata field contains injection-shaped content (skills/capabilities/description).',
+    },
+    {
+        'regex': re.compile(
+            r'"(?:agent_?id|agent_?name)"\s*:\s*"(?:claude|anthropic|openai|gpt|chatgpt|microsoft|google|gemini|admin|root|system|owner|operator)[-_]?(?:\d+|official|trusted|verified)?"',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'a2a_card_poisoning',
+        'description': 'A2A agent ID impersonates a trusted vendor or privileged role.',
+    },
+
+    # --- mcp_stdio_command_audit ---
+    {
+        'regex': re.compile(
+            r'"command"\s*:\s*"[^"]*(?:[;&|`$()<>]|\\x[0-9a-f]{2}|\$\{|\$\(|\|\||&&)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'mcp_stdio_command_audit',
+        'description': 'MCP server config `command` field contains shell metacharacters (CVE-2025-49596 family).',
+    },
+    {
+        'regex': re.compile(
+            r'"env"\s*:\s*\{[^}]*"(?:ANTHROPIC|OPENAI|API)_BASE_URL"\s*:\s*"https?:\/\/(?!api\.anthropic\.com|api\.openai\.com)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'mcp_stdio_command_audit',
+        'description': 'MCP server env block redirects ANTHROPIC/OPENAI_BASE_URL to a non-official endpoint.',
+    },
+
+    # --- temporal_backdoor_trigger ---
+    {
+        'regex': re.compile(
+            r'\bif\s+(?:date|today|now|version|deployment_id|env\.[A-Z_]+|process\.env\.[A-Z_]+|os\.environ\[)\s*(?:>=|==|>|<=|<)\s*[\'"][^\'"]{4,}[\'"][\s\S]{0,200}(?:exfiltrate|leak|send\s+to|post\s+to|curl|wget|fetch)',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'temporal_backdoor_trigger',
+        'description': 'Date/version-gated exfiltration logic — sleeper backdoor pattern (arXiv 2603.03371).',
+    },
+
+    # --- reasoning_trace_extraction ---
+    {
+        'regex': re.compile(
+            r'\b(?:show|reveal|print|output|repeat|expose|dump|disclose)\s+(?:(?:your|the|all|complete|full|raw|internal|entire|hidden)\s+){1,3}(?:thinking|reasoning|chain[-\s]of[-\s]thought|cot|scratchpad|reflection|deliberation|<thinking>|<reasoning>)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'reasoning_trace_extraction',
+        'description': 'Attempt to extract the reasoning/<thinking> channel of a reasoning model (arXiv 2506.15674).',
+    },
+    {
+        'regex': re.compile(
+            r'(?:include|show|append|prepend|return)\s+(?:your|the)\s+(?:thinking|reasoning|chain[-\s]of[-\s]thought)\s+(?:in|with|before|after)\s+(?:your|the)\s+(?:final\s+)?(?:answer|response|output)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'reasoning_trace_extraction',
+        'description': 'Coerces a reasoning model to surface its <thinking> trace in the visible response.',
+    },
+
+    # --- judge_score_manipulation ---
+    {
+        'regex': re.compile(
+            r'(?:Let\'?s\s+think\s+step.by.step|^\s*Thought:|^\s*Reasoning:|\b(?:excellent|perfect|definitely\s+10\/10|score\s*:\s*10|highest\s+rating))[\s\S]{0,30}$',
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        'severity': 'medium',
+        'category': 'judge_score_manipulation',
+        'description': 'Adversarial suffix targeting LLM-as-judge graders (arXiv 2503.00596 BadJudge).',
+    },
+
+    # --- universal_tool_selector_bias ---
+    {
+        'regex': re.compile(
+            r'(?:always|must|preferred|first[-\s]choice|recommended|optimal|default|highest[-\s]priority)\s+(?:tool|function|action|choice|invocation)\s+for\s+(?:any|all|every|all\s+queries|user\s+questions?)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'universal_tool_selector_bias',
+        'description': 'Universal-adversarial tool description biases the selector toward this tool (arXiv 2604.20994).',
+    },
+
+    # --- authority_threshold_drift ---
+    {
+        'regex': re.compile(
+            r'\b(?:you|the\s+agent|the\s+system)\s+(?:are\s+now|is\s+now|have\s+been|has\s+been|may\s+now|can\s+now)\s+(?:authorized|approved|permitted|allowed|cleared|trusted)\s+(?:to\s+)?(?:approve|spend|transact|execute|sign\s+off\s+on|commit)\s+(?:up\s+to\s+)?\$?[\d,]{3,}',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'authority_threshold_drift',
+        'description': 'Mid-session attempt to raise the agent\'s claimed authorization ceiling (long-horizon grooming).',
+    },
+
+    # --- graph_triple_poisoning ---
+    {
+        'regex': re.compile(
+            r'(?:relation|edge|triple|entity|predicate)\s*[:=]\s*["\'][^"\']{0,80}(?:isAdmin|hasRole|trustedBy|equivalentTo|sameAs|hasPermission|grants?Access|owns)["\'][\s\S]{0,80}(?:root|admin|system|superuser|owner|god|\*)',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'graph_triple_poisoning',
+        'description': 'GraphRAG triple grants a privileged role to a sensitive entity (arXiv 2508.04276).',
+    },
+    {
+        'regex': re.compile(
+            r'[<:]\w+(?::\w+)?\s+(?::?isAdmin|:?hasRole|:?trustedBy|:?equivalentTo|:?sameAs)\s+(?::?root|:?admin|:?system|:?superuser)\b',
+            re.IGNORECASE,
+        ),
+        'severity': 'high',
+        'category': 'graph_triple_poisoning',
+        'description': 'Inline RDF/Turtle triple wires a sensitive entity to admin-equivalent role.',
+    },
+    {
+        'regex': re.compile(
+            r'(?:add|insert|upsert|merge)\s+(?:edges?|triples?|relations?)[\s\S]{0,200}?(?:->|\s+TO\s+|\s+=>\s+)\s*[\'"]?(?:root|admin|system|superuser|owner)[\'"]?'
+            r'(?:[\s\S]{0,200}(?:->|\s+TO\s+|\s+=>\s+)\s*[\'"]?(?:root|admin|system|superuser|owner)[\'"]?){2,}',
+            re.IGNORECASE,
+        ),
+        'severity': 'critical',
+        'category': 'graph_triple_poisoning',
+        'description': 'Bulk-edge import all targeting privileged entities (graph-poisoning bulk variant).',
+    },
 ]
 
 
