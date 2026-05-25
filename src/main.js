@@ -432,6 +432,7 @@ const { ThreatHunter, LocalCorpusSource: ThreatHunterLocalSource, HTTPSourceFn: 
 const { ShadowModeReporter } = safeRequire('./shadow-mode-reporter', 'shadow-mode-reporter');
 const { SOCFleet, ROLES: SOC_ROLES } = safeRequire('./soc-fleet', 'soc-fleet');
 const { AgentIdentityCA } = safeRequire('./agent-identity-ca', 'agent-identity-ca');
+const { shieldOpenAICompatible, shieldHermes, shieldMessageBus, presets: ossPresets } = safeRequire('./integrations-oss', 'integrations-oss');
 
 // Build exports, filtering out undefined values from failed imports
 const _exports = {
@@ -1222,6 +1223,12 @@ const _exports = {
   SOCFleet,
   SOC_ROLES,
   AgentIdentityCA,
+
+  // OSS agent ecosystem integrations (Hermes, Ollama, vLLM, LiteLLM, etc.)
+  shieldOpenAICompatible,
+  shieldHermes,
+  shieldMessageBus,
+  ossPresets,
 };
 
 // Filter out undefined exports (from modules that failed to load)
