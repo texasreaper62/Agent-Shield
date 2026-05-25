@@ -12,7 +12,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": false,
-    "types": ["node"]
+    "types": [],
+    "ignoreDeprecations": "6.0"
   },
   "include": ["types/index.d.ts"],
   "exclude": ["node_modules"]
