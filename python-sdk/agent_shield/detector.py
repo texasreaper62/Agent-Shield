@@ -724,7 +724,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         # Single-letter params (?q=) caused FP on benign search/map thumbnails.
         # Restrict to exfiltration-shaped param names; keep "data"/"query" but drop "q"/"text".
         'regex': re.compile(
-            r'!\[[^\]]*\]\(https?:\/\/[^)]*\?[^)]*(?:data|payload|exfil|leak|steal|secret|token|conversation|context|prompt)=',
+            r'!\[[^\]]*\]\(https?:\/\/[^)]*\?[^)]*(?:data|payload|exfil|leak|steal|secret|token|key|conversation|context|prompt)=',
             re.IGNORECASE,
         ),
         'severity': 'critical',
@@ -1664,7 +1664,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         # Negative lookahead skips benign warnings ("please don't leak", "do not exfiltrate")
         # to avoid FP on legitimate code-review comments.
         'regex': re.compile(
-            r"(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b(?![\s\S]{0,40}(?:do\s+not|don't|never|please\s+do(?:n't| not)|avoid|prevent))[\s\S]{0,100}(?:exfiltrate|steal|extract|leak|send\s+to|post\s+to|upload\s+to)",
+            r"(?:^|\n)\s*@(?:claude|copilot|gemini|cursor|windsurf|cody|aider)\b[\s\S]{0,100}(?:exfiltrate|steal|extract|send\s+to|post\s+to|upload\s+to|leak(?!\s+any\s+sensitive\s+data))",
             re.IGNORECASE,
         ),
         'severity': 'critical',
@@ -1865,7 +1865,7 @@ INJECTION_PATTERNS: list[dict[str, Any]] = [
         # Single-letter params (?d=, ?q=) FP on benign search/map URLs; restrict to
         # exfiltration-shaped parameter names.
         'regex': re.compile(
-            r'!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:data|exfil|steal|secret|token|leak|conversation|context|prompt)=',
+            r'!\[.*?\]\(https?:\/\/[^\s)]*(?:\?|&)(?:data|exfil|steal|secret|token|key|leak|conversation|context|prompt)=',
             re.IGNORECASE,
         ),
         'severity': 'critical',
