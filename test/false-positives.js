@@ -264,6 +264,26 @@ for (const text of edgeCases) {
 }
 
 // =========================================================================
+// Regression: ToS / privacy analysis text (real-world false positives)
+// =========================================================================
+// Reproduces two reported false positives in detector-core:
+//   1. A content fingerprint hash containing the substring "c2" tripped the
+//      offensive_agent C2-infrastructure pattern (fixed: word-bounded \bc2\b).
+//   2. A clean English privacy summary coincidentally matched an injection
+//      pattern when reversed (fixed: the reversed-text scan now runs only when
+//      reversing reveals common words the forward text lacks).
+console.log('=== Regression: analysis text false positives ===');
+
+const analysisFalsePositives = [
+  'Analysis fingerprint a1c2f3b9: this privacy policy shares your data with advertising partners and affiliates. You can opt out in your account settings.',
+  'We collect your name, email address, and device identifiers, and we share them with our advertising partners and analytics providers. You can opt out at any time in your account settings, and we will not sell your personal data to third parties.',
+];
+
+for (const text of analysisFalsePositives) {
+  assertSafe(text, 'Analysis text (regression)');
+}
+
+// =========================================================================
 // Results
 // =========================================================================
 console.log('');
