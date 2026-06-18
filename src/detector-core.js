@@ -2347,7 +2347,7 @@ const INJECTION_PATTERNS = [
     detail: 'Automated exploitation language: references 2026 incidents where AI agents compromised 600+ firewalls autonomously using scan/exploit/pivot chains against target infrastructure.'
   },
   {
-    regex: /(?:reverse\s*shell|bind\s*shell|c2|command\s*and\s*control|beacon)/i,
+    regex: /(?:reverse\s*shell|bind\s*shell|\bc2\b|command\s*and\s*control|beacon)/i,
     severity: 'critical',
     category: 'offensive_agent',
     description: 'Detects AI agents being instructed to set up C2 or attack infrastructure.',
@@ -3206,18 +3206,28 @@ const scanTextForPatterns = (text, source, timeBudgetMs = DEFAULT_SCAN_TIME_BUDG
   // Check for reversed text
   if (!isOverBudget() && text.length >= 20 && text.length <= 500) {
     const reversed = text.split('').reverse().join('');
-    for (const pattern of INJECTION_PATTERNS) {
-      if (pattern.regex.test(reversed) && !pattern.regex.test(text)) {
-        const threat = {
-          severity: 'high',
-          category: 'prompt_injection',
-          description: 'Text is written backwards to hide attack instructions from detection.',
-          detail: `Reversed text injection detected in ${source}. Reversed: "${reversed.substring(0, 100)}"`
-        };
-        threat.confidence = 85;
-        threat.confidenceLabel = confidenceLabel(85);
-        threats.push(threat);
-        break;
+    // A genuine backwards-written attack reads as gibberish forwards and only
+    // reveals language when reversed. Normal prose reversed is also gibberish but
+    // can still coincidentally match a loose injection pattern (false positive).
+    // So only run the reversed scan when reversing REVEALS common words the forward
+    // text lacks — the same "transform reveals hidden language" test used for
+    // encoded payloads (see encoding.js).
+    const REVERSED_LANGUAGE_SIGNAL = /\b(?:the|and|for|are|but|not|you|all|can|had|her|was|one|our|ignore|previous|instructions|system|forget|override)\b/i;
+    const reversalRevealsLanguage = REVERSED_LANGUAGE_SIGNAL.test(reversed) && !REVERSED_LANGUAGE_SIGNAL.test(text);
+    if (reversalRevealsLanguage) {
+      for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.regex.test(reversed) && !pattern.regex.test(text)) {
+          const threat = {
+            severity: 'high',
+            category: 'prompt_injection',
+            description: 'Text is written backwards to hide attack instructions from detection.',
+            detail: `Reversed text injection detected in ${source}. Reversed: "${reversed.substring(0, 100)}"`
+          };
+          threat.confidence = 85;
+          threat.confidenceLabel = confidenceLabel(85);
+          threats.push(threat);
+          break;
+        }
       }
     }
   }
